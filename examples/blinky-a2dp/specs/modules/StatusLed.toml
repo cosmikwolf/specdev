@@ -1,0 +1,137 @@
+#:schema ../../../../schema/firmware/v1/module.schema.yaml
+
+# StatusLed — driver for an APA102 (DotStar) RGB LED used as a system status
+# indicator. Ported from sysml-v2-analyzer/tests/fixtures/status_led.sysml.
+
+name = "StatusLed"
+layer = "driver"
+description = "APA102 DotStar LED driver providing solid / blinking status patterns."
+depends_on = []
+satisfies = []
+
+[metadata.MemoryModel]
+allocation = "static_alloc"
+max_instances = 1
+owner = "owned"
+
+[metadata.ConcurrencyModel]
+protection = "mutex"
+isr_safe = false
+reentrant = false
+shared_state = []
+
+[metadata.ErrorHandling]
+strategy = "result_type"
+error_type = "LedError"
+
+[metadata.Ownership]
+owner = "owned"
+
+[hardware]
+[[hardware.pins]]
+name = "DATA"
+port = "GPIO"
+pin  = 2
+role = "dotstar_data"
+
+[[hardware.pins]]
+name = "CLK"
+port = "GPIO"
+pin  = 12
+role = "dotstar_clock"
+
+[[ports]]
+name = "led_in"
+port_type = "LedCommandPort"
+direction = "in"
+flow_type = "StatusPattern"
+
+[[actions]]
+name = "new"
+params = [
+  { name = "data_pin", type = "GpioPin",  direction = "in" },
+  { name = "clock_pin", type = "GpioPin", direction = "in" },
+]
+returns = "Result<StatusLed, LedError>"
+blocking = false
+isr_safe = false
+description = "Construct a StatusLed bound to the given GPIO pins."
+
+[[actions]]
+name = "set_solid"
+params = [
+  { name = "r", type = "u8", direction = "in" },
+  { name = "g", type = "u8", direction = "in" },
+  { name = "b", type = "u8", direction = "in" },
+]
+returns = "Result<(), LedError>"
+blocking = false
+isr_safe = false
+description = "Display a solid RGB color."
+
+[[actions]]
+name = "set_pattern"
+params = [
+  { name = "pattern", type = "StatusPattern", direction = "in" },
+]
+returns = "Result<(), LedError>"
+blocking = false
+isr_safe = false
+description = "Display a named blink pattern."
+
+[[actions]]
+name = "off"
+params = []
+returns = "Result<(), LedError>"
+blocking = false
+isr_safe = false
+description = "Turn the LED off."
+
+[[state_machines]]
+name = "LedFSM"
+initial = "off"
+states = ["off", "solid", "blinking"]
+
+[[state_machines.transitions]]
+name = "off_to_solid"
+from = "off"
+to = "solid"
+event = "set_solid_evt"
+
+[[state_machines.transitions]]
+name = "off_to_blinking"
+from = "off"
+to = "blinking"
+event = "set_pattern_evt"
+
+[[state_machines.transitions]]
+name = "solid_to_off"
+from = "solid"
+to = "off"
+event = "turn_off_evt"
+
+[[state_machines.transitions]]
+name = "solid_to_blinking"
+from = "solid"
+to = "blinking"
+event = "set_pattern_evt"
+
+[[state_machines.transitions]]
+name = "blinking_to_off"
+from = "blinking"
+to = "off"
+event = "turn_off_evt"
+
+[[state_machines.transitions]]
+name = "blinking_to_solid"
+from = "blinking"
+to = "solid"
+event = "set_solid_evt"
+
+[[errors]]
+variant = "GpioError"
+description = "Underlying GPIO write failed."
+
+[[errors]]
+variant = "InvalidPattern"
+description = "Requested pattern is not defined for this LED."

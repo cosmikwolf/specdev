@@ -1,0 +1,144 @@
+#:schema ../../../../schema/firmware/v1/module.schema.yaml
+
+# BtA2dpSink — driver managing a Bluetooth A2DP audio sink.
+# Ported from sysml-v2-analyzer/tests/fixtures/bt_a2dp_sink.sysml.
+
+name = "BtA2dpSink"
+layer = "driver"
+description = "Bluetooth A2DP sink. Accepts an incoming audio stream from a paired source and exposes it via audio_out."
+depends_on = []
+satisfies = ["REQ-AUDIO-001"]
+
+[[external_deps]]
+name = "esp-idf-sys"
+version = "0.34"
+
+[metadata.MemoryModel]
+allocation = "static_alloc"
+max_instances = 1
+owner = "owned"
+
+[metadata.ConcurrencyModel]
+protection = "mutex"
+isr_safe = false
+reentrant = false
+shared_state = ["connection_state", "stream_buffer"]
+
+[metadata.ErrorHandling]
+strategy = "result_type"
+error_type = "A2dpError"
+
+[metadata.Ownership]
+owner = "owned"
+
+[hardware]
+[[hardware.peripherals]]
+name = "BT_CONTROLLER"
+role = "bluetooth_classic"
+
+[[ports]]
+name = "audio_out"
+port_type = "AudioDataPort"
+direction = "out"
+flow_type = "PcmFrame"
+
+[[ports]]
+name = "bt_status"
+port_type = "StatusPort"
+direction = "out"
+flow_type = "ConnectionState"
+
+[[actions]]
+name = "init"
+params = [{ name = "config", type = "A2dpConfig", direction = "in" }]
+returns = "Result<BtA2dpSink, A2dpError>"
+blocking = true
+isr_safe = false
+description = "Initialise the Bluetooth stack and begin advertising."
+
+[[actions]]
+name = "start"
+params = []
+returns = "Result<(), A2dpError>"
+blocking = false
+isr_safe = false
+description = "Allow incoming connections and audio streaming."
+
+[[actions]]
+name = "stop"
+params = []
+returns = "Result<(), A2dpError>"
+blocking = false
+isr_safe = false
+description = "Tear down active streams and disallow new connections."
+
+[[actions]]
+name = "get_connection_state"
+params = []
+returns = "ConnectionState"
+blocking = false
+isr_safe = true
+description = "Read the current connection state; ISR-safe accessor."
+
+[[state_machines]]
+name = "ConnectionFSM"
+initial = "disconnected"
+states = ["disconnected", "discovering", "connected", "streaming"]
+
+[[state_machines.transitions]]
+name = "start_discovery"
+from = "disconnected"
+to = "discovering"
+event = "start_discovery_evt"
+
+[[state_machines.transitions]]
+name = "peer_connected"
+from = "discovering"
+to = "connected"
+event = "connected_evt"
+
+[[state_machines.transitions]]
+name = "discovery_timeout"
+from = "discovering"
+to = "disconnected"
+event = "timeout_evt"
+
+[[state_machines.transitions]]
+name = "audio_starts"
+from = "connected"
+to = "streaming"
+event = "audio_start_evt"
+
+[[state_machines.transitions]]
+name = "audio_stops"
+from = "streaming"
+to = "connected"
+event = "audio_stop_evt"
+
+[[state_machines.transitions]]
+name = "peer_disconnect_while_connected"
+from = "connected"
+to = "disconnected"
+event = "disconnect_evt"
+
+[[state_machines.transitions]]
+name = "peer_disconnect_while_streaming"
+from = "streaming"
+to = "disconnected"
+event = "disconnect_evt"
+
+[[errors]]
+variant = "InitFailed"
+description = "Bluetooth controller failed to initialise."
+
+[[errors]]
+variant = "AlreadyStarted"
+description = "start() was called twice without an intervening stop()."
+
+[[errors]]
+variant = "NotStarted"
+description = "Operation attempted before start()."
+
+[[errors]]
+variant = "BufferUnderrun"
+description = "Audio source delivered frames slower than the consumer."

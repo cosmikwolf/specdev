@@ -1,0 +1,16 @@
+#:schema ../../../../schema/firmware/v1/requirements.schema.yaml
+
+# Audio-related requirements for the blinky-a2dp example.
+# Modules reference these ids via their top-level `satisfies` array.
+
+[[requirement]]
+id = "REQ-AUDIO-001"
+text = "The system shall decode SBC audio at 44.1 kHz with no more than 20 ms end-to-end latency from Bluetooth RX to I2S DAC output."
+satisfies = []
+verified_by = ["BtA2dpSink.init", "AudioPipeline.run"]
+
+[[requirement]]
+id = "REQ-AUDIO-002"
+text = "Audio pipeline underruns shall be surfaced as PipelineError::BufferUnderrun and visibly indicated on the status LED within 100 ms."
+satisfies = ["REQ-AUDIO-001"]
+verified_by = ["AudioPipeline.run"]
