@@ -1,0 +1,81 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://specdev.dev/schema/firmware/v1/enums.schema.yaml"
+title: "Firmware enums (v1)"
+description: >
+  Shared closed vocabularies used across the firmware domain. Every enum here
+  is a $defs entry; other schemas reference these via $ref.
+
+$defs:
+  LayerKind:
+    description: >
+      Architectural layer a module belongs to. Dependencies flow downward per
+      domain.toml's layer_dependency rule.
+    type: string
+    enum:
+      - PAC
+      - HAL
+      - driver
+      - middleware
+      - application
+
+  AllocationKind:
+    description: How a module's state is allocated.
+    type: string
+    enum:
+      - static_alloc
+      - heap_alloc
+      - stack_alloc
+
+  ProtectionKind:
+    description: Synchronization primitive guarding shared state.
+    type: string
+    enum:
+      - none
+      - critical_section
+      - mutex
+      - atomic
+      - disable_interrupts
+
+  ErrorKind:
+    description: Error-handling strategy used by the module's API.
+    type: string
+    enum:
+      - panic
+      - enum_variant
+      - result_type
+      - errno
+      - option
+
+  BufferOwnerKind:
+    description: Who owns the buffers or resources a module handles.
+    type: string
+    enum:
+      - borrowed
+      - owned
+      - shared
+
+  PortDirection:
+    description: Direction of data flow across a port.
+    type: string
+    enum:
+      - in
+      - out
+      - bidirectional
+
+  ParamDirection:
+    description: Direction of an action parameter.
+    type: string
+    enum:
+      - in
+      - out
+      - inout
+
+  Identifier:
+    description: snake_case or PascalCase identifier usable in target languages.
+    type: string
+    pattern: "^[A-Za-z_][A-Za-z0-9_]*$"
+
+  QualifiedPort:
+    description: "Module.port reference used by architecture.toml connections."
+    type: string
+    pattern: "^[A-Za-z_][A-Za-z0-9_]*\\.[A-Za-z_][A-Za-z0-9_]*$"

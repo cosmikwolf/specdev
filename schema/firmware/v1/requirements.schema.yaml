@@ -1,0 +1,40 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://specdev.dev/schema/firmware/v1/requirements.schema.yaml"
+title: "Firmware requirements file (v1)"
+description: >
+  Shape of files under specs/requirements/. Each file groups related
+  requirements. Modules reference them by id via their top-level
+  `satisfies` array.
+type: object
+additionalProperties: false
+properties:
+  requirement:
+    type: array
+    items: { $ref: "#/$defs/Requirement" }
+
+$defs:
+  Requirement:
+    type: object
+    additionalProperties: false
+    required: [id, text]
+    properties:
+      id:
+        type: string
+        pattern: "^REQ-[A-Z0-9]+(-[A-Z0-9]+)*-\\d+$"
+      text:
+        type: string
+        minLength: 1
+      satisfies:
+        description: >
+          Parent requirement ids. Forms a requirement tree for traceability.
+        type: array
+        items:
+          type: string
+          pattern: "^REQ-[A-Z0-9]+(-[A-Z0-9]+)*-\\d+$"
+        uniqueItems: true
+      verified_by:
+        description: >
+          Dotted Module.action identifiers or test names that verify this
+          requirement. Free-form for v1.
+        type: array
+        items: { type: string, minLength: 1 }

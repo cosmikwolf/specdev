@@ -1,0 +1,24 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://specdev.dev/schema/firmware/v1/architecture.schema.yaml"
+title: "Firmware architecture spec (v1)"
+description: >
+  Shape of specs/architecture.toml — cross-module port connections (D17).
+  Each entry wires one module's port to another. The analyzer verifies at
+  validate time that every endpoint references an existing module and an
+  existing port on that module; this schema only enforces shape.
+type: object
+additionalProperties: false
+properties:
+  connections:
+    type: array
+    items: { $ref: "#/$defs/Connection" }
+
+$defs:
+  Connection:
+    type: object
+    additionalProperties: false
+    required: [from, to]
+    properties:
+      from:      { $ref: "enums.schema.yaml#/$defs/QualifiedPort" }
+      to:        { $ref: "enums.schema.yaml#/$defs/QualifiedPort" }
+      flow_type: { type: string }
