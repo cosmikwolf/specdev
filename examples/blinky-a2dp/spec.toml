@@ -1,0 +1,22 @@
+# Project config for the "blinky-a2dp" example — a Bluetooth A2DP audio sink
+# that streams PCM from a Bluetooth source to an I2S DAC, with a status LED.
+#
+# This example is the reference firmware project used across the planning docs
+# (see specdev-next/04-schema-design.md) and is the first fixture set the
+# analyzer's validate pipeline targets.
+
+spec_version = "1.0"
+
+[project]
+name = "blinky-a2dp"
+domain = "firmware"
+language = "rust"
+
+[source]
+root = "src"
+layout = "flat"
+
+# Project-local override paths for schema/domain/language/codegen trees live
+# here (see D13). When empty, the resolver falls back to .specdev/ then to
+# plugin defaults.
+[paths.overrides]

@@ -1,0 +1,84 @@
+#:schema ../../../../schema/firmware/v1/module.schema.yaml
+
+# AudioPipeline — middleware that bridges the Bluetooth A2DP sink to the I2S
+# output driver, with a ring buffer and a StatusLed for user feedback.
+# Ported from sysml-v2-analyzer/tests/fixtures/audio_pipeline.sysml.
+
+name = "AudioPipeline"
+layer = "middleware"
+description = "Routes PCM frames from BtA2dpSink to I2sOutput, surfaces state via StatusLed, and reports underruns."
+depends_on = ["BtA2dpSink", "I2sOutput", "StatusLed"]
+satisfies = ["REQ-AUDIO-001", "REQ-AUDIO-002"]
+
+[metadata.MemoryModel]
+allocation = "static_alloc"
+max_instances = 1
+owner = "owned"
+
+[metadata.ConcurrencyModel]
+protection = "mutex"
+isr_safe = false
+reentrant = false
+shared_state = ["ring_buffer"]
+
+[metadata.ErrorHandling]
+strategy = "result_type"
+error_type = "PipelineError"
+
+[metadata.Ownership]
+owner = "owned"
+
+[[ports]]
+name = "audio_in"
+port_type = "AudioDataPort"
+direction = "in"
+flow_type = "PcmFrame"
+
+[[ports]]
+name = "audio_write"
+port_type = "I2sWritePort"
+direction = "out"
+flow_type = "PcmFrame"
+
+[[ports]]
+name = "led_cmd"
+port_type = "LedCommandPort"
+direction = "out"
+flow_type = "StatusPattern"
+
+[[actions]]
+name = "new"
+params = [
+  { name = "i2s", type = "I2sOutput", direction = "in" },
+  { name = "bt",  type = "BtA2dpSink", direction = "in" },
+  { name = "led", type = "StatusLed", direction = "in" },
+  { name = "config", type = "PipelineConfig", direction = "in" },
+]
+returns = "Result<AudioPipeline, PipelineError>"
+blocking = false
+isr_safe = false
+description = "Construct the pipeline with its three owned sub-components."
+
+[[actions]]
+name = "run"
+params = []
+returns = "!"
+blocking = true
+isr_safe = false
+description = "Enter the pipeline event loop. Never returns under normal operation."
+
+[[errors]]
+variant = "I2sError"
+description = "I2S output driver reported an error."
+
+[[errors]]
+variant = "BtError"
+description = "Bluetooth sink driver reported an error."
+
+[[errors]]
+variant = "BufferOverflow"
+description = "Source delivered PCM frames faster than the sink could consume them."
+
+[[errors]]
+variant = "BufferUnderrun"
+description = "Sink consumed PCM frames faster than the source could deliver them."

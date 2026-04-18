@@ -1,0 +1,48 @@
+# specdev
+
+A Claude Code plugin for spec-driven firmware development. Author architecture and module specs in TOML, validate them against a machine-checkable JSON Schema, then generate or audit Rust / C / C++ firmware from those specs.
+
+Successor to [`spec-driven-dev`](../spec-driven-dev/). Pairs with the [`specdev-analyzer`](../specdev-analyzer/) Rust CLI.
+
+## Status
+
+Phase 1 — scaffolding. Not yet usable. See [`../specdev-next/00-status.md`](../specdev-next/00-status.md) for implementation progress.
+
+## What this plugin gives you
+
+- Skills (`/spec-init`, `/spec-design`, `/spec-validate`, `/spec-gen`, and more) that drive the spec-authoring and codegen workflow.
+- YAML-authored JSON Schema for the firmware domain under `schema/firmware/v1/`.
+- Domain guidance (`domains/firmware/`) and language guidance (`languages/{rust,c,cpp}/`) used by the skills.
+- Codegen rules per domain-language pair under `codegen/`.
+- A `scripts/resolve-context` helper that reads `spec.toml`, resolves project-local overrides from `.specdev/`, and returns the effective paths each skill should use.
+
+## How specs are laid out
+
+In a user project:
+
+```
+my-firmware/
+├── spec.toml                  # project config (domain, language, paths, spec_version)
+├── specs/
+│   ├── architecture.toml      # cross-module connections
+│   ├── modules/*.toml         # one module per file
+│   ├── requirements/*.toml    # requirement files, referenced by id
+│   └── ui/*.toml              # optional UI specs
+└── .specdev/                  # optional: project-local overrides
+    ├── schema/…
+    ├── domains/…
+    ├── languages/…
+    └── codegen/…
+```
+
+## Install
+
+Once Phase 11 ships, this plugin will be installable through the Claude Code plugin mechanism. The analyzer binary installs separately via:
+
+```
+cargo install --git https://github.com/tenkai/specdev-analyzer
+```
+
+## License
+
+MIT.

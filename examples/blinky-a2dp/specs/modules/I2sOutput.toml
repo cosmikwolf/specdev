@@ -1,0 +1,90 @@
+#:schema ../../../../schema/firmware/v1/module.schema.yaml
+
+# I2sOutput — driver for an I2S DAC (UDA1334A on I2S0).
+# Ported from sysml-v2-analyzer/tests/fixtures/i2s_output.sysml.
+
+name = "I2sOutput"
+layer = "driver"
+description = "I2S output driver that feeds PCM samples to an external DAC."
+depends_on = []
+satisfies = []
+
+[metadata.MemoryModel]
+allocation = "static_alloc"
+max_instances = 1
+owner = "owned"
+
+[metadata.ConcurrencyModel]
+protection = "none"
+isr_safe = false
+reentrant = false
+shared_state = []
+
+[metadata.ErrorHandling]
+strategy = "result_type"
+error_type = "I2sOutputError"
+
+[metadata.Ownership]
+owner = "owned"
+
+[hardware]
+[[hardware.peripherals]]
+name = "I2S0"
+role = "i2s_tx"
+
+[[hardware.pins]]
+name = "DOUT"
+port = "GPIO"
+pin = 22
+role = "i2s_dout"
+
+[[hardware.pins]]
+name = "BCK"
+port = "GPIO"
+pin = 25
+role = "i2s_bclk"
+
+[[hardware.pins]]
+name = "WS"
+port = "GPIO"
+pin = 26
+role = "i2s_wclk"
+
+[[ports]]
+name = "i2s_in"
+port_type = "I2sWritePort"
+direction = "in"
+flow_type = "PcmFrame"
+
+[[actions]]
+name = "new"
+params = [
+  { name = "i2s", type = "I2sPeripheral", direction = "in" },
+  { name = "bck", type = "GpioPin", direction = "in" },
+  { name = "ws",  type = "GpioPin", direction = "in" },
+  { name = "dout", type = "GpioPin", direction = "in" },
+]
+returns = "Result<I2sOutput, I2sOutputError>"
+blocking = false
+isr_safe = false
+description = "Construct an I2sOutput bound to the given peripheral and pins."
+
+[[actions]]
+name = "write_samples"
+params = [{ name = "data", type = "&[i16]", direction = "in" }]
+returns = "Result<usize, I2sOutputError>"
+blocking = true
+isr_safe = false
+description = "Write PCM samples; returns the count actually written."
+
+[[errors]]
+variant = "InitFailed"
+description = "I2S peripheral failed to initialise."
+
+[[errors]]
+variant = "WriteFailed"
+description = "A DMA or peripheral write failed."
+
+[[errors]]
+variant = "DmaError"
+description = "The underlying DMA transfer reported an error."
