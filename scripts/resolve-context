@@ -38,4 +38,4 @@ EOF
     exit 0
 fi
 
-exec "${ANALYZER_BIN}" resolve --project "$(pwd)" --plugin-root "${PLUGIN_ROOT}"
+exec "${ANALYZER_BIN}" resolve --project "$(pwd)" --plugin-root "${PLUGIN_ROOT}" --allow-missing

@@ -22,9 +22,14 @@ Modes, decided from `$ARGUMENTS`:
 
 ---
 
-## Step 0 — prerequisites
+## Step 0 — prerequisites and bootstrap
 
-If the context header reports the analyzer is not on PATH, or reports no `spec.toml`, stop and tell the user to run `/spec-init` first. If `spec.toml` is missing but the user wants to reverse from a raw source tree, offer to run `/spec-init` and resume.
+If the context header reports the analyzer is not on PATH, stop and tell the user to install it.
+
+If the context header reports **Status: no `spec.toml` found**, this is expected for a greenfield reverse on an existing codebase. Do **not** stop — instead, run the `/spec-init` flow inline first:
+
+1. Follow every step in `specdev/skills/spec-init/SKILL.md` (Steps 1–7), reading that skill's instructions verbatim. Defaults for the interview should be aggressively inferred from the source tree (Cargo.toml, CMakeLists.txt, etc.) so the user only confirms, not types.
+2. Once `spec.toml` and the `specs/` skeleton exist, continue with Step 1 below. Do not re-run the resolve-context header — you already know the project layout.
 
 ## Step 1 — read the authoritative guides
 
