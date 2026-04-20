@@ -11,6 +11,7 @@ Phase 1 — scaffolding. Not yet usable. See [`../specdev-next/00-status.md`](..
 ## What this plugin gives you
 
 - Skills (`/spec-init`, `/spec-design`, `/spec-validate`, `/spec-gen`, and more) that drive the spec-authoring and codegen workflow.
+- Agents under `agents/` — purpose-built subagents with their own model routing (e.g. `module-reverser` on Sonnet) that skills fan out for parallel, bounded work. Used today by `/spec-reverse --all` to extract modules concurrently.
 - YAML-authored JSON Schema for the firmware domain under `schema/firmware/v1/`.
 - Domain guidance (`domains/firmware/`) and language guidance (`languages/{rust,c,cpp}/`) used by the skills.
 - Codegen rules per domain-language pair under `codegen/`.
