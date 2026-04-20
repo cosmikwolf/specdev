@@ -82,6 +82,7 @@ For each item, quote the source lines you used as evidence. Fields not evidenced
 
 - **`name`** — PascalCase derived from the file/module name.
 - **`layer`** — infer from dependencies: direct register access → `pac` or `driver`; depends only on drivers → `middleware`; depends on middleware or has policy/business logic → `application`.
+- **`description`** — one sentence stating the module's *purpose* at a level higher than the rest of the spec. Do not restate anything that is already captured by other fields: no listing of actions, state machines, ports, hardware, dependencies, or error variants. If the sentence could be deleted without losing information a reader can't get from scanning the rest of the file, rewrite it. Target ≤ 20 words. Example — good: *"Drives the onboard status LED with solid, blinking, and breathing patterns."* Bad: *"A driver module in the driver layer that exposes set_pattern and tick actions, owns GPIO pin PA5, uses a critical section for shared state, and implements a three-state FSM for the LED."*
 - **`depends_on`** — imports/includes to other in-project modules.
 - **`actions[]`** — each public function (`pub fn`, non-`static` C function, or exported C++ method). For each: `params` (inline if ≤3), `direction` from parameter mode (`in` / `out` / `inout`), `blocking` (true if it can await, loop on IO, or acquire a mutex — otherwise false), `isr_safe` (true only when the function is clearly safe from ISR context).
 - **`state_machines[]`** — any enum consumed by a `match`/`switch` dispatching on current state; states are enum variants. Event enum, initial state, and transitions if the source dispatch is clear.
@@ -117,6 +118,8 @@ Scan for UI code:
 - **Navigation** — transitions between screens, timeouts, global actions (e.g. long-press to sleep).
 
 Read `<Schema dir>/ui.schema.yaml` for the exact field list. Present candidate `specs/ui/*.toml` with LOW-confidence comments. Write on confirmation.
+
+Any `description` field (on the UI file, a screen, an element) is one sentence describing *purpose*. Do not summarize the widgets, inputs, or navigation defined elsewhere in the same file.
 
 Run validate. Report file count, hardware/input/screen/nav counts, validation result.
 
