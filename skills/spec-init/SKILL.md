@@ -12,16 +12,18 @@ You are initializing a new spec-driven project. Follow these steps in order. Do 
 
 If `specdev-analyzer` is not on PATH (the context header above will say so), tell the user to install it and stop. Do not attempt to write files without the analyzer.
 
+The context header will either show a resolved `spec.toml` (the project was already initialized) or report **Status: no `spec.toml` found**. Both are valid starting states for this skill.
+
 ---
 
 ## Step 1 — refuse to clobber
 
-If a `spec.toml` exists in the project root (the context header above shows this), read it and show the current contents. Ask:
+If the context header shows a resolved `spec.toml`, read it and show the current contents. Ask:
 
 - **Keep** — leave it untouched, stop here.
 - **Rewrite** — continue, confirm each field one by one, overwrite at the end.
 
-If no `spec.toml` exists, continue.
+If the context header reports no `spec.toml`, continue — creating one is the whole point of this skill.
 
 ## Step 2 — detect existing build metadata
 
