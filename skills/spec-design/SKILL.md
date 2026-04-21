@@ -1,6 +1,6 @@
 ---
 name: spec-design
-description: Author or refine a single module TOML spec under specs/modules/, then validate it.
+description: This skill should be used when the user asks to "design a module", "add a module spec", "refine a module", "author a driver spec", "design <ModuleName>", or needs to write/refine a single module TOML under specs/modules/. Authors one module TOML per invocation, then validates it.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 argument-hint: <one-line module description>
 ---
@@ -9,13 +9,13 @@ argument-hint: <one-line module description>
 
 # /spec-design — Module authoring
 
-You design one module per invocation. User input: `$ARGUMENTS` (a one-line description of what the module does). If `$ARGUMENTS` is empty, ask first.
+Design one module per invocation. User input: `$ARGUMENTS` (a one-line description of what the module does). If `$ARGUMENTS` is empty, ask first.
 
-Your job is to produce a TOML file at `specs/modules/<ModuleName>.toml` that:
+Produce a TOML file at `specs/modules/<ModuleName>.toml` that:
 
 1. Validates against the resolved schema.
 2. Follows the authoring guidance in the resolved domain directory.
-3. Fits the existing project: consistent naming, uses actual peripherals declared in `specs/architecture.toml`, and depends only on modules that exist (or that you explicitly note as follow-up work).
+3. Fits the existing project: consistent naming, uses actual peripherals declared in `specs/architecture.toml`, and depends only on modules that exist (or modules explicitly noted as follow-up work).
 
 ---
 
@@ -25,7 +25,7 @@ If the context header reports the analyzer is not on PATH, or reports no `spec.t
 
 ## Step 1 — read the authoritative guides
 
-Read these files, in order, from the paths given in the context header (NOT hard-coded plugin paths — the resolver may have pointed you at `.specdev/` overrides):
+Read these files, in order, from the paths given in the context header (NOT hard-coded plugin paths — the resolver may have pointed to `.specdev/` overrides):
 
 1. `<Domain dir>/author.md` — how modules are structured for this domain, with examples.
 2. `<Schema dir>/module.schema.yaml` — canonical field list and enums. This is the contract; treat it as authoritative over any other doc.
@@ -37,7 +37,7 @@ Do not read the codegen guides. They describe how specs turn into code, which is
 
 ## Step 2 — interview
 
-Ask the user for the fields you cannot reasonably infer from `$ARGUMENTS`:
+Ask the user for fields not reasonably inferable from `$ARGUMENTS`:
 
 - **Name** — PascalCase. Default: suggest a name derived from `$ARGUMENTS`.
 - **Layer** — from the enum in `module.schema.yaml`. Ask which, default from the description (e.g. "driver for an I2C sensor" → `driver`).
@@ -75,7 +75,7 @@ If there are errors:
 2. Fix the TOML. Do not mask errors by removing fields — fix the actual modeling problem.
 3. Re-validate until clean.
 
-If the user stops you to discuss a structural issue (e.g. "actually this should be two modules"), stop, write a short plan, and wait for confirmation before rewriting.
+If the user raises a structural issue (e.g. "actually this should be two modules"), stop, write a short plan, and wait for confirmation before rewriting.
 
 ## Step 5 — optional: extract and show
 
@@ -86,5 +86,5 @@ Once validate is clean, run `specdev-analyzer extract --project <project_root> -
 One-paragraph summary:
 - Module name and path written.
 - Key decisions (layer, ownership kind, error strategy) in one line each.
-- Anything the user asked for but was not placed in the file, and where you recorded it instead.
+- Anything the user asked for but was not placed in the file, and where it was recorded instead.
 - Suggested next step: `/spec-design <next module>`, or `/spec-gen <ModuleName>` once at least one module exists.

@@ -1,6 +1,6 @@
 ---
 name: spec-edit
-description: Edit an existing module TOML spec with downstream impact analysis, then validate.
+description: This skill should be used when the user asks to "edit <ModuleName>", "update this module spec", "rename this action", "change the pins for <module>", "remove a field", "refactor a module spec", or needs to modify an existing module TOML with downstream impact analysis. Edits one existing module spec per invocation, analyzes same-package/cross-package/project-wide impact, then validates.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 argument-hint: <ModuleName> [change description]
 ---
@@ -9,7 +9,7 @@ argument-hint: <ModuleName> [change description]
 
 # /spec-edit — Edit a module spec
 
-You edit exactly one existing module TOML per invocation. First positional arg is the module name. It may be bare (`StatusLed`) or qualified as `<pkg>::<Module>` (`drivers::StatusLed`). Qualified form is required when two packages declare modules with the same name. Any remaining text is a free-form change description.
+Edit exactly one existing module TOML per invocation. First positional arg is the module name. It may be bare (`StatusLed`) or qualified as `<pkg>::<Module>` (`drivers::StatusLed`). Qualified form is required when two packages declare modules with the same name. Any remaining text is a free-form change description.
 
 If `$ARGUMENTS` is empty, ask the user which module to edit and what to change. Never guess.
 
@@ -39,7 +39,7 @@ Read, in this order:
 2. `specs/architecture.toml` — for the project's peripherals and connection list.
 3. Every other file under `specs/modules/**/*.toml` — for downstream impact analysis.
 4. `<Schema dir>/module.schema.yaml` and `<Schema dir>/metadata.schema.yaml` — the authoritative field list for edits.
-5. `<Domain dir>/author.md` — if the user's change touches structure you haven't seen before.
+5. `<Domain dir>/author.md` — if the change touches unfamiliar structure.
 
 Do not read codegen guides — this skill does not generate code.
 
@@ -58,7 +58,7 @@ Summarize the module grouped by topic, not raw TOML:
 
 ## Step 4 — interview, if needed
 
-If the user's request is ambiguous, ask focused questions — batch them in one message. Otherwise proceed straight to Step 5.
+If the request is ambiguous, ask focused questions — batch them in one message. Otherwise proceed straight to Step 5.
 
 ## Step 5 — impact analysis
 
@@ -91,7 +91,7 @@ Apply the change using `Edit`. Obey the rules from `/spec-design` step 3:
 3. Do not drop required metadata sub-objects.
 4. Keep inline-table vs array-of-tables form consistent with the rest of the file.
 
-Show a focused diff of the change. For non-trivial edits wait for user confirmation before running validate.
+Show a focused diff of the change. For non-trivial edits, wait for user confirmation before running validate.
 
 ## Step 7 — validate
 
@@ -100,7 +100,7 @@ Run `specdev-analyzer validate --project <project_root> --no-color`. Present the
 On errors:
 1. Map each rule id to a fix (`LAYER001`, `FSM020/21/22`, `PORT030`, `ISR060`, `OWN050`, `REQ001/002`, `META010`).
 2. Fix the modeling problem — do not delete fields to silence the checker.
-3. Re-run until clean or until the user stops you.
+3. Re-run until clean or until the user stops.
 
 ## Step 8 — report
 
@@ -109,4 +109,4 @@ One paragraph:
 - What changed (fields + summary).
 - Validation result.
 - Downstream modules that likely need a follow-up edit (list by qualified name `<pkg>::<Module>` when packaged, else bare name).
-- Suggested next step: `/spec-edit <qualified-name>` for each affected dependent, or `/spec-gen <qualified-name>` if the user wants regenerated code.
+- Suggested next step: `/spec-edit <qualified-name>` for each affected dependent, or `/spec-gen <qualified-name>` to regenerate code.

@@ -1,6 +1,6 @@
 ---
 name: fetch-datasheet
-description: Download, parse, and summarize a hardware datasheet PDF into docs/datasheets/<part>/<doc_type>/summary.yaml.
+description: This skill should be used when the user asks to "fetch a datasheet", "download the datasheet for <part>", "grab the ESP32/STM32/nRF datasheet", "parse this chip PDF", "summarize this reference manual", or when spec work needs authoritative hardware data. Downloads, parses, and summarizes a hardware datasheet PDF into docs/datasheets/<part>/<doc_type>/summary.yaml.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, WebSearch, WebFetch
 argument-hint: <part-number | URL | description>
 ---
@@ -9,13 +9,13 @@ argument-hint: <part-number | URL | description>
 
 # /fetch-datasheet — Download, parse, summarize hardware datasheets
 
-You are fetching a hardware datasheet, parsing it into chapters, and generating a structured summary that downstream skills can cite. Follow these steps in order. Never invent values — when a field is not stated in the parsed text, write `null`.
+Fetch a hardware datasheet, parse it into chapters, and generate a structured summary that downstream skills can cite. Follow these steps in order. Never invent values — when a field is not stated in the parsed text, write `null`.
 
 ---
 
 ## Step 1 — read context
 
-Read `specs/architecture.toml` if it exists — note the MCU target so you can suggest sensible defaults. If it doesn't exist, proceed anyway; datasheets are useful even pre-architecture.
+Read `specs/architecture.toml` if it exists — note the MCU target to suggest sensible defaults. If it does not exist, proceed anyway; datasheets are useful even pre-architecture.
 
 ## Step 2 — determine input from `$ARGUMENTS`
 

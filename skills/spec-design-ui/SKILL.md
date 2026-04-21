@@ -1,6 +1,6 @@
 ---
 name: spec-design-ui
-description: Interactively design firmware UI specs (displays, inputs, indicators, screens, navigation) under specs/ui/.
+description: This skill should be used when the user asks to "design the UI", "add a screen", "set up navigation", "design firmware UI", "add input devices", or needs to author UI specs (displays, inputs, indicators, screens, navigation) under specs/ui/. Authors TOML UI specs interactively.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 argument-hint: <one-line UI description>
 ---
@@ -9,9 +9,9 @@ argument-hint: <one-line UI description>
 
 # /spec-design-ui — UI authoring
 
-You design the UI surface for the project. Output is a set of TOMLs under `specs/ui/`. `$ARGUMENTS` is a natural-language description of the UI; if empty, ask the user for a description with 2–3 examples of expected detail level.
+Design the UI surface for the project. Output is a set of TOMLs under `specs/ui/`. `$ARGUMENTS` is a natural-language description of the UI; if empty, ask the user for a description with 2–3 examples of expected detail level.
 
-The v1 UI schema is deliberately permissive — **inner items accept unknown keys**. That means authoring ergonomics wins over strictness. Still, every *known* key you emit must match `ui.schema.yaml` exactly, and required keys (`name`, `Navigation.initial`, `Navigation.states`) must be present.
+The v1 UI schema is deliberately permissive — **inner items accept unknown keys**. That means authoring ergonomics wins over strictness. Still, every *known* key emitted must match `ui.schema.yaml` exactly, and required keys (`name`, `Navigation.initial`, `Navigation.states`) must be present.
 
 ---
 
@@ -30,13 +30,13 @@ If the context header reports the analyzer is not on PATH, or reports no `spec.t
 
 ## Step 2 — multi-phase design
 
-Present each phase as a table or layout and **wait for approval between phases**. Don't design everything in one shot.
+Present each phase as a table or layout and **wait for approval between phases**. Do not design everything in one shot.
 
 ### 2a — Hardware
 
 Identify displays, input devices, indicators. For each display: `name` (PascalCase), `width`, `height`, plus free-form keys for `driver`, `interface`, `color_depth`. For input devices: `name`, `kind` (e.g. `button`, `rotary`, `touch`). Indicators: `name`, `kind` (e.g. `rgb_led`, `pwm_led`).
 
-Cross-reference pins/peripherals in `specs/architecture.toml`. If a pin isn't declared there yet, offer to add it in a follow-up.
+Cross-reference pins/peripherals in `specs/architecture.toml`. If a pin is not declared there yet, offer to add it in a follow-up.
 
 ### 2b — Input vocabulary
 
@@ -76,7 +76,7 @@ Verify but do NOT block on missing dependencies:
 
 - Data-bound modules exist under `specs/modules/**/*.toml`.
 - Display/input pins appear in `specs/architecture.toml`.
-- If a binding refers to a module that doesn't exist, list it as a follow-up for `/spec-design <Module>`.
+- If a binding refers to a module that does not exist, list it as a follow-up for `/spec-design <Module>`.
 
 Report status with check/cross marks for each dependency.
 
@@ -97,7 +97,7 @@ Run `specdev-analyzer validate --project <project_root> --no-color`. For each er
 - Missing `name` on a display / input / indicator / screen → add it.
 - `Navigation.transitions` referencing an unknown state → add the state or correct the reference.
 
-Fix mechanical issues; ask the user about design-level changes.
+Fix mechanical issues; ask about design-level changes.
 
 ## Step 6 — report
 
