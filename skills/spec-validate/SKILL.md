@@ -1,6 +1,6 @@
 ---
 name: spec-validate
-description: This skill should be used when the user asks to "validate specs", "check spec.toml", "run spec-validate", "find schema errors", "check LAYER001/FSM020/PORT030/REQ001 violations", or needs to run specdev-analyzer validate and get actionable fix suggestions.
+description: This skill should be used when the user asks to "validate specs", "verify spec consistency", "check spec errors", "check spec.toml", "find schema errors", or "check LAYER001/FSM020/PORT030/REQ001 violations". Runs specdev-analyzer validate and maps rule codes to actionable fixes.
 allowed-tools: Read, Bash, Glob, Grep
 ---
 

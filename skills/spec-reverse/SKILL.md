@@ -1,6 +1,6 @@
 ---
 name: spec-reverse
-description: This skill should be used when the user asks to "reverse-engineer specs", "generate specs from code", "document this existing codebase", "run spec-reverse", "extract specs from source", "reverse <ModuleName>", "spec-reverse --all", or "spec-reverse --ui". Extracts architecture, module, or UI TOML specs from an existing Rust/C/C++ codebase.
+description: This skill should be used when the user asks to "reverse-engineer specs", "generate specs from code", "document this existing codebase", "reverse <ModuleName>", "spec-reverse --all", or "spec-reverse --ui". Extracts architecture, module, or UI TOML specs from an existing Rust/C/C++ codebase.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 argument-hint: [<ModuleName> | --all | --ui]
 ---

@@ -1,6 +1,6 @@
 ---
 name: fetch-datasheet
-description: This skill should be used when the user asks to "fetch a datasheet", "download the datasheet for <part>", "grab the ESP32/STM32/nRF datasheet", "parse this chip PDF", "summarize this reference manual", or when spec work needs authoritative hardware data. Downloads, parses, and summarizes a hardware datasheet PDF into docs/datasheets/<part>/<doc_type>/summary.yaml.
+description: This skill should be used when the user asks to "fetch a datasheet", "download the datasheet for <part>", "parse this chip PDF", or "summarize this reference manual". Downloads, parses, and summarizes a hardware datasheet PDF into docs/datasheets/<part>/<doc_type>/summary.yaml.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, WebSearch, WebFetch
 argument-hint: <part-number | URL | description>
 ---
