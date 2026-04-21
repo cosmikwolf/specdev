@@ -75,7 +75,16 @@ $defs:
     type: string
     pattern: "^[A-Za-z_][A-Za-z0-9_]*$"
 
-  QualifiedPort:
-    description: "Module.port reference used by architecture.toml connections."
+  ModuleRef:
+    description: >
+      Reference to a module: a bare `Module` identifier, or a package-qualified
+      `<package>::<Module>` form used in multi-package projects.
     type: string
-    pattern: "^[A-Za-z_][A-Za-z0-9_]*\\.[A-Za-z_][A-Za-z0-9_]*$"
+    pattern: "^([a-z][a-z0-9_]*::)?[A-Za-z_][A-Za-z0-9_]*$"
+
+  QualifiedPort:
+    description: >
+      `Module.port` or `<package>::<Module>.port` reference used by
+      architecture.toml connections.
+    type: string
+    pattern: "^([a-z][a-z0-9_]*::)?[A-Za-z_][A-Za-z0-9_]*\\.[A-Za-z_][A-Za-z0-9_]*$"

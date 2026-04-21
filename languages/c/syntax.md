@@ -14,6 +14,31 @@ src/<module>/<module>.c          # Implementation
 tests/<module>_test.c            # Test stubs
 ```
 
+In multi-subproject CMake builds (ESP-IDF components, Zephyr modules, etc.),
+`src/` above is `<source_dir>/`: the `source_path` of the spec module's
+package, resolved by `/spec-gen` (see D24). E.g. `drivers::led` with
+`source_path = "components/drivers"` lands at
+`components/drivers/src/led/led.c`.
+
+---
+
+## Source-to-spec mapping
+
+C projects map to spec layout as follows:
+
+- **CMake `add_subdirectory(components/<name>)` target** (ESP-IDF component,
+  Zephyr module, CMake subproject) → one package in `spec.toml` `[[packages]]`.
+  The subdirectory path is the `source_path`.
+- **Single-binary CMake project** → no `[[packages]]`; the project is flat.
+- **`.c` + matching `.h` pair** → one spec module. File stem is snake_case;
+  the spec `name` is PascalCase (e.g. `status_led.c`/`status_led.h` →
+  `StatusLed.toml`). A `.c` file that spans layers becomes multiple spec
+  modules.
+- **Types-only component** (`include/` with headers but no `.c`) → no spec
+  modules; its structs/enums become shared ports in `architecture.toml`.
+- **`main.c`** → not a spec module; it wires modules together per
+  `architecture.toml`.
+
 ---
 
 ## File Header Comment

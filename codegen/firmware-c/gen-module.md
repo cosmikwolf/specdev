@@ -2,6 +2,15 @@
 
 This file defines how firmware module spec concepts map to C language constructs. Every rule couples a firmware domain concept with a specific C pattern.
 
+## Source Directory Placeholder
+
+Every path of the form `src/...` or `src/include/...` in this file is shorthand for `<source_dir>/...`, resolved by `/spec-gen` per target:
+
+- If the module YAML carries a `package: <name>` key, `<source_dir>` is `<packages.<name>.source_path>/src/` — for a module `drivers::Led` in a CMake project with `source_path = "components/drivers"`, files land under `components/drivers/src/`.
+- Otherwise `<source_dir>` is `<source.root>/` from `spec.toml` (typically `src/`), and substitution is a no-op.
+
+Never hard-code the project root for a packaged module — always route through its package's `source_path`.
+
 ## Extraction YAML Schema
 
 See `codegen/firmware-rust/gen-module.md` for the full extraction YAML schema — field names are identical across all languages.

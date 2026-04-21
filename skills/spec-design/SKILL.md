@@ -46,7 +46,7 @@ Ask the user for the fields you cannot reasonably infer from `$ARGUMENTS`:
 - **Hardware** — pins, peripherals, clocks the module owns or borrows. Cross-check against `specs/architecture.toml`.
 - **State machine** — if the module has one, ask for initial state, state names, and the triggering events. Defer transition details to the TOML.
 - **Errors** — which failure modes the module reports. One short variant name + one-line description each.
-- **Requirements satisfied** — if the project has `specs/requirements/*.toml`, list the ids this module implements. Otherwise leave empty.
+- **Requirements satisfied** — if the project has `specs/requirements/*.toml`, list the ids this module implements. Otherwise leave empty. (Requirements themselves may declare `source`/`source_ref` pointing at an external spec document — the module's `satisfies[]` still references requirement ids only, not source ids.)
 
 Batch these questions in one message. Show reasonable defaults so a fluent user can accept them all.
 

@@ -46,8 +46,15 @@ PORT030    = "error"    # architecture connection endpoint not found.
 TYPE040    = "warning"  # type in action/port not in type_map for language.
 REQ001     = "warning"  # requirement id not satisfied by any module.
 REQ002     = "error"    # module satisfies[] references unknown requirement id.
+REQ003     = "error"    # requirement source[] references unknown source id.
 OWN050     = "error"    # two modules own the same hardware resource.
 ISR060     = "error"    # action is isr_safe=true and blocking=true simultaneously.
+PKG040     = "warning"  # module under specs/modules/<X>/ where <X> is not a declared package.
+PKG041     = "info"     # module directly under specs/modules/ in a multi-package project.
+PKG042     = "warning"  # [[packages]].source_path does not exist on disk.
+PKG043     = "error"    # depends_on / architecture endpoint references an unknown package or module.
+PKG044     = "error"    # unqualified reference is ambiguous across multiple packages.
+MOD_DEPTH  = "error"    # module file nested deeper than one level under specs/modules/.
 
 # Module-level graph checks. Applied per module spec.
 [[module.graph_checks]]
@@ -128,6 +135,13 @@ rule = "REQ002"
 kind = "reference_exists"
 source_field = "modules[].satisfies[]"
 target_field = "requirements[].id"
+scope = "project"
+
+[[project.graph_checks]]
+rule = "REQ003"
+kind = "reference_exists"
+source_field = "requirements[].source[]"
+target_field = "sources[].id"
 scope = "project"
 
 [[project.graph_checks]]

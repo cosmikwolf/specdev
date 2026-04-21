@@ -171,8 +171,14 @@ additional context.
 - Requirement id appears in zero module's `satisfies[]` → REQ001 warning.
 - Requirement's `verified_by[]` lists `Module.action` pairs that do not
   resolve to existing actions → warning.
+- Requirement's `source[]` lists ids that do not resolve to any
+  `[[source]]` entry across the requirements files → REQ003 error.
+- Requirement has `source_ref` set but `source = []` (or unset) → warning.
+  A free-form locator with no source to anchor it is ambiguous.
+- A declared `[[source]]` that no requirement references → info. May be
+  a stub waiting on derivation, or dead metadata.
 
-**Severity:** warning.
+**Severity:** warning unless otherwise noted.
 
 ---
 
