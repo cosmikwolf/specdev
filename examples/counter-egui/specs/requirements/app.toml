@@ -1,0 +1,21 @@
+#:schema ../../../../schema/egui/v1/requirements.schema.yaml
+
+# Requirements for the counter-egui example. Views and stores reference
+# these ids via their top-level `satisfies` array.
+
+[[source]]
+id = "user-stories"
+kind = "user"
+title = "Counter-egui product brief"
+
+[[requirement]]
+id = "REQ-COUNTER-001"
+text = "The application shall expose a counter value that persists across application restarts."
+source = ["user-stories"]
+verified_by = ["CounterStore"]
+
+[[requirement]]
+id = "REQ-COUNTER-002"
+text = "The user shall be able to increment and decrement the counter via on-screen buttons."
+source = ["user-stories"]
+verified_by = ["increment", "decrement"]

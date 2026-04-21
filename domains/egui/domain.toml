@@ -1,0 +1,241 @@
+# egui domain config (v1).
+#
+# This file wires the egui (native Rust GUI) domain to:
+#   * its JSON Schema files (schema/egui/v1/*.schema.yaml)
+#   * the graph-check primitives the analyzer runs after structural validation
+#   * the extra `stores` collection under specs/stores/
+#   * metadata defaults, severity levels, and the Rust type map
+#
+# Unlike firmware, this domain does NOT use layered dependency enforcement —
+# egui views compose freely, with cycles caught by `acyclic` only.
+
+[domain]
+name = "egui"
+description = "Native Rust GUI apps built on egui + eframe — views, stores, and panel composition."
+
+[schemas]
+module        = "../../schema/egui/v1/module.schema.yaml"
+store         = "../../schema/egui/v1/store.schema.yaml"
+requirements  = "../../schema/egui/v1/requirements.schema.yaml"
+architecture  = "../../schema/egui/v1/architecture.schema.yaml"
+
+# Domain-declared per-file collection in addition to the built-in
+# specs/modules/, specs/requirements/, specs/architecture.toml paths.
+# Each entry under specs/stores/*.toml is validated against the `store`
+# schema and exposed at project.stores[] for graph checks.
+[[collections]]
+name   = "stores"
+dir    = "stores"
+schema = "store"
+
+# Metadata categories every view SHOULD declare. Missing required metadata
+# emits META010 during validation.
+[required_metadata]
+module = ["StateOwnership", "UpdateTrigger", "ErrorHandling"]
+
+# Severity of each validation rule id. Rule ids are stable across versions.
+[validation.rules]
+VIEW001    = "error"    # view depends_on references unknown view.
+VIEW002    = "error"    # cyclic view dependency.
+SUB001     = "error"    # sub_views entry references unknown view.
+WIDGET020  = "error"    # widget on_event references unknown action on the view.
+WIDGET021  = "error"    # widget names not unique within the view.
+ACTION030  = "error"    # action names not unique within the view.
+NAV050     = "error"    # navigation.initial not in states[].
+NAV051     = "error"    # navigation transition references unknown state.
+NAV052     = "warning"  # navigation state unreachable from initial.
+MOUNT060   = "error"    # architecture mount references unknown view.
+MOUNT061   = "error"    # two mounts share the same panel slot.
+FSM020     = "error"    # view-internal FSM initial not in states[].
+FSM021     = "error"    # view-internal FSM transition references unknown state.
+FSM022     = "warning"  # view-internal FSM state unreachable.
+META010    = "error"    # required metadata category missing on a view.
+META011    = "warning"  # metadata value disagrees with domain default.
+REQ001     = "warning"  # requirement id not satisfied by any view or store.
+REQ002     = "error"    # satisfies[] references unknown requirement id.
+REQ003     = "error"    # requirement source[] references unknown source id.
+PKG040     = "warning"  # module under specs/modules/<X>/ where <X> is not a declared package.
+PKG041     = "info"     # module directly under specs/modules/ in a multi-package project.
+PKG042     = "warning"  # [[packages]].source_path does not exist on disk.
+PKG043     = "error"    # depends_on / architecture endpoint references an unknown package or module.
+PKG044     = "error"    # unqualified reference is ambiguous across multiple packages.
+MOD_DEPTH  = "error"    # module file nested deeper than one level under specs/modules/.
+
+# View-level graph checks (applied to each module spec individually).
+[[module.graph_checks]]
+kind = "unique"
+field = "widgets[].name"
+scope = "module"
+rule = "WIDGET021"
+
+[[module.graph_checks]]
+kind = "unique"
+field = "actions[].name"
+scope = "module"
+rule = "ACTION030"
+
+[[module.graph_checks]]
+rule = "WIDGET020"
+kind = "reference_exists"
+source_field = "widgets[].on_event"
+target_field = "actions[].name"
+scope = "module"
+
+[[module.graph_checks]]
+rule = "FSM020"
+kind = "reference_exists"
+source_field = "state_machines[].initial"
+target_field = "state_machines[].states[]"
+scope = "per_state_machine"
+
+[[module.graph_checks]]
+rule = "FSM021"
+kind = "reference_exists"
+source_field = "state_machines[].transitions[].from"
+target_field = "state_machines[].states[]"
+scope = "per_state_machine"
+
+[[module.graph_checks]]
+rule = "FSM021"
+kind = "reference_exists"
+source_field = "state_machines[].transitions[].to"
+target_field = "state_machines[].states[]"
+scope = "per_state_machine"
+
+[[module.graph_checks]]
+rule = "FSM022"
+kind = "reachability"
+nodes_field  = "state_machines[].states[]"
+edges_from   = "state_machines[].transitions[].from"
+edges_to     = "state_machines[].transitions[].to"
+entry_field  = "state_machines[].initial"
+scope = "per_state_machine"
+
+[[module.graph_checks]]
+kind = "unique"
+field = "state_machines[].name"
+scope = "module"
+
+[[module.graph_checks]]
+kind = "unique"
+field = "errors[].variant"
+scope = "module"
+
+# Project-level graph checks (applied across all view + store + architecture).
+[[project.graph_checks]]
+rule = "VIEW001"
+kind = "reference_exists"
+source_field = "modules[].depends_on[]"
+target_field = "modules[].name"
+scope = "project"
+
+[[project.graph_checks]]
+rule = "SUB001"
+kind = "reference_exists"
+source_field = "modules[].sub_views[]"
+target_field = "modules[].name"
+scope = "project"
+
+[[project.graph_checks]]
+rule = "VIEW002"
+kind = "acyclic"
+nodes_field  = "modules[].name"
+edges_from   = "modules[].name"
+edges_to     = "modules[].depends_on[]"
+scope = "project"
+
+[[project.graph_checks]]
+rule = "REQ002"
+kind = "reference_exists"
+source_field = "modules[].satisfies[]"
+target_field = "requirements[].id"
+scope = "project"
+
+[[project.graph_checks]]
+rule = "REQ002"
+kind = "reference_exists"
+source_field = "stores[].satisfies[]"
+target_field = "requirements[].id"
+scope = "project"
+
+[[project.graph_checks]]
+rule = "REQ003"
+kind = "reference_exists"
+source_field = "requirements[].source[]"
+target_field = "sources[].id"
+scope = "project"
+
+[[project.graph_checks]]
+rule = "MOUNT060"
+kind = "reference_exists"
+source_field = "architecture.mounts[].view"
+target_field = "modules[].name"
+scope = "project"
+
+[[project.graph_checks]]
+rule = "MOUNT061"
+kind = "unique"
+field = "architecture.mounts[].slot"
+scope = "project"
+
+[[project.graph_checks]]
+rule = "NAV050"
+kind = "reference_exists"
+source_field = "architecture.navigation.initial"
+target_field = "architecture.navigation.states[]"
+scope = "project"
+
+[[project.graph_checks]]
+rule = "NAV051"
+kind = "reference_exists"
+source_field = "architecture.navigation.transitions[].from"
+target_field = "architecture.navigation.states[]"
+scope = "project"
+
+[[project.graph_checks]]
+rule = "NAV051"
+kind = "reference_exists"
+source_field = "architecture.navigation.transitions[].to"
+target_field = "architecture.navigation.states[]"
+scope = "project"
+
+[[project.graph_checks]]
+rule = "NAV052"
+kind = "reachability"
+nodes_field  = "architecture.navigation.states[]"
+edges_from   = "architecture.navigation.transitions[].from"
+edges_to     = "architecture.navigation.transitions[].to"
+entry_field  = "architecture.navigation.initial"
+scope = "project"
+
+# Navigation states must also be declared views with kind=root_view.
+# Enforced structurally via reference_exists against modules[].name; the
+# "must be kind=root_view" semantic is covered in validate.md.
+[[project.graph_checks]]
+kind = "reference_exists"
+source_field = "architecture.navigation.states[]"
+target_field = "modules[].name"
+scope = "project"
+
+# Baseline values assumed when a view does not override them. Used by
+# validation (META011) and by codegen to avoid redundant annotations.
+[metadata.defaults.StateOwnership]
+location = "local"
+
+[metadata.defaults.UpdateTrigger]
+kind = "on_event"
+
+[metadata.defaults.ErrorHandling]
+strategy = "result_type"
+
+# Domain-level type aliases that map to Rust types. TYPE040-style warnings
+# are not wired up in v1; codegen falls back to the raw type string when a
+# domain alias is absent.
+[type_map.rust]
+Integer = "i32"
+Boolean = "bool"
+String  = "String"
+Text    = "String"
+Real    = "f64"
+Id      = "egui::Id"
+Color   = "egui::Color32"

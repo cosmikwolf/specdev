@@ -1,0 +1,175 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://specdev.dev/schema/egui/v1/module.schema.yaml"
+title: "egui view spec (v1)"
+description: >
+  Shape of a single view spec in `specs/modules/*.toml`. A view is the
+  first-class compositional unit in this domain (named `module` for
+  cross-domain filesystem consistency with firmware). One view per file;
+  filename should match the `name` field.
+type: object
+additionalProperties: false
+required: [name, kind]
+properties:
+  name:
+    $ref: "enums.schema.yaml#/$defs/Identifier"
+  kind:
+    $ref: "enums.schema.yaml#/$defs/ViewKind"
+  description:
+    type: string
+  depends_on:
+    description: Other views this one composes or renders as sub-views.
+    type: array
+    items: { $ref: "enums.schema.yaml#/$defs/ModuleRef" }
+    uniqueItems: true
+  reads:
+    description: >
+      Store or view fields this view reads, as "Owner.field". Validated
+      against declared stores and views at project scope (BIND010).
+    type: array
+    items: { $ref: "enums.schema.yaml#/$defs/QualifiedBinding" }
+    uniqueItems: true
+  writes:
+    description: >
+      Store or view fields this view writes, as "Owner.field". Validated
+      the same way as reads. An entry in writes[] need not also appear in
+      reads[].
+    type: array
+    items: { $ref: "enums.schema.yaml#/$defs/QualifiedBinding" }
+    uniqueItems: true
+  satisfies:
+    type: array
+    items: { $ref: "#/$defs/RequirementId" }
+    uniqueItems: true
+  metadata:
+    $ref: "metadata.schema.yaml#/$defs/MetadataObject"
+  widgets:
+    type: array
+    items: { $ref: "#/$defs/Widget" }
+  actions:
+    type: array
+    items: { $ref: "#/$defs/Action" }
+  sub_views:
+    description: >
+      Names of child views rendered inside this one (must also appear in
+      depends_on[]). Kept as a distinct list so codegen knows which
+      dependencies are rendered vs. merely referenced.
+    type: array
+    items: { $ref: "enums.schema.yaml#/$defs/Identifier" }
+    uniqueItems: true
+  state_machines:
+    description: >
+      View-internal modes (e.g. loading/loaded/error). Same structure as
+      firmware FSMs; validated by the same FSM020-022 rules.
+    type: array
+    items: { $ref: "#/$defs/StateMachine" }
+  errors:
+    type: array
+    items: { $ref: "#/$defs/ErrorVariant" }
+
+$defs:
+  RequirementId:
+    type: string
+    pattern: "^REQ-[A-Z0-9]+(-[A-Z0-9]+)*-\\d+$"
+
+  Widget:
+    type: object
+    additionalProperties: false
+    required: [name, kind]
+    properties:
+      name:
+        $ref: "enums.schema.yaml#/$defs/Identifier"
+      kind:
+        $ref: "enums.schema.yaml#/$defs/WidgetKind"
+      label:
+        description: >
+          Static text shown on the widget. For button/label/heading/
+          checkbox/radio_button/selectable_label. Omit for widgets whose
+          text is data-bound via `binding`.
+        type: string
+      binding:
+        description: >
+          Owner.field this widget reads or displays. Must appear in the
+          view's reads[] or writes[] list. Codegen uses this to emit the
+          right ui call (e.g. ui.add(Slider::new(&mut store.x, 0..=100))).
+        $ref: "enums.schema.yaml#/$defs/QualifiedBinding"
+      on_event:
+        description: >
+          Name of an action on this view to invoke when the widget fires
+          (button clicked, text changed, slider released). Must match an
+          entry in this view's actions[].
+        $ref: "enums.schema.yaml#/$defs/Identifier"
+      enabled_when:
+        description: >
+          Free-form boolean expression in target-language syntax used to
+          gate the widget (ui.add_enabled). Kept free-form in v1;
+          codegen pastes it verbatim.
+        type: string
+
+  ActionParam:
+    type: object
+    additionalProperties: false
+    required: [name, type, direction]
+    properties:
+      name:      { $ref: "enums.schema.yaml#/$defs/Identifier" }
+      type:      { type: string, minLength: 1 }
+      direction: { $ref: "enums.schema.yaml#/$defs/ParamDirection" }
+
+  Action:
+    description: >
+      Handler invoked in response to a widget event. Actions are the view's
+      public vocabulary; widgets reference them by name in on_event.
+    type: object
+    additionalProperties: false
+    required: [name]
+    properties:
+      name:
+        $ref: "enums.schema.yaml#/$defs/Identifier"
+      description:
+        type: string
+      params:
+        type: array
+        items: { $ref: "#/$defs/ActionParam" }
+      returns:
+        type: string
+      async:
+        description: >
+          If true, the handler spawns async work and the view should
+          request a repaint on completion. Codegen emits a channel/future
+          pattern rather than an inline call.
+        type: boolean
+
+  Transition:
+    type: object
+    additionalProperties: false
+    required: [from, to, event]
+    properties:
+      name:   { $ref: "enums.schema.yaml#/$defs/Identifier" }
+      from:   { $ref: "enums.schema.yaml#/$defs/Identifier" }
+      to:     { $ref: "enums.schema.yaml#/$defs/Identifier" }
+      event:  { $ref: "enums.schema.yaml#/$defs/Identifier" }
+      guard:  { type: string }
+      action: { type: string }
+
+  StateMachine:
+    type: object
+    additionalProperties: false
+    required: [name, initial, states]
+    properties:
+      name:    { $ref: "enums.schema.yaml#/$defs/Identifier" }
+      initial: { $ref: "enums.schema.yaml#/$defs/Identifier" }
+      states:
+        type: array
+        minItems: 1
+        uniqueItems: true
+        items: { $ref: "enums.schema.yaml#/$defs/Identifier" }
+      transitions:
+        type: array
+        items: { $ref: "#/$defs/Transition" }
+
+  ErrorVariant:
+    type: object
+    additionalProperties: false
+    required: [variant]
+    properties:
+      variant:     { $ref: "enums.schema.yaml#/$defs/Identifier" }
+      description: { type: string }

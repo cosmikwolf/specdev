@@ -1,0 +1,65 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://specdev.dev/schema/egui/v1/metadata.schema.yaml"
+title: "egui metadata categories (v1)"
+description: >
+  Object shape of each metadata category a view spec may declare. The
+  top-level `metadata` object on a view is closed (D18) — only the
+  categories named below are accepted, and each category object is itself
+  closed. Stores and architecture do not take metadata.
+
+$defs:
+  MetadataObject:
+    description: The value of `metadata` on a view spec. Closed.
+    type: object
+    additionalProperties: false
+    properties:
+      StateOwnership: { $ref: "#/$defs/StateOwnership" }
+      UpdateTrigger:  { $ref: "#/$defs/UpdateTrigger" }
+      ErrorHandling:  { $ref: "#/$defs/ErrorHandling" }
+
+  StateOwnership:
+    description: >
+      Where this view's state is owned. `local` — an ephemeral field on the
+      view struct, lost on window close. `store` — read/written against a
+      store declared in specs/stores/. `parent` — received from the parent
+      view by reference. Declared `reads[]`/`writes[]` on the view must be
+      consistent with this choice: StateOwnership=local should have empty
+      reads/writes; StateOwnership=store should list at least one
+      Store.field binding.
+    type: object
+    additionalProperties: false
+    required: [location]
+    properties:
+      location:
+        $ref: "enums.schema.yaml#/$defs/StateOwnershipKind"
+
+  UpdateTrigger:
+    description: >
+      egui calls update() every frame, but most views only do meaningful
+      work in response to input. `per_frame` — re-renders every frame
+      regardless (animations, live plots). `on_event` — renders reactively
+      when input changes a value it reads. `on_request` — deferred render
+      via ctx.request_repaint_after() driven by async work.
+    type: object
+    additionalProperties: false
+    required: [kind]
+    properties:
+      kind:
+        $ref: "enums.schema.yaml#/$defs/UpdateTriggerKind"
+      repaint_after_ms:
+        description: >
+          Hint for on_request: longest interval before self-repaint, in
+          milliseconds. Codegen emits ctx.request_repaint_after() with
+          this value.
+        type: integer
+        minimum: 0
+
+  ErrorHandling:
+    type: object
+    additionalProperties: false
+    required: [strategy]
+    properties:
+      strategy:
+        $ref: "enums.schema.yaml#/$defs/ErrorKind"
+      error_type:
+        $ref: "enums.schema.yaml#/$defs/Identifier"
