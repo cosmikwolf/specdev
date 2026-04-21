@@ -51,10 +51,10 @@ From an existing codebase:
 | `/spec-init`     | Scaffold `spec.toml` and the `specs/` directory tree.              |
 | `/spec-design`   | Author one module TOML interactively.                              |
 | `/spec-edit`     | Modify an existing module with downstream impact analysis.         |
-| `/spec-design-ui`| Design UI specs (displays, inputs, indicators, screens, nav).      |
+| `/spec-design-ui`| Design firmware UI specs (displays, inputs, indicators, screens, nav). Firmware domain only. |
 | `/spec-validate` | Run the analyzer and translate findings into actionable fixes.     |
 | `/spec-gen`      | Generate source code from validated specs.                         |
-| `/spec-gen-ui`   | Generate UI rendering code, or emit Mermaid interaction diagrams.  |
+| `/spec-gen-ui`   | Generate firmware UI rendering code, or emit Mermaid interaction diagrams. Firmware domain only. |
 | `/spec-reverse`  | Reverse-engineer specs from existing Rust / C / C++ source.        |
 | `/fetch-datasheet` | Download, parse, and summarize a hardware datasheet PDF.         |
 
