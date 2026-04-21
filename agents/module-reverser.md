@@ -106,3 +106,4 @@ Do not validate, do not write files, do not run the analyzer. The invoker will d
 - **Schema is the contract.** Every key you emit must appear in `module.schema.yaml`. When in doubt, re-read the schema.
 - **Stay read-only.** You have `Read`, `Grep`, `Glob` — no `Write`, `Edit`, `Bash`. That is intentional.
 - **One module per invocation.** If the source you find plausibly represents two modules, say so in Notes and let the invoker decide.
+- **No explanatory comments in the Candidate TOML.** The only comments permitted are (a) the `#:schema` directive on line 1 and (b) the inline `# LOW:` markers from Step 4. Do not emit file-header prose, section dividers, or comments that restate a nearby field — facts belong in schema fields.

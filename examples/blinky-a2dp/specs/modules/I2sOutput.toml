@@ -1,7 +1,5 @@
 #:schema ../../../../schema/firmware/v1/module.schema.yaml
 
-# I2sOutput — driver for an I2S DAC (UDA1334A on I2S0).
-
 name = "I2sOutput"
 layer = "driver"
 description = "I2S output driver that feeds PCM samples to an external DAC."

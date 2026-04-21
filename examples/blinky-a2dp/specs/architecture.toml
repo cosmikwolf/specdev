@@ -1,9 +1,5 @@
 #:schema ../../../schema/firmware/v1/architecture.schema.yaml
 
-# Cross-module connections for the blinky-a2dp example. Each entry wires one
-# module's port to another. The analyzer's project-level graph checks verify
-# that every endpoint references an existing module and an existing port.
-
 [[connections]]
 from = "BtA2dpSink.audio_out"
 to   = "AudioPipeline.audio_in"

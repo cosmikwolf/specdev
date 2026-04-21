@@ -191,3 +191,4 @@ Do these in order, pausing for confirmation between passes:
 - **Schema is the contract.** Every key written must appear in `module.schema.yaml`, `architecture.schema.yaml`, or `ui.schema.yaml`.
 - **One module per file.** Do not fold multiple concerns into a single TOML.
 - **Stop on structural ambiguity.** If a source file plausibly represents two modules, ask before splitting.
+- **No explanatory comments.** The only comments permitted in an emitted TOML are (a) the `#:schema` directive on line 1 and (b) inline `# LOW: inferred from <source>:<line>, please confirm` markers next to LOW-confidence fields. Do not add file-header prose, section dividers, or comments that restate a nearby field — facts belong in schema fields, not comments. LOW markers are transient review metadata, intended to be cleared once the user confirms each field; once confirmed, the comment is removed in the written file.

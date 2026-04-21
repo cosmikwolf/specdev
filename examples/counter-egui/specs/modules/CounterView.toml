@@ -1,6 +1,3 @@
-# The single root view for the counter app. Renders the count plus
-# increment / decrement buttons; mutates CounterStore.count directly.
-
 name = "CounterView"
 kind = "root_view"
 description = "Displays the counter value and increment/decrement buttons."
@@ -19,7 +16,6 @@ kind = "on_event"
 [metadata.ErrorHandling]
 strategy = "result_type"
 
-# Widget list order = render order (top-to-bottom).
 [[widgets]]
 name = "title"
 kind = "heading"

@@ -1,8 +1,5 @@
 #:schema ../../../../schema/firmware/v1/requirements.schema.yaml
 
-# Audio-related requirements for the blinky-a2dp example.
-# Modules reference these ids via their top-level `satisfies` array.
-
 [[source]]
 id = "bt-a2dp-v1-4"
 kind = "protocol"
