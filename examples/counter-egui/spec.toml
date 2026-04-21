@@ -1,9 +1,6 @@
-# Project config for the "counter-egui" example — the minimal egui-domain
-# fixture: a one-screen native app with a counter that increments,
-# decrements, and persists across restarts via eframe::Storage.
-#
-# This example is the reference egui project used to validate D7
-# domain-neutrality (see specdev-next/09-new-domain-recipe.md).
+# Project config for the "counter-egui" example — a minimal native egui app:
+# a one-screen counter that increments, decrements, and persists across
+# restarts via eframe::Storage.
 
 spec_version = "1.0"
 
@@ -17,6 +14,6 @@ root = "src"
 layout = "flat"
 
 # Project-local override paths for schema/domain/language/codegen trees
-# live here (see D13). When empty, the resolver falls back to .specdev/
-# then to plugin defaults.
+# live here. When empty, the resolver falls back to .specdev/ then to
+# plugin defaults.
 [paths.overrides]
