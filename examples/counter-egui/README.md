@@ -1,33 +1,41 @@
-# counter-egui — minimal egui domain fixture
+# counter-egui
 
-The "blinky" of the egui domain: a one-screen native Rust GUI app with
-a persisted counter. Two buttons (+ / −), one label, one store.
+A minimal native Rust GUI example using the [egui](https://github.com/emilk/egui) immediate-mode framework. One screen, two buttons (+ / −), one label, one persisted counter.
 
-Proves the specdev analyzer is domain-neutral by exercising the full
-validate → extract pipeline against a non-firmware project.
+Demonstrates the specdev workflow on a non-firmware domain: the same `/spec-design`, `/spec-validate`, `/spec-gen` commands work here, just with `domain = "egui"` in `spec.toml` instead of `"firmware"`.
 
 ## Layout
 
 ```
 counter-egui/
-├── spec.toml                            # project config (domain = "egui")
+├── spec.toml                      # domain = "egui", language = "rust"
 └── specs/
-    ├── architecture.toml                # mounts CounterView in central
+    ├── architecture.toml          # mounts CounterView in central panel
     ├── modules/
-    │   └── CounterView.toml             # the one view
+    │   └── CounterView.toml       # the view
     ├── stores/
-    │   └── CounterStore.toml            # the one store (persisted)
+    │   └── CounterStore.toml      # the persisted counter
     └── requirements/
-        └── app.toml                     # REQ-COUNTER-001, -002
+        └── app.toml               # REQ-COUNTER-001, -002
 ```
 
-## Smoke
+## Run the analyzer
+
+From the repo root:
 
 ```
-specdev-analyzer validate specdev/examples/counter-egui
-specdev-analyzer extract -o /tmp/counter-egui-out specdev/examples/counter-egui
+specdev-analyzer validate --project specdev/examples/counter-egui
+specdev-analyzer extract  --project specdev/examples/counter-egui --output /tmp/counter-out
 ```
 
-Expected: zero errors; extraction produces `CounterView.yaml`,
-`architecture.yaml`, `requirements.yaml`, and `stores/CounterStore.yaml`
-with keys alphabetically sorted.
+Expected: clean validation, four YAML files written (`CounterView.yaml`, `architecture.yaml`, `requirements.yaml`, `stores/CounterStore.yaml`) with keys alphabetized for byte-stable diffs.
+
+## Regenerate code
+
+Inside Claude Code with the plugin installed:
+
+```
+/spec-gen --all
+```
+
+This emits Rust modules under `src/` following the egui codegen guides shipped with the plugin (view functions, store wiring, app init).

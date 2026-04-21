@@ -1,7 +1,6 @@
 #:schema ../../../../schema/firmware/v1/module.schema.yaml
 
 # I2sOutput — driver for an I2S DAC (UDA1334A on I2S0).
-# Ported from sysml-v2-analyzer/tests/fixtures/i2s_output.sysml.
 
 name = "I2sOutput"
 layer = "driver"

@@ -1,7 +1,7 @@
 #:schema ../../../../schema/firmware/v1/module.schema.yaml
 
 # StatusLed — driver for an APA102 (DotStar) RGB LED used as a system status
-# indicator. Ported from sysml-v2-analyzer/tests/fixtures/status_led.sysml.
+# indicator.
 
 name = "StatusLed"
 layer = "driver"

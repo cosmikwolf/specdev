@@ -1,7 +1,6 @@
 #:schema ../../../../schema/firmware/v1/module.schema.yaml
 
 # BtA2dpSink — driver managing a Bluetooth A2DP audio sink.
-# Ported from sysml-v2-analyzer/tests/fixtures/bt_a2dp_sink.sysml.
 
 name = "BtA2dpSink"
 layer = "driver"

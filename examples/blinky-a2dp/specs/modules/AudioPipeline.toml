@@ -2,7 +2,6 @@
 
 # AudioPipeline — middleware that bridges the Bluetooth A2DP sink to the I2S
 # output driver, with a ring buffer and a StatusLed for user feedback.
-# Ported from sysml-v2-analyzer/tests/fixtures/audio_pipeline.sysml.
 
 name = "AudioPipeline"
 layer = "middleware"

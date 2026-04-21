@@ -1,30 +1,43 @@
-# Example: `blinky-a2dp`
+# blinky-a2dp
 
-Reference project that pairs with the specdev planning docs. A Bluetooth A2DP
-audio sink streams PCM frames from a paired source to an I2S DAC, surfacing
-status (discoverable / connected / underrun) on a DotStar LED.
+A Bluetooth A2DP audio sink firmware example. Streams PCM frames from a paired Bluetooth source to an I2S DAC and surfaces connection status on a DotStar RGB LED.
 
-Modules:
+Target: ESP32 with Bluetooth and I2S.
 
-| Module         | Layer      | Purpose                                               |
-| -------------- | ---------- | ----------------------------------------------------- |
-| `StatusLed`    | driver     | APA102 DotStar LED driver with a 3-state FSM.         |
-| `BtA2dpSink`   | driver     | Bluetooth A2DP sink with a 4-state connection FSM.    |
-| `I2sOutput`    | driver     | I2S DAC driver (single-threaded, owns peripheral).    |
-| `AudioPipeline`| middleware | Bridges Bt → I2S, drives the status LED, reports drift. |
+## Modules
 
-Additional files:
+| Module          | Layer      | Purpose                                                   |
+| --------------- | ---------- | --------------------------------------------------------- |
+| `StatusLed`     | driver     | APA102 DotStar driver with a 3-state pattern FSM.         |
+| `BtA2dpSink`    | driver     | Bluetooth A2DP sink with a 4-state connection FSM.        |
+| `I2sOutput`     | driver     | I2S DAC driver; single-threaded, owns the peripheral.     |
+| `AudioPipeline` | middleware | Bridges Bluetooth → I2S, drives the LED, reports drift.   |
 
-- `spec.toml` — project-level config.
-- `specs/architecture.toml` — cross-module port connections (D17).
-- `specs/requirements/audio.toml` — requirements referenced by `satisfies`.
+## Files
 
-These specs are ports of the existing SysML fixtures under
-`sysml-v2-analyzer/tests/fixtures/`. Once Phase 2 schemas land, this project
-must validate cleanly end-to-end; it is the first acceptance test for the
-analyzer.
+- `spec.toml` — project config (domain, language, source root).
+- `specs/architecture.toml` — cross-module port connections.
+- `specs/modules/*.toml` — one TOML per module.
+- `specs/requirements/audio.toml` — requirements referenced by modules via `satisfies`.
 
-## Status
+## Run the analyzer
 
-Phase 1 — specs exist; schemas and validator do not yet. Running
-`specdev-analyzer validate` on this project today prints a placeholder message.
+From the repo root:
+
+```
+specdev-analyzer validate --project specdev/examples/blinky-a2dp
+specdev-analyzer extract  --project specdev/examples/blinky-a2dp --output /tmp/blinky-out
+specdev-analyzer audit    --project specdev/examples/blinky-a2dp
+```
+
+Expected: clean validation, six YAML files written under `/tmp/blinky-out/` (four modules + `architecture.yaml` + `requirements.yaml`), audit reports Match for every extracted module.
+
+## Regenerate code
+
+Inside Claude Code with the plugin installed:
+
+```
+/spec-gen --all
+```
+
+This emits Rust / C / C++ source under `src/` following the project's configured language and the codegen guides shipped with the plugin.
