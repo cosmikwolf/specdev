@@ -19,7 +19,7 @@ Phase 1 — scaffolding. Not yet usable. See [`../specdev-next/00-status.md`](..
 
 ## How specs are laid out
 
-In a user project:
+Single-crate project:
 
 ```
 my-firmware/
@@ -35,6 +35,23 @@ my-firmware/
     ├── languages/…
     └── codegen/…
 ```
+
+Multi-crate / multi-subproject workspace (D24 — declare `[[packages]]` in `spec.toml`):
+
+```
+my-workspace/
+├── spec.toml                          # includes [[packages]] name + source_path per crate
+├── crates/core/     src/…
+├── crates/drivers/  src/…
+└── specs/
+    ├── architecture.toml              # endpoints may be <pkg>::<Module>.<port>
+    ├── modules/
+    │   ├── core/Clock.toml
+    │   └── drivers/Led.toml           # depends_on = ["core::Clock"]
+    └── requirements/*.toml            # requirements are NOT packaged
+```
+
+The `package` is derived from the filesystem path — never written inside module TOMLs. Cross-package references use `<pkg>::<Module>` syntax; unqualified names resolve within the same package first.
 
 ## Install
 

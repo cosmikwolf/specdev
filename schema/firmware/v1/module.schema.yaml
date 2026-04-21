@@ -16,7 +16,7 @@ properties:
     type: string
   depends_on:
     type: array
-    items: { $ref: "enums.schema.yaml#/$defs/Identifier" }
+    items: { $ref: "enums.schema.yaml#/$defs/ModuleRef" }
     uniqueItems: true
   external_deps:
     type: array

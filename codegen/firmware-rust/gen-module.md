@@ -2,6 +2,15 @@
 
 This file defines how firmware module spec concepts map to Rust language constructs. Every rule couples a firmware domain concept with a specific Rust pattern.
 
+## Source Directory Placeholder
+
+Every path of the form `src/...` in this file is shorthand for `<source_dir>/...`, resolved by `/spec-gen` per target:
+
+- If the module YAML carries a `package: <name>` key, `<source_dir>` is `<packages.<name>.source_path>/src/` — for a module `drivers::StatusLed` in a workspace with `source_path = "crates/drivers"`, files land under `crates/drivers/src/`.
+- Otherwise `<source_dir>` is `<source.root>/` from `spec.toml` (typically `src/`), and substitution is a no-op.
+
+Never hard-code the workspace root for a packaged module — always route through its package's `source_path`.
+
 ## Extraction YAML Schema
 
 Code generation reads the per-module YAML produced by `specdev-analyzer extract`. Key fields:

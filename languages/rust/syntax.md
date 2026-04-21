@@ -15,6 +15,29 @@ src/<module>/tests.rs    # Test stubs
 
 The parent `src/lib.rs` or `src/main.rs` must declare each module with `mod <module>;`.
 
+In multi-crate workspaces, `src/` in the paths above is `<source_dir>/`: the
+`source_path` of the spec module's package, resolved by `/spec-gen` (see D24).
+E.g. `drivers::Led` with `source_path = "crates/drivers"` lands at
+`crates/drivers/src/led/mod.rs`.
+
+---
+
+## Source-to-spec mapping
+
+Rust projects map to spec layout as follows:
+
+- **Cargo workspace member** → one package in `spec.toml` `[[packages]]`. The
+  member's directory (`crates/<name>`) is the package's `source_path`.
+- **Single Cargo crate** → no `[[packages]]` needed; the project is flat.
+- **`src/<name>.rs` or `src/<name>/mod.rs`** → one spec module per file, named
+  PascalCase (e.g. `src/status_led.rs` → `StatusLed.toml`). A file that spans
+  two layers (e.g. both HAL wrappers and middleware logic) becomes *two* spec
+  modules, not one.
+- **Types-only crate** (common names: `common`, `types`, `interfaces`) → no
+  spec modules; its types surface as shared ports in `architecture.toml`.
+- **Binary crate `src/main.rs`** → the `main` entrypoint is not a spec module;
+  it wires up other modules and belongs in `architecture.toml`.
+
 ---
 
 ## File Header Comment

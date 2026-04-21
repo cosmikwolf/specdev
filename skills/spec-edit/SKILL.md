@@ -9,7 +9,7 @@ argument-hint: <ModuleName> [change description]
 
 # /spec-edit — Edit a module spec
 
-You edit exactly one existing module TOML per invocation. First positional arg is the module name (PascalCase, matching the file stem under `specs/modules/`). Any remaining text is a free-form change description.
+You edit exactly one existing module TOML per invocation. First positional arg is the module name. It may be bare (`StatusLed`) or qualified as `<pkg>::<Module>` (`drivers::StatusLed`). Qualified form is required when two packages declare modules with the same name. Any remaining text is a free-form change description.
 
 If `$ARGUMENTS` is empty, ask the user which module to edit and what to change. Never guess.
 
@@ -21,10 +21,15 @@ If the context header reports the analyzer is not on PATH, or reports no `spec.t
 
 ## Step 1 — locate the module
 
-Glob `specs/modules/**/<ModuleName>.toml`. If not found:
-1. Try a case-insensitive match.
-2. Try matching by `name = "..."` inside TOML files, in case the filename diverged.
-3. If still unfound, stop: "No module named `<ModuleName>`. Use `/spec-design <name>` to create it, or list existing modules."
+Parse `$ARGUMENTS` for a `<pkg>::<Module>` split.
+
+- **Qualified (`<pkg>::<Module>`)** — look at `specs/modules/<pkg>/<Module>.toml`. If absent, stop with an error.
+- **Bare (`<Module>`)** — glob `specs/modules/**/<Module>.toml`:
+  1. If exactly one match, use it. Record its package as the parent directory name (or `None` if directly under `specs/modules/`).
+  2. If multiple matches (same name in multiple packages), stop and list them: "Ambiguous — qualify as `<pkg>::<Module>`."
+  3. If zero matches, try case-insensitive; try matching by inner `name = "..."`. If still unfound, stop: "No module named `<Module>`. Use `/spec-design <name>` to create it, or list existing modules."
+
+Record the resolved package (if any) — Step 5 uses it to scope searches.
 
 ## Step 2 — read context
 
@@ -57,17 +62,25 @@ If the user's request is ambiguous, ask focused questions — batch them in one 
 
 ## Step 5 — impact analysis
 
-Before writing, audit downstream effects. Do each that applies:
+Before writing, audit downstream effects. Partition findings into three buckets when the project declares `[[packages]]`:
 
-- **Renaming/removing an action** — grep other modules for the action name; flag callers.
-- **Renaming/removing a port** — grep `specs/architecture.toml` `[[connections]]` entries; list broken wires.
-- **Changing `layer`** — check every module that `depends_on` this one; if their layer is now higher per `<Domain dir>/domain.toml`, flag `LAYER001` violations.
-- **Changing `depends_on`** — check for cycles; check layer rules both ways.
-- **Changing `hardware.peripherals` / `hardware.pins`** — cross-check `specs/architecture.toml` and grep other modules for the same resource (two modules must not both own the same pin or peripheral).
-- **Changing `metadata.ConcurrencyModel`** — if any action is `isr_safe = true`, `protection` cannot be `none`.
-- **Changing `metadata.Ownership.owner`** — verify that owner module exists.
+- **Same-package impact** — callers or resource conflicts within the target module's package.
+- **Cross-package impact** — callers or references from other packages (expected for public cross-crate APIs; flag so the user knows the blast radius).
+- **Project-wide impact** — concerns that ignore package boundaries (hardware ownership, wiring in `specs/architecture.toml`).
 
-If any issue surfaces, present them clearly and **wait for confirmation** before editing.
+For unpackaged projects, collapse to a single flat report.
+
+Do each that applies:
+
+- **Renaming/removing an action** — grep `depends_on` and source under the target's `package.source_path` first (same-package bucket), then every other package's `source_path` (cross-package bucket). Unqualified references inside the same package resolve locally; qualified `<pkg>::<Module>.action` references from other packages must also be matched.
+- **Renaming/removing a port** — grep `specs/architecture.toml` `[[connections]]` entries; a connection endpoint may appear qualified (`<pkg>::<Module>.port`) or unqualified. List broken wires as **project-wide**.
+- **Changing `layer`** — check every module that `depends_on` this one across *all* packages; if their layer is now higher per `<Domain dir>/domain.toml`, flag `LAYER001`. Report in the Cross-package bucket if the caller's package differs.
+- **Changing `depends_on`** — check for cycles and layer rules both ways. Qualified references cross package boundaries; resolve them before the graph check.
+- **Changing `hardware.peripherals` / `hardware.pins`** — always **project-wide**. Pin conflicts ignore package boundaries. Cross-check `specs/architecture.toml` and grep every module for the same resource.
+- **Changing `metadata.ConcurrencyModel`** — local check: if any action is `isr_safe = true`, `protection` cannot be `none`.
+- **Changing `metadata.Ownership.owner`** — verify the owner module exists; accept unqualified same-package name or qualified `<pkg>::<Module>`.
+
+If any issue surfaces, present them grouped by bucket and **wait for confirmation** before editing.
 
 ## Step 6 — edit
 
@@ -95,5 +108,5 @@ One paragraph:
 
 - What changed (fields + summary).
 - Validation result.
-- Downstream modules that likely need a follow-up edit (list by name).
-- Suggested next step: `/spec-edit` each affected dependent, or `/spec-gen <ModuleName>` if the user wants regenerated code.
+- Downstream modules that likely need a follow-up edit (list by qualified name `<pkg>::<Module>` when packaged, else bare name).
+- Suggested next step: `/spec-edit <qualified-name>` for each affected dependent, or `/spec-gen <qualified-name>` if the user wants regenerated code.

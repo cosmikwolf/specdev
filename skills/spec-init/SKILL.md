@@ -83,6 +83,20 @@ layout = "<flat or workspace>"
 # codegen = "./.specdev/codegen/firmware-rust"
 ```
 
+**If `layout = "workspace"`:** enumerate the root `Cargo.toml`'s `[workspace] members` (or `CMakeLists.txt` `add_subdirectory(...)` calls for C/C++). Append one `[[packages]]` entry per member with `source_path` set to the member's relative path. Example:
+
+```toml
+[[packages]]
+name = "core"
+source_path = "crates/core"
+
+[[packages]]
+name = "drivers"
+source_path = "crates/drivers"
+```
+
+Package `name` must be snake_case and unique. Omit the `[[packages]]` section entirely for single-package (flat) projects.
+
 Do not add `target`, `rtos`, `environment`, or similar fields to `spec.toml` — those are firmware metadata and belong in `specs/architecture.toml`.
 
 ## Step 6 — create the specs/ tree
@@ -91,6 +105,8 @@ Create these directories under the project root (only if they do not exist):
 
 - `specs/modules/`
 - `specs/requirements/`
+
+**If `[[packages]]` is declared:** also create one empty directory per declared package under `specs/modules/<pkg>/` and drop a `.gitkeep` file inside each. Module TOMLs will land there in later skills (`/spec-reverse`, `/spec-design`).
 
 Write `specs/architecture.toml` with this skeleton. Populate `target`, `rtos`, `environment`, `external_packages` from the interview and build-file detection:
 
@@ -124,7 +140,7 @@ build_integration = { cargo = 'example_pkg = "0.1"' }
 # to   = "AudioPipeline.pcm_in"
 ```
 
-Write `specs/requirements/README.md` with a one-paragraph explanation: "Each `.toml` file in this directory declares one or more requirements. Modules reference requirements via their `satisfies = [...]` field. Run `specdev-analyzer validate` to check that every satisfied id is declared and every requirement is satisfied by at least one module."
+Write `specs/requirements/README.md` with a one-paragraph explanation: "Each `.toml` file in this directory declares one or more requirements and, optionally, the external `[[source]]` documents (protocol specs, standards, user briefs) those requirements are derived from. Each requirement has an id (`REQ-<NAMESPACE>-NNN`) and may reference one or more source ids via `source = [...]` with a free-form `source_ref` locator. Modules reference requirements via their `satisfies = [...]` field. Run `specdev-analyzer validate` to check that every satisfied id is declared, every `source` id resolves, and every requirement is satisfied by at least one module."
 
 Do NOT create any module TOMLs yet. Leave `specs/modules/` empty — that is the job of `/spec-design`.
 

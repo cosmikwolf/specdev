@@ -19,6 +19,8 @@ The invoker provides in the prompt:
 - `domain_dir` — absolute path to the resolved domain directory.
 - `language_dir` — absolute path to the resolved language directory.
 - `source_hint` — optional path to source file(s); if absent, infer from the module name.
+- `package` — optional snake_case package name (multi-package projects only). When provided, the Candidate TOML is written by the invoker to `specs/modules/<package>/<ModuleName>.toml`; do **not** add a `package` field to the TOML itself — the analyzer derives it from the filesystem path.
+- `source_path` — optional absolute or project-relative path. When provided, restrict all Read / Grep / Glob searches to this subtree; do not scan other package trees. Used to scope evidence for one package in a multi-package fan-out.
 
 If any of these are missing, return an error message saying which and stop. Do not guess paths.
 
@@ -36,15 +38,17 @@ Read these once, in order:
 
 ## Step 2 — locate source
 
-Heuristics (Rust):
-- `src/<snake_case>.rs`
-- `src/<snake_case>/mod.rs`
-- workspace member named `<snake_case>` with its own `src/lib.rs`
+If `source_path` was provided, treat it as the search root for this invocation. All Read/Grep/Glob calls must stay within it. If `source_hint` was provided, prefer it (and it must fall within `source_path` when that is also set).
+
+Heuristics (Rust), searched under `source_path` if set, else under the project root:
+- `<root>/<snake_case>.rs`
+- `<root>/<snake_case>/mod.rs`
+- workspace member named `<snake_case>` with its own `src/lib.rs` (only applies when no `source_path` was given)
 
 Heuristics (C / C++):
-- `src/<snake_case>.c` / `.cpp` plus matching header.
+- `<root>/<snake_case>.c` / `.cpp` plus matching header.
 
-If `source_hint` was provided, prefer it. If no source is found, return an error indicating the searched paths.
+If no source is found, return an error indicating the searched paths.
 
 ## Step 3 — extract with evidence
 

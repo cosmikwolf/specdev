@@ -11,11 +11,14 @@ The schema is the contract. This doc explains the reasoning behind it.
 
 ## File layout
 
-A firmware project has this shape:
+A firmware project has one of two shapes depending on whether it declares
+`[[packages]]` in `spec.toml`.
+
+**Flat (single-package):**
 
 ```
 my-firmware/
-├── spec.toml                          # project-level config
+├── spec.toml                          # no [[packages]] section
 └── specs/
     ├── architecture.toml              # cross-module port connections (D17)
     ├── modules/
@@ -26,8 +29,55 @@ my-firmware/
         └── <ScreenGroup>.toml         # optional; for UI projects
 ```
 
+**Packaged (multi-crate / multi-subproject, D24):**
+
+```
+my-firmware/
+├── spec.toml                          # declares [[packages]] for each crate
+├── crates/
+│   ├── core/        src/...           # package "core", source_path = "crates/core"
+│   └── drivers/     src/...           # package "drivers", source_path = "crates/drivers"
+└── specs/
+    ├── architecture.toml              # cross-module ports; endpoints may be
+    │                                   #   <pkg>::<Module>.<port>
+    ├── modules/
+    │   ├── core/
+    │   │   └── Clock.toml
+    │   └── drivers/
+    │       └── Led.toml               # depends_on = ["core::Clock"]
+    └── requirements/
+        └── <topic>.toml               # requirements are NOT packaged
+```
+
 One module per file. Filename matches the `name` field (`StatusLed.toml` for
-`name = "StatusLed"`).
+`name = "StatusLed"`). The `package` is **derived from the filesystem path** —
+never write a `package` field inside the TOML.
+
+---
+
+## Spec modules and packages
+
+A **spec module** is one coherent unit of behavior at one layer, touching at
+most one peripheral concern. This is a *stricter* rule than "one Rust module
+equals one spec module":
+
+- A Cargo workspace *crate* may contain multiple spec modules (e.g. `drivers`
+  crate contains `Led`, `Display`, `Button`).
+- A crate that exposes types-only has no spec modules — its types become shared
+  ports in `architecture.toml` instead.
+- A spec module never spans layers: if a single `.rs` file is half-driver and
+  half-middleware, split it into two spec modules (and ideally two files) when
+  writing the spec.
+
+When a project declares `[[packages]]`, references across packages must be
+**qualified** as `<pkg>::<Module>`:
+
+- `depends_on = ["core::Clock"]` — drivers crate depends on a core type.
+- `[[connections]] from = "core::Clock.tick_out" to = "drivers::Led.tick_in"`
+
+Within the same package, use unqualified names — they resolve locally first.
+The analyzer will error with `PKG044` on ambiguous unqualified references when
+the same name exists in multiple packages.
 
 ---
 
@@ -197,6 +247,41 @@ REQ002.
 Every requirement with `verified_by = []` triggers REQ001 (warning) at
 project validate time — this flags orphaned requirements without failing
 the build.
+
+### Sources (traceability to external documents)
+
+A requirement often paraphrases a clause from an external document
+(protocol spec, standard, user brief). Declare each document once as a
+top-level `[[source]]` and reference it by id:
+
+```toml
+[[source]]
+id = "midi2-ump"
+kind = "protocol"           # protocol | user | regulatory | derived
+title = "MIDI 2.0 Universal MIDI Packet Specification"
+version = "1.1.2"
+url = "https://midi.org/..."
+
+[[requirement]]
+id = "REQ-UMP-0001"
+text = "UMP messages shall be 32, 64, 96, or 128 bits."
+source = ["midi2-ump"]       # one or more source ids
+source_ref = "§2.1.4"        # free-form locator
+```
+
+Rules:
+
+- `source` is an array — a requirement may derive from multiple documents
+  when clauses overlap (e.g. UMP + MIDI-CI).
+- `source_ref` is free-form (section, page, table, clause) and applies
+  to every id listed in `source`. Keep it short and greppable.
+- `kind = "user"` covers stakeholder requirements with no external spec.
+  Title the source something like "Product brief" or "User stories".
+- `kind = "derived"` covers internal decisions with no document. Prefer
+  writing a short design note and referencing it rather than using
+  `derived` liberally.
+- An id in `source[]` that does not resolve to a declared `[[source]]`
+  triggers REQ003 (error).
 
 ---
 

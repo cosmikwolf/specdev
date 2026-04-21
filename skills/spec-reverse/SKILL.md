@@ -45,6 +45,44 @@ Jump to the appropriate step below.
 
 ---
 
+## Step 2.5 — Project shape survey (used by `--all`)
+
+Skip this section for single-module and `--ui` modes.
+
+Before any module reversal, detect how the source is organized and propose a per-package modularization plan. Goal: one spec module per coherent unit (one layer, one peripheral concern) while preserving the visual grouping users expect from the project's package structure (Cargo workspace, CMake subprojects, etc.).
+
+1. **Detect project shape.** Check these in order and stop at the first match:
+   - **Cargo workspace** — root `Cargo.toml` has `[workspace] members = [...]`. Each member is a candidate package.
+   - **Single Cargo crate** — root `Cargo.toml` has `[package]`. Treat the crate as one implicit package.
+   - **CMake multi-subproject** — root `CMakeLists.txt` contains one or more `add_subdirectory(...)` calls. Each subdirectory is a candidate package.
+   - **Flat / unknown** — no recognized shape. Treat the whole project as one implicit package.
+
+2. **Classify each candidate package** by reading its source files:
+   - **Coherent** — spans one layer and one peripheral/concern. → 1 spec module.
+   - **Composite** — spans multiple layers or peripherals (e.g., a crate with both a driver and its middleware consumers). → N spec modules, one per coherent unit.
+   - **Infrastructure** — types-only (no actions, no state). → 0 spec modules; its types become shared port types referenced from other modules' specs.
+
+3. **Read `Packages` from the context header.** If `spec.toml` already declares `[[packages]]`, honor that list and skip to step 5 — only re-survey to classify each declared package. Do not propose new packages.
+
+4. **Propose modularization plan.** Present as a tree with one-line rationale per classification and the concrete file evidence that drove it. Example:
+
+   ```
+   crates/core (coherent → 1 module)
+     → Clock (HAL)  [evidence: src/timer.rs Peripherals::TIMG0 init]
+   crates/drivers (composite → 2 modules)
+     → Led (driver)  [evidence: src/led.rs pub fn set_pattern]
+     → Button (driver)  [evidence: src/button.rs pub fn poll]
+   crates/types (infrastructure → 0 modules, ports only)
+   ```
+
+5. **User confirms / edits.** Record two outputs:
+   - `[[packages]]` entries to append to `spec.toml` (only for shapes that declared them implicitly; skip if already present).
+   - A confirmed list of `(package, module_name, source_path_glob)` tuples used by Step 6 fan-out.
+
+If the user selects "no packages" for a workspace project (rare; only sensible when the workspace has just one member that contributes spec modules), emit a single implicit package and proceed with a flat `specs/modules/` layout.
+
+---
+
 ## Step 3 — Architecture reverse (no args)
 
 If `specs/architecture.toml` exists, ask: **Compare (dry-run diff) / Replace / Cancel**.
@@ -130,8 +168,8 @@ Run validate. Report file count, hardware/input/screen/nav counts, validation re
 Do these in order, pausing for confirmation between passes:
 
 1. **Architecture pass** — run Step 3, wait for user confirmation of `specs/architecture.toml`.
-2. **Module discovery** — list discovered modules grouped by layer, ask the user to confirm the set (default: all). Allow exclusions.
-3. **Parallel module reverse** — fan out one `module-reverser` subagent per confirmed module in a **single assistant message** (one Agent tool use per module). Each subagent receives `module_name`, `project_root`, and the `schema_dir` / `domain_dir` / `language_dir` paths from the context header, plus a hint to `specs/architecture.toml` for cross-module context. Do NOT write files during fan-out; subagents are read-only by design. When all subagents return, collect their Candidate TOML blocks and present them to the user in layer order (`pac` → `driver` → `middleware` → `application`) for **batch confirmation** — confirm / edit / skip each. Write confirmed files in one pass. If a subagent returned an error (source not found, ambiguous split), surface it alongside the candidates and let the user resolve before writing.
+2. **Project shape survey** — run Step 2.5. Output: confirmed `[[packages]]` list (if any) and the `(package, module_name, source_path_glob)` tuples for step 3. If packages are being introduced now, append them to `spec.toml` and create `specs/modules/<pkg>/` dirs before continuing.
+3. **Parallel module reverse** — fan out one `module-reverser` subagent per confirmed `(package, module)` tuple in a **single assistant message** (one Agent tool use per tuple). Each subagent receives `module_name`, `project_root`, the `schema_dir` / `domain_dir` / `language_dir` paths from the context header, plus — when the tuple is packaged — `package` (snake_case name) and `source_path` (restrict evidence scan to this subtree). Do NOT write files during fan-out; subagents are read-only by design. When all subagents return, collect their Candidate TOML blocks and present them grouped by package, then in layer order (`pac` → `driver` → `middleware` → `application`) for **batch confirmation** — confirm / edit / skip each. Write confirmed files to `specs/modules/<package>/<Module>.toml` (or `specs/modules/<Module>.toml` for single-package projects) in one pass. If a subagent returned an error (source not found, ambiguous split), surface it alongside the candidates and let the user resolve before writing.
 4. **UI detection** — if UI code is detected, ask whether to run Step 5.
 5. **Validate everything** — run `specdev-analyzer validate --project <project_root>`. Surface layer violations and missing cross-references.
 6. **Audit cross-check** — run `specdev-analyzer audit --project <project_root>`. This reports any source symbols not captured in the specs; for each Uncovered item, either add it to the module spec or record an intentional omission.

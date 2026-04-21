@@ -3,14 +3,29 @@
 # Audio-related requirements for the blinky-a2dp example.
 # Modules reference these ids via their top-level `satisfies` array.
 
+[[source]]
+id = "bt-a2dp-v1-4"
+kind = "protocol"
+title = "Bluetooth Advanced Audio Distribution Profile"
+version = "1.4"
+url = "https://www.bluetooth.com/specifications/specs/a2dp-1-4/"
+
+[[source]]
+id = "user-stories"
+kind = "user"
+title = "Blinky-A2DP product brief"
+
 [[requirement]]
 id = "REQ-AUDIO-001"
 text = "The system shall decode SBC audio at 44.1 kHz with no more than 20 ms end-to-end latency from Bluetooth RX to I2S DAC output."
 satisfies = []
+source = ["bt-a2dp-v1-4"]
+source_ref = "§4.3 (SBC), §8 (latency)"
 verified_by = ["BtA2dpSink.init", "AudioPipeline.run"]
 
 [[requirement]]
 id = "REQ-AUDIO-002"
 text = "Audio pipeline underruns shall be surfaced as PipelineError::BufferUnderrun and visibly indicated on the status LED within 100 ms."
 satisfies = ["REQ-AUDIO-001"]
+source = ["user-stories"]
 verified_by = ["AudioPipeline.run"]

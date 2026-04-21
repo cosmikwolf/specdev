@@ -27,10 +27,22 @@ Each module becomes `<ModuleName>.yaml`. There is also one `architecture.yaml` (
 
 ## Step 3 — resolve the targets
 
-- If `$ARGUMENTS` is `--all`: targets are every `*.yaml` in the extract output except `architecture.yaml` and `requirements.yaml`.
-- If `$ARGUMENTS` is a module name: the single target is `<ModuleName>.yaml`. Fail if that file is absent — likely a typo.
+Extract output is nested for multi-package projects: `<out>/<ModuleName>.yaml` for unpackaged modules, `<out>/<package>/<ModuleName>.yaml` for packaged ones. Treat packaged modules as `<pkg>::<Module>` when referring to them in logs and disambiguation.
+
+- If `$ARGUMENTS` is `--all`: targets are every module YAML under the extract output (recursive), excluding `architecture.yaml` and `requirements.yaml`.
+- If `$ARGUMENTS` is `<pkg>::<Module>`: the single target is `<out>/<pkg>/<Module>.yaml`.
+- If `$ARGUMENTS` is a bare `<Module>`: search all packages. If exactly one match, use it. If multiple, stop and ask the user to qualify it. If zero, fail with the list of available modules.
 
 For every target, note whether it has a `state_machines[]` array (→ also consult `gen-fsm.md`) and whether any action targets a UI element (→ also consult `gen-ui.md`, only if the project has a `ui/` spec section).
+
+## Step 3.5 — resolve `<source_dir>` per target
+
+Every codegen guide writes files under a placeholder `<source_dir>` (effectively what the guide calls `src/`). Resolve it per target:
+
+1. If the target module's YAML carries a top-level `package: <name>` key, look up that package in the project's `spec.toml` `[[packages]]` list and use its `source_path` joined with `src/` — e.g. `crates/drivers/src/`.
+2. Otherwise, use the project's `[source] root` from `spec.toml` (typically `src/`).
+
+Record `<source_dir>` for each target. Wherever a codegen guide says `src/<module_name>/mod.rs`, substitute `<source_dir>/<module_name>/mod.rs`. Single-package projects stay unchanged (source root is `src/`, substitution is a no-op).
 
 ## Step 4 — read the rules
 
@@ -50,7 +62,7 @@ Output source code that satisfies, in priority order:
 
 1. **The codegen guide's mapping rules** (e.g. "`ConcurrencyModel.protection = mutex` ⇒ the module struct holds a `SemaphoreHandle_t`").
 2. **The language's syntax conventions** (naming, file placement, header layout).
-3. **The existing project's observable conventions.** Skim other modules' source under the resolved source root (`<project>/<[source].root>/`) and match what they do — indent width, use of `#pragma once` vs include guards, etc.
+3. **The existing project's observable conventions.** Skim other modules' source under the resolved `<source_dir>` (see Step 3.5) and match what they do — indent width, use of `#pragma once` vs include guards, etc.
 4. **The spec's intent.** When the codegen guide does not prescribe a specific choice, choose something idiomatic for the language and justify it in a one-line comment.
 
 For each file you write:
