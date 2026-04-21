@@ -1,6 +1,6 @@
 ---
 name: spec-init
-description: Scaffold a new spec-driven project — writes spec.toml and the specs/ directory structure.
+description: This skill should be used when the user asks to "init specdev", "set up a new spec project", "scaffold a spec-driven project", "create spec.toml", "initialize specs/", or starts a new specdev project from scratch. Writes spec.toml, architecture.toml, and the specs/ directory structure.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
@@ -8,7 +8,7 @@ allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 
 # /spec-init — Project scaffolding
 
-You are initializing a new spec-driven project. Follow these steps in order. Do not skip interview questions; every field lands in `spec.toml` or derives layout that later skills depend on.
+Initialize a new spec-driven project. Follow these steps in order. Do not skip interview questions; every field lands in `spec.toml` or derives layout that later skills depend on.
 
 If `specdev-analyzer` is not on PATH (the context header above will say so), tell the user to install it and stop. Do not attempt to write files without the analyzer.
 
@@ -38,7 +38,7 @@ Scan the project root for build manifests. For each present file, extract fields
 | `sdkconfig.defaults` | all `CONFIG_*` lines (ESP-IDF) |
 | `platformio.ini` | `board`, `framework`, `lib_deps` |
 
-Use extracted values as defaults in Step 4's interview. Do not silently overwrite — always show the defaulted value and let the user confirm or change.
+Use extracted values as defaults in Step 4's interview. Do not silently overwrite — always show the defaulted value and let the user confirm or change it.
 
 ## Step 3 — list available domains
 
@@ -56,7 +56,7 @@ Ask all of these in one message. Show defaults from Step 2 in parentheses:
 6. **Environment** — `std` or `no_std` (firmware only; default: inferred from RTOS + `build-std`)
 7. **Source layout** — `flat` (default) or `workspace` (infer `workspace` from `[workspace] members` in root `Cargo.toml`)
 
-Do not invent fields that are not in the project schema. If an interview answer has no home in `spec.toml` today, record it in a `## Notes` section of `specs/architecture.toml` instead.
+Do not invent fields outside the project schema. If an interview answer has no home in `spec.toml` today, record it in a `## Notes` section of `specs/architecture.toml` instead.
 
 ## Step 5 — write spec.toml
 
@@ -146,11 +146,11 @@ Do NOT create any module TOMLs yet. Leave `specs/modules/` empty — that is the
 
 ## Step 7 — verify
 
-Run `specdev-analyzer validate --project <project_root>` and show the output. Expect a clean report (there are no modules yet, so there is nothing to invalidate). If the analyzer complains about `architecture.toml`, fix the fields you wrote in Step 6 based on its messages and re-run until clean.
+Run `specdev-analyzer validate --project <project_root>` and show the output. Expect a clean report (there are no modules yet, so there is nothing to invalidate). If the analyzer complains about `architecture.toml`, fix the fields written in Step 6 based on its messages and re-run until clean.
 
 ## Step 8 — report
 
 Summarize:
-- What files you created (one line each, with paths).
-- What the next skill is: `/spec-design <one-line module description>` to add the first module, or open `specs/architecture.toml` to refine wiring.
+- Files created (one line each, with paths).
+- Next skill: `/spec-design <one-line module description>` to add the first module, or open `specs/architecture.toml` to refine wiring.
 - Any interview answer that did not land in a file (record them in a `Notes` section at the end of `architecture.toml` so they are not lost).

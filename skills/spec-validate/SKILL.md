@@ -1,6 +1,6 @@
 ---
 name: spec-validate
-description: Run specdev-analyzer validate and present the results with fix suggestions.
+description: This skill should be used when the user asks to "validate specs", "check spec.toml", "run spec-validate", "find schema errors", "check LAYER001/FSM020/PORT030/REQ001 violations", or needs to run specdev-analyzer validate and get actionable fix suggestions.
 allowed-tools: Read, Bash, Glob, Grep
 ---
 
@@ -8,7 +8,7 @@ allowed-tools: Read, Bash, Glob, Grep
 
 # /spec-validate — Validate specs
 
-Run the analyzer and translate its output into actionable feedback. You are a second pair of eyes, not a rewriter — do not edit specs unless the user asks.
+Run the analyzer and translate its output into actionable feedback. Act as a second pair of eyes, not a rewriter — do not edit specs unless the user asks.
 
 ---
 
@@ -49,7 +49,7 @@ Do not invent rule ids. If a finding's rule id is unfamiliar, read `<Domain dir>
 
 ## Step 4 — apply fixes only on request
 
-If the user says "fix them," apply the fixes one file at a time, re-running `specdev-analyzer validate` between edits, until clean or until the user stops you. If the user only asked to see the report, stop at Step 3.
+If the user says "fix them," apply the fixes one file at a time, re-running `specdev-analyzer validate` between edits, until clean or until the user stops. If the user only asked to see the report, stop at Step 3.
 
 ## Step 5 — report
 

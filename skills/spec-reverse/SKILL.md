@@ -1,6 +1,6 @@
 ---
 name: spec-reverse
-description: Reverse-engineer specs from existing source code (architecture, modules, or UI).
+description: This skill should be used when the user asks to "reverse-engineer specs", "generate specs from code", "document this existing codebase", "run spec-reverse", "extract specs from source", "reverse <ModuleName>", "spec-reverse --all", or "spec-reverse --ui". Extracts architecture, module, or UI TOML specs from an existing Rust/C/C++ codebase.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 argument-hint: [<ModuleName> | --all | --ui]
 ---
@@ -9,7 +9,7 @@ argument-hint: [<ModuleName> | --all | --ui]
 
 # /spec-reverse — Extract specs from source
 
-You reverse-engineer TOML specs from existing source. Never invent fields the code doesn't support. Every claim you write must be traceable to a file and line.
+Reverse-engineer TOML specs from existing source. Never invent fields the code does not support. Every claim written must be traceable to a file and line.
 
 Modes, decided from `$ARGUMENTS`:
 
@@ -29,13 +29,13 @@ If the context header reports the analyzer is not on PATH, stop and tell the use
 If the context header reports **Status: no `spec.toml` found**, this is expected for a greenfield reverse on an existing codebase. Do **not** stop — instead, run the `/spec-init` flow inline first:
 
 1. Follow every step in `specdev/skills/spec-init/SKILL.md` (Steps 1–7), reading that skill's instructions verbatim. Defaults for the interview should be aggressively inferred from the source tree (Cargo.toml, CMakeLists.txt, etc.) so the user only confirms, not types.
-2. Once `spec.toml` and the `specs/` skeleton exist, continue with Step 1 below. Do not re-run the resolve-context header — you already know the project layout.
+2. Once `spec.toml` and the `specs/` skeleton exist, continue with Step 1 below. Do not re-run the resolve-context header — the project layout is already known.
 
 ## Step 1 — read the authoritative guides
 
 Read these, in order, from the paths in the context header:
 
-1. `<Schema dir>/architecture.schema.yaml`, `<Schema dir>/module.schema.yaml`, `<Schema dir>/metadata.schema.yaml`, `<Schema dir>/ui.schema.yaml` — the authoritative field list for every spec file you may write.
+1. `<Schema dir>/architecture.schema.yaml`, `<Schema dir>/module.schema.yaml`, `<Schema dir>/metadata.schema.yaml`, `<Schema dir>/ui.schema.yaml` — the authoritative field list for every spec file to be written.
 2. `<Domain dir>/author.md` — structural conventions for this domain.
 3. `<Language dir>/syntax.md` — file conventions for the project's language (Rust / C / C++).
 
@@ -116,11 +116,11 @@ Report: language, build system, target, RTOS, packages, modules discovered, next
 
 ### Extraction checklist
 
-For each item, quote the source lines you used as evidence. Fields not evidenced are omitted.
+For each item, quote the source lines used as evidence. Fields not evidenced are omitted.
 
 - **`name`** — PascalCase derived from the file/module name.
 - **`layer`** — infer from dependencies: direct register access → `pac` or `driver`; depends only on drivers → `middleware`; depends on middleware or has policy/business logic → `application`.
-- **`description`** — one sentence stating the module's *purpose* at a level higher than the rest of the spec. Do not restate anything that is already captured by other fields: no listing of actions, state machines, ports, hardware, dependencies, or error variants. If the sentence could be deleted without losing information a reader can't get from scanning the rest of the file, rewrite it. Target ≤ 20 words. Example — good: *"Drives the onboard status LED with solid, blinking, and breathing patterns."* Bad: *"A driver module in the driver layer that exposes set_pattern and tick actions, owns GPIO pin PA5, uses a critical section for shared state, and implements a three-state FSM for the LED."*
+- **`description`** — one sentence stating the module's *purpose* at a level higher than the rest of the spec. Do not restate anything already captured by other fields: no listing of actions, state machines, ports, hardware, dependencies, or error variants. If the sentence could be deleted without losing information a reader cannot get from scanning the rest of the file, rewrite it. Target ≤ 20 words. Example — good: *"Drives the onboard status LED with solid, blinking, and breathing patterns."* Bad: *"A driver module in the driver layer that exposes set_pattern and tick actions, owns GPIO pin PA5, uses a critical section for shared state, and implements a three-state FSM for the LED."*
 - **`depends_on`** — imports/includes to other in-project modules.
 - **`actions[]`** — each public function (`pub fn`, non-`static` C function, or exported C++ method). For each: `params` (inline if ≤3), `direction` from parameter mode (`in` / `out` / `inout`), `blocking` (true if it can await, loop on IO, or acquire a mutex — otherwise false), `isr_safe` (true only when the function is clearly safe from ISR context).
 - **`state_machines[]`** — any enum consumed by a `match`/`switch` dispatching on current state; states are enum variants. Event enum, initial state, and transitions if the source dispatch is clear.
@@ -134,7 +134,7 @@ For each item, quote the source lines you used as evidence. Fields not evidenced
 
 ### Writing
 
-Present the candidate TOML with confidence annotations **next to LOW fields only** (comments like `# LOW: inferred, please confirm`). Wait for confirmation. Write to `specs/modules/<ModuleName>.toml`.
+Present the candidate TOML with confidence annotations **next to LOW fields only** (comments like `# LOW: inferred, please confirm`). Wait for confirmation. Then write to `specs/modules/<ModuleName>.toml`.
 
 Run `specdev-analyzer validate --project <project_root>`; if errors, show them and ask whether to iterate.
 
@@ -157,7 +157,7 @@ Scan for UI code:
 
 Read `<Schema dir>/ui.schema.yaml` for the exact field list. Present candidate `specs/ui/*.toml` with LOW-confidence comments. Write on confirmation.
 
-Any `description` field (on the UI file, a screen, an element) is one sentence describing *purpose*. Do not summarize the widgets, inputs, or navigation defined elsewhere in the same file.
+Any `description` field (on the UI file, a screen, an element) is one sentence describing *purpose*. Do not summarize widgets, inputs, or navigation defined elsewhere in the same file.
 
 Run validate. Report file count, hardware/input/screen/nav counts, validation result.
 
@@ -181,13 +181,13 @@ Do these in order, pausing for confirmation between passes:
 - **UI**: included / not detected / skipped, file count.
 - **Validation**: overall PASS/FAIL with per-module issues.
 - **Audit**: Uncovered items by module.
-- **Next steps**: review LOW fields, `/spec-edit <Module>` for any you want to refine, `/spec-gen <Module>` when you're ready to regenerate code.
+- **Next steps**: review LOW fields, `/spec-edit <Module>` to refine any, `/spec-gen <Module>` when ready to regenerate code.
 
 ---
 
 ## Rules of the road
 
-- **Evidence over invention.** Every field must trace to source. If you cannot find evidence, leave the field out or mark LOW and ask.
-- **Schema is the contract.** Every key you write must appear in `module.schema.yaml`, `architecture.schema.yaml`, or `ui.schema.yaml`.
-- **One module per file.** Don't fold multiple concerns into a single TOML.
+- **Evidence over invention.** Every field must trace to source. If evidence is missing, leave the field out or mark LOW and ask.
+- **Schema is the contract.** Every key written must appear in `module.schema.yaml`, `architecture.schema.yaml`, or `ui.schema.yaml`.
+- **One module per file.** Do not fold multiple concerns into a single TOML.
 - **Stop on structural ambiguity.** If a source file plausibly represents two modules, ask before splitting.

@@ -1,6 +1,6 @@
 ---
 name: spec-gen
-description: Generate source code for one or more modules from their validated specs, following the language + codegen guides.
+description: This skill should be used when the user asks to "generate code", "codegen", "run spec-gen", "generate <ModuleName>", "codegen all modules", "implement this spec", or needs source code generated from validated specdev specs. Handles single modules, packaged modules (`pkg::Module`), and `--all` batch generation.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 argument-hint: <ModuleName | --all>
 ---
@@ -11,7 +11,7 @@ argument-hint: <ModuleName | --all>
 
 Generate source code for one named module, or for every module when invoked with `--all`. User input: `$ARGUMENTS`.
 
-You are an implementer, not an improviser. The codegen guides at the resolved `Codegen` path are the rules; the extracted YAML is the data; the language guides at the resolved `Languages` path are the style. If the three disagree, the schema/codegen guides win.
+Act as an implementer, not an improviser. The codegen guides at the resolved `Codegen` path are the rules; the extracted YAML is the data; the language guides at the resolved `Languages` path are the style. If the three disagree, the schema/codegen guides win.
 
 ---
 
@@ -65,18 +65,18 @@ Output source code that satisfies, in priority order:
 3. **The existing project's observable conventions.** Skim other modules' source under the resolved `<source_dir>` (see Step 3.5) and match what they do — indent width, use of `#pragma once` vs include guards, etc.
 4. **The spec's intent.** When the codegen guide does not prescribe a specific choice, choose something idiomatic for the language and justify it in a one-line comment.
 
-For each file you write:
+For each file written:
 - At the top, emit the auto-generation header the codegen guide specifies (file name, `@spec` pointer to the module TOML, regeneration command).
 - Under the header, import order and visibility as per the language guide.
-- No placeholder bodies. If a function cannot be implemented because the spec lacks information, stop and ask the user before writing a `todo!()` / `return -1;` stub.
+- No placeholder bodies. If a function cannot be implemented because the spec lacks information, stop and ask before writing a `todo!()` / `return -1;` stub.
 
-Do **not** modify files outside the auto-generated regions. If the user has hand-written code in the target file, preserve it and warn in the report.
+Do **not** modify files outside the auto-generated regions. If hand-written code exists in the target file, preserve it and warn in the report.
 
 ## Step 6 — compile gate (best effort)
 
 If the project's build system is detected (`Cargo.toml`, `CMakeLists.txt`, `platformio.ini`), run a build. For Rust: `cargo check --quiet` from the project root. For C/C++: whatever the `build.md` prescribes.
 
-Report the first error verbatim if the build fails. Do not attempt to fix build errors that stem from missing scaffolding outside your generation scope (e.g. "main.rs does not register this module") — surface the problem to the user with a one-line action item.
+Report the first error verbatim if the build fails. Do not attempt to fix build errors that stem from missing scaffolding outside the generation scope (e.g. "main.rs does not register this module") — surface the problem to the user with a one-line action item.
 
 ## Step 7 — clean up
 
@@ -86,6 +86,6 @@ Delete the `/tmp/specdev-gen-<pid>` directory once generation is complete. The e
 
 One paragraph per module generated:
 - Source file(s) written.
-- Any codegen guide rule that required a choice and what you chose.
+- Any codegen guide rule that required a choice and the choice made.
 - Build result (pass/fail; first error if fail).
 - Suggested follow-ups: `/spec-gen <OtherModule>`, wire this module into `main.rs`, or regenerate after editing the spec.

@@ -1,6 +1,6 @@
 ---
 name: spec-gen-ui
-description: Generate UI rendering code from UI specs, or emit Mermaid interaction diagrams.
+description: This skill should be used when the user asks to "generate UI code", "render UI from spec", "run spec-gen-ui", "show UI diagram", "visualize navigation flow", "emit Mermaid diagram of UI", or needs UI rendering code generated from TOML specs under specs/ui/ (or Mermaid interaction diagrams).
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 argument-hint: [--diagram]
 ---
@@ -9,7 +9,7 @@ argument-hint: [--diagram]
 
 # /spec-gen-ui — UI code generation + diagrams
 
-You turn `specs/ui/*.toml` into either rendering code or interaction diagrams. Never invent functionality not present in the specs. If a field is ambiguous, stop and ask.
+Turn `specs/ui/*.toml` into either rendering code or interaction diagrams. Never invent functionality not present in the specs. If a field is ambiguous, stop and ask.
 
 Modes, decided from `$ARGUMENTS`:
 
@@ -39,7 +39,7 @@ If the context header reports the analyzer is not on PATH, or reports no `spec.t
 1. Run `specdev-analyzer validate --project <project_root> --no-color`. If it fails, print the output and stop.
 2. Run `specdev-analyzer extract --project <project_root> --output /tmp/specdev-extract-<pid>`. Read `/tmp/specdev-extract-<pid>/` for structured UI data: displays, input_devices, indicators, screens, navigation.
 
-Hold the extracted YAML in mind as authoritative. Do not re-read the TOML for fields that already appear in the extract.
+Treat the extracted YAML as authoritative. Do not re-read the TOML for fields that already appear in the extract.
 
 ## Step 3 — freshness check
 
