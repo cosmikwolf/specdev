@@ -1,6 +1,3 @@
-# App composition. One root view, mounted in the central panel; no
-# navigation (single-screen app).
-
 [[mounts]]
 view = "CounterView"
 slot = "central"

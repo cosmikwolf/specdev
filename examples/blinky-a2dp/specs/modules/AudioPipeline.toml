@@ -1,8 +1,5 @@
 #:schema ../../../../schema/firmware/v1/module.schema.yaml
 
-# AudioPipeline — middleware that bridges the Bluetooth A2DP sink to the I2S
-# output driver, with a ring buffer and a StatusLed for user feedback.
-
 name = "AudioPipeline"
 layer = "middleware"
 description = "Routes PCM frames from BtA2dpSink to I2sOutput, surfaces state via StatusLed, and reports underruns."

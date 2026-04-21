@@ -1,8 +1,5 @@
 #:schema ../../../../schema/firmware/v1/module.schema.yaml
 
-# StatusLed — driver for an APA102 (DotStar) RGB LED used as a system status
-# indicator.
-
 name = "StatusLed"
 layer = "driver"
 description = "APA102 DotStar LED driver providing solid / blinking status patterns."

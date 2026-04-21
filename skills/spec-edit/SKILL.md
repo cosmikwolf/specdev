@@ -90,6 +90,7 @@ Apply the change using `Edit`. Obey the rules from `/spec-design` step 3:
 2. Preserve existing indentation and key order where not semantically changed.
 3. Do not drop required metadata sub-objects.
 4. Keep inline-table vs array-of-tables form consistent with the rest of the file.
+5. **No explanatory comments.** The only comment permitted in the file is the `#:schema` directive on line 1. If the existing file carries other comments (file-header blurbs, section dividers, prose that restates a nearby field), strip them as part of your edit. Facts belong in schema fields; project-level prose belongs in `README.md`. The one carve-out is `# LOW:` confidence markers produced by `/spec-reverse` — leave those alone until the user has confirmed or cleared each one.
 
 Show a focused diff of the change. For non-trivial edits, wait for user confirmation before running validate.
 

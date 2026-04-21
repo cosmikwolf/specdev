@@ -1,5 +1,3 @@
-# App-level counter state. Persisted across restarts via eframe::Storage.
-
 name = "CounterStore"
 description = "Holds the user-facing counter value."
 persisted = true

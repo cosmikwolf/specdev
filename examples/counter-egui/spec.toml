@@ -1,7 +1,3 @@
-# Project config for the "counter-egui" example — a minimal native egui app:
-# a one-screen counter that increments, decrements, and persists across
-# restarts via eframe::Storage.
-
 spec_version = "1.0"
 
 [project]
@@ -13,7 +9,4 @@ language = "rust"
 root = "src"
 layout = "flat"
 
-# Project-local override paths for schema/domain/language/codegen trees
-# live here. When empty, the resolver falls back to .specdev/ then to
-# plugin defaults.
 [paths.overrides]

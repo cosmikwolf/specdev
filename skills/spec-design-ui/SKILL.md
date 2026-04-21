@@ -89,6 +89,8 @@ Layout:
 
 Each TOML must start with `name = "..."` (required). Use inline tables for short arrays; switch to `[[array_of_tables]]` when an item has ≥3 fields.
 
+**No explanatory comments.** The only comment permitted in emitted TOML is the `#:schema` directive on line 1 (for IDE/Taplo integration). Do not add file-header prose, section dividers, or comments that restate a nearby field. If a fact deserves to live in the file, it belongs in a schema field — not a comment.
+
 ## Step 5 — validate
 
 Run `specdev-analyzer validate --project <project_root> --no-color`. For each error, map the rule id to a fix:
