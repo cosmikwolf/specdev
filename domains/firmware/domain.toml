@@ -191,3 +191,18 @@ Boolean = "bool"
 String  = "const char*"
 Real    = "double"
 GpioPin = "uint8_t"
+
+# Skills that are semantically owned by this domain. These only make sense for
+# firmware projects (physical displays, GPIO inputs, indicator LEDs, navigation
+# FSM over screens). They live under `specdev/skills/` because Claude Code's
+# plugin loader auto-discovers skills from a single root; ownership is enforced
+# at runtime by a Step 0 domain guard inside each SKILL.md that checks
+# `spec.toml`'s `[project] domain` field. Future: once the loader supports
+# multiple skill roots, move these under `domains/firmware/skills/` (see D25).
+[[domain_skills]]
+name = "spec-design-ui"
+path = "../../skills/spec-design-ui/"
+
+[[domain_skills]]
+name = "spec-gen-ui"
+path = "../../skills/spec-gen-ui/"

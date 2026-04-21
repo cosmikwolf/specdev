@@ -1,6 +1,6 @@
 ---
 name: spec-gen-ui
-description: This skill should be used when the user asks to "generate UI code", "render UI from spec", "run spec-gen-ui", "show UI diagram", "visualize navigation flow", "emit Mermaid diagram of UI", or needs UI rendering code generated from TOML specs under specs/ui/ (or Mermaid interaction diagrams).
+description: This skill should be used when the user asks to "generate firmware UI code", "render firmware UI from spec", "run spec-gen-ui", "show UI diagram", "visualize navigation flow", "emit Mermaid diagram of UI", or needs UI rendering code generated from firmware TOML specs under specs/ui/ (or Mermaid interaction diagrams). Firmware-domain only — for egui / web / mobile projects the UI lives inside view modules; use /spec-gen instead.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 argument-hint: [--diagram]
 ---
@@ -22,7 +22,11 @@ Modes, decided from `$ARGUMENTS`:
 
 ## Step 0 — prerequisites
 
-If the context header reports the analyzer is not on PATH, or reports no `spec.toml`, stop and tell the user to run `/spec-init`. If `specs/ui/` is empty or absent, stop and tell the user to run `/spec-design-ui` first.
+This skill is firmware-only. Check, in order:
+
+1. If the context header reports the analyzer is not on PATH, or reports no `spec.toml`, stop and tell the user to run `/spec-init`.
+2. Read `spec.toml`'s `[project] domain` field. If it is not `firmware`, stop with: *"This skill is firmware-only — it emits rendering code for physical displays. For `<domain>` projects, UI code is generated from view modules — use `/spec-gen` directly."* Do not proceed.
+3. If `specs/ui/` is empty or absent, stop and tell the user to run `/spec-design-ui` first.
 
 ## Step 1 — read the authoritative guides
 

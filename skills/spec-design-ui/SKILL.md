@@ -1,6 +1,6 @@
 ---
 name: spec-design-ui
-description: This skill should be used when the user asks to "design the UI", "add a screen", "set up navigation", "design firmware UI", "add input devices", or needs to author UI specs (displays, inputs, indicators, screens, navigation) under specs/ui/. Authors TOML UI specs interactively.
+description: This skill should be used when the user asks to "design the firmware UI", "add a screen", "set up navigation", "add input devices", or needs to author firmware UI specs (displays, inputs, indicators, screens, navigation) under specs/ui/. Firmware-domain only — for egui / web / mobile projects the UI lives inside view modules; use /spec-design instead. Authors TOML UI specs interactively.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 argument-hint: <one-line UI description>
 ---
@@ -17,7 +17,11 @@ The v1 UI schema is deliberately permissive — **inner items accept unknown key
 
 ## Step 0 — prerequisites
 
-If the context header reports the analyzer is not on PATH, or reports no `spec.toml`, stop and tell the user to run `/spec-init`. If `specs/architecture.toml` is missing, stop and tell the user to run `/spec-design` for at least the architecture first.
+This skill is firmware-only. Check, in order:
+
+1. If the context header reports the analyzer is not on PATH, or reports no `spec.toml`, stop and tell the user to run `/spec-init`.
+2. Read `spec.toml`'s `[project] domain` field. If it is not `firmware`, stop with: *"This skill is firmware-only — it models physical displays, GPIO inputs, and indicator LEDs. For `<domain>` projects, UI lives inside view/screen modules — use `/spec-design` directly."* Do not proceed.
+3. If `specs/architecture.toml` is missing, stop and tell the user to run `/spec-design` for at least the architecture first.
 
 ## Step 1 — read the authoritative guides
 
