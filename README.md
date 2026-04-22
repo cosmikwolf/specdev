@@ -2,27 +2,30 @@
 
 A Claude Code plugin for spec-driven development. Describe your firmware or GUI app as TOML specs, validate them against a machine-checkable schema, then generate Rust / C / C++ code — or reverse-engineer specs from code you already have.
 
-Pairs with the [`specdev-analyzer`](https://github.com/tenkai/specdev-analyzer) CLI, which does the actual validation, extraction, and audit. The plugin provides the interactive authoring workflow; the analyzer provides the checks.
+Pairs with the [`specdev-analyzer`](https://github.com/cosmikwolf/specdev-analyzer) CLI, which does the actual validation, extraction, and audit. The plugin provides the interactive authoring workflow; the analyzer provides the checks.
 
 ## Install
 
-1. Install the analyzer:
+1. Install the analyzer (requires a stable Rust toolchain):
 
    ```
-   cargo install --git https://github.com/tenkai/specdev-analyzer
+   cargo install --git https://github.com/cosmikwolf/specdev-analyzer
    ```
 
-2. Install the plugin:
+2. Add the marketplace and install the plugin in Claude Code:
 
    ```
-   /plugin install specdev@tenkai
+   /plugin marketplace add cosmikwolf/specdev
+   /plugin install specdev@specdev
    ```
 
-   Or point Claude Code at a local checkout for development:
+   For local development against a checkout:
 
    ```
    claude --plugin-dir /path/to/specdev
    ```
+
+3. Verify the install: type `/` in Claude Code and confirm `/spec-init`, `/spec-design`, `/spec-validate`, and `/spec-gen` appear in the slash-command menu. If they do not, re-run the marketplace add or check `/plugin` for installation errors.
 
 ## Quickstart
 

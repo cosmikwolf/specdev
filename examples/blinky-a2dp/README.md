@@ -27,12 +27,11 @@ From the repo root:
 ```
 specdev-analyzer validate --project specdev/examples/blinky-a2dp
 specdev-analyzer extract  --project specdev/examples/blinky-a2dp --output /tmp/blinky-out
-specdev-analyzer audit    --project specdev/examples/blinky-a2dp
 ```
 
-Expected: clean validation, six YAML files written under `/tmp/blinky-out/` (four modules + `architecture.yaml` + `requirements.yaml`), audit reports Match for every extracted module.
+Expected: clean validation (`0 error(s), 0 warning(s), 0 info(s)`) and six YAML files written under `/tmp/blinky-out/` (four modules + `architecture.yaml` + `requirements.yaml`).
 
-## Regenerate code
+## Generate code
 
 Inside Claude Code with the plugin installed:
 
@@ -40,4 +39,14 @@ Inside Claude Code with the plugin installed:
 /spec-gen --all
 ```
 
-This emits Rust / C / C++ source under `src/` following the project's configured language and the codegen guides shipped with the plugin.
+Expected output: one Rust file per module is emitted under `src/` — `status_led.rs`, `bt_a2dp_sink.rs`, `i2s_output.rs`, `audio_pipeline.rs` — following the `languages/rust` and `codegen/firmware-rust` guides shipped with the plugin. The skill appends each module to `src/lib.rs` (or creates it).
+
+## Audit drift
+
+Once source exists, `audit` cross-checks it against the spec:
+
+```
+specdev-analyzer audit --project specdev/examples/blinky-a2dp --show-uncovered
+```
+
+On a freshly-generated tree this reports `4 match, 0 missing, 0 mismatch, 0 uncovered`. Before `/spec-gen --all` runs, the same command reports four `missing` entries — one per module without a source file.

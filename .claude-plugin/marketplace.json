@@ -1,0 +1,12 @@
+{
+  "name": "specdev",
+  "owner": {
+    "name": "cosmikwolf"
+  },
+  "plugins": [
+    {
+      "name": "specdev",
+      "source": "./"
+    }
+  ]
+}
