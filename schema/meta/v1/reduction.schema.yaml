@@ -1,0 +1,141 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://specdev.dev/schema/meta/v1/reduction.schema.yaml"
+title: "Domain reduction spec (v1)"
+description: >
+  The shape of a per-domain reduction.yaml. A reduction maps authored TOML
+  under specs/ to a universal (entities, relations) graph that downstream
+  consumers (visualizer, codegen, audit) read. Authored TOML is unchanged.
+
+  See specdev-next/10-metaschema.md for motivation and the open questions
+  deliberately left un-encoded in v1.
+
+type: object
+additionalProperties: false
+required:
+  - metaschema_version
+  - entities
+  - relations
+properties:
+  metaschema_version:
+    description: Version of this metaschema the reduction targets. Only "v1" is defined.
+    type: string
+    const: "v1"
+
+  entities:
+    type: array
+    items:
+      $ref: "#/$defs/EntityDecl"
+
+  relations:
+    type: array
+    items:
+      $ref: "#/$defs/RelationDecl"
+
+$defs:
+  EntityDecl:
+    type: object
+    additionalProperties: false
+    required:
+      - kind
+      - extends
+      - from
+      - name
+    properties:
+      kind:
+        description: Domain-local entity kind. Referenced by relations as from_kind/to_kind.
+        type: string
+        pattern: "^[a-z][a-z0-9_]*$"
+      extends:
+        description: Canonical root kind this entity extends.
+        $ref: "root_kinds.schema.yaml#/$defs/RootKind"
+      from:
+        description: >
+          Glob (relative to project root) matching the authored TOML files that
+          materialize instances of this entity.
+        type: string
+        minLength: 1
+      for_each:
+        description: >
+          Optional selector. When present, one entity is materialized per element
+          the selector picks out of each file. When absent, one entity per file.
+        type: string
+      name:
+        description: >
+          Template string that yields the entity's unique name. May reference
+          the current element (${.field}) and the enclosing file's root (${...}).
+        type: string
+        minLength: 1
+      attrs:
+        description: >
+          Map of attribute name → selector. Selectors are evaluated against the
+          current for_each element (or the file root, if no for_each).
+        type: object
+        additionalProperties:
+          type: string
+      render:
+        $ref: "#/$defs/RenderHint"
+
+  RelationDecl:
+    type: object
+    additionalProperties: false
+    required:
+      - kind
+      - from_kind
+      - to_kind
+      - from_spec
+      - endpoints
+    properties:
+      kind:
+        description: Canonical relation kind.
+        $ref: "relation_kinds.schema.yaml#/$defs/RelationKind"
+      from_kind:
+        description: Entity kind (declared in entities[]) of the source endpoint.
+        type: string
+        pattern: "^[a-z][a-z0-9_]*$"
+      to_kind:
+        description: Entity kind of the target endpoint.
+        type: string
+        pattern: "^[a-z][a-z0-9_]*$"
+      from_spec:
+        description: Glob matching the authored TOML files this relation is read from.
+        type: string
+        minLength: 1
+      for_each:
+        description: Optional per-element iterator, as in EntityDecl.
+        type: string
+      endpoints:
+        type: object
+        additionalProperties: false
+        required:
+          - from
+          - to
+        properties:
+          from:
+            description: Template string resolving to the name of an existing entity.
+            type: string
+            minLength: 1
+          to:
+            type: string
+            minLength: 1
+      attrs:
+        type: object
+        additionalProperties:
+          type: string
+
+  RenderHint:
+    type: object
+    additionalProperties: false
+    properties:
+      shape:
+        description: Closed v1 shape enum.
+        type: string
+        enum: [box, rounded_rect, diamond, port, swimlane]
+      arrow_style:
+        description: Closed v1 arrow-style enum.
+        type: string
+        enum: [solid, dashed, dotted, bold]
+      group_by:
+        description: >
+          Attribute name or canonical root kind to group this entity under in
+          default views.
+        type: string
