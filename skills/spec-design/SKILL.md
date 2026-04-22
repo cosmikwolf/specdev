@@ -65,7 +65,7 @@ Write `specs/modules/<ModuleName>.toml`. Obey these rules, in priority order:
    - Error variants: `PascalCase` (they become `enum class` / Rust enum variants downstream).
 5. **Layer discipline.** A module at layer `application` must not depend on a `pac` module directly; walk through middleware/driver. If in doubt, read `author.md`.
 6. **One module per file.** Never put two `part def` siblings in one file; each TOML holds exactly one module.
-7. **No explanatory comments.** The only comment permitted in emitted TOML is the `#:schema` directive on line 1 (for IDE/Taplo integration). Do not add file-header prose, section dividers, or comments that restate or summarize a nearby field. If a fact deserves to live in the file, it belongs in a schema field — not a comment. Prose that describes the project as a whole belongs in `README.md`.
+7. **No explanatory comments.** The only comment permitted in emitted TOML is the `#:schema` directive on line 1 (for IDE/Taplo integration). Do not add file-header prose, section dividers, or comments that restate or summarize a nearby field. If a fact deserves to live in the file, it belongs in a schema field — not a comment. Prose that describes the project as a whole belongs in `README.md`. `# LOW:` confidence markers produced by `/spec-reverse` are transient review metadata and do not apply here — `/spec-design` authors from interview, not inference, so no LOW markers are ever emitted; if this skill encounters a pre-existing file with LOW markers, leave them alone.
 
 ## Step 4 — validate
 
