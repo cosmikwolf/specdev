@@ -1,0 +1,142 @@
+metaschema_version: v1
+
+# -----------------------------------------------------------------------------
+# Egui-domain reduction (v1). Maps authored TOML under `specs/` to the
+# universal (entities, relations) graph defined at `schema/meta/v1/`.
+#
+# v1 scoping choices (mirror the firmware reduction):
+#   * `parent.name` only resolves the file-root `name` field. Sub-view
+#     nesting expressed via navigation is skipped at this level.
+#   * `reads[]` / `writes[]` reference store fields as `<Store>.<field>`;
+#     we model them as view→store_field `depends_on` edges so consumers can
+#     walk from a view straight to the fields it reads.
+#   * Architecture `mounts[]` are not materialized as relations in v1 — there
+#     is no natural parent entity for the root shell. Promote when a
+#     consumer actually needs the shell→view edge.
+#   * State machines / navigation FSM are out of scope here; they're covered
+#     by the firmware reduction and are egui-app-specific additions.
+# -----------------------------------------------------------------------------
+
+entities:
+  - kind: view
+    extends: structural
+    from: specs/modules/*.toml
+    name: "${.name}"
+    attrs:
+      view_kind: "kind"
+      description: "description"
+    render:
+      shape: rounded_rect
+
+  - kind: widget
+    extends: structural
+    from: specs/modules/*.toml
+    for_each: "widgets[]"
+    name: "${parent.name}.${.name}"
+    attrs:
+      widget_kind: "kind"
+      label: "label"
+      binding: "binding"
+      on_event: "on_event"
+    render:
+      shape: box
+
+  - kind: action
+    extends: behavioral
+    from: specs/modules/*.toml
+    for_each: "actions[]"
+    name: "${parent.name}.${.name}"
+    attrs:
+      description: "description"
+    render:
+      shape: rounded_rect
+
+  - kind: store
+    extends: structural
+    from: specs/stores/*.toml
+    name: "${.name}"
+    attrs:
+      persisted: "persisted"
+      description: "description"
+    render:
+      shape: box
+
+  - kind: store_field
+    extends: data
+    from: specs/stores/*.toml
+    for_each: "fields[]"
+    name: "${parent.name}.${.name}"
+    attrs:
+      field_type: "type"
+      default: "default"
+      description: "description"
+    render:
+      shape: box
+
+  - kind: requirement
+    extends: statement
+    from: specs/requirements/*.toml
+    for_each: "requirement[]"
+    name: "${.id}"
+    attrs:
+      text: "text"
+      verified_by: "verified_by[]"
+    render:
+      shape: box
+      group_by: statement
+
+relations:
+  # Container edges.
+  - kind: contains
+    from_kind: view
+    to_kind: widget
+    from_spec: specs/modules/*.toml
+    for_each: "widgets[]"
+    endpoints: { from: "${parent.name}", to: "${parent.name}.${.name}" }
+
+  - kind: contains
+    from_kind: view
+    to_kind: action
+    from_spec: specs/modules/*.toml
+    for_each: "actions[]"
+    endpoints: { from: "${parent.name}", to: "${parent.name}.${.name}" }
+
+  - kind: contains
+    from_kind: store
+    to_kind: store_field
+    from_spec: specs/stores/*.toml
+    for_each: "fields[]"
+    endpoints: { from: "${parent.name}", to: "${parent.name}.${.name}" }
+
+  # Reactive data flow: each `reads[]` entry is already a qualified
+  # `<Store>.<field>` matching a store_field entity name.
+  - kind: depends_on
+    from_kind: view
+    to_kind: store_field
+    from_spec: specs/modules/*.toml
+    for_each: "reads[]"
+    endpoints: { from: "${parent.name}", to: "${.}" }
+    attrs:
+      mode: "mode"  # absent on plain string elements; left for future expansion
+
+  - kind: depends_on
+    from_kind: view
+    to_kind: store_field
+    from_spec: specs/modules/*.toml
+    for_each: "writes[]"
+    endpoints: { from: "${parent.name}", to: "${.}" }
+
+  # Requirement satisfaction from both views and stores.
+  - kind: satisfies
+    from_kind: view
+    to_kind: requirement
+    from_spec: specs/modules/*.toml
+    for_each: "satisfies[]"
+    endpoints: { from: "${parent.name}", to: "${.}" }
+
+  - kind: satisfies
+    from_kind: store
+    to_kind: requirement
+    from_spec: specs/stores/*.toml
+    for_each: "satisfies[]"
+    endpoints: { from: "${parent.name}", to: "${.}" }
