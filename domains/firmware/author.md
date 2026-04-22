@@ -316,8 +316,8 @@ the modules themselves.
 ## Common anti-patterns
 
 1. **Inline cross-module connections.** Wiring goes in `architecture.toml`,
-   not inside a module. If you find yourself writing `connect X.a to Y.b`
-   inside a module, stop.
+   not inside a module. A module file containing `connect X.a to Y.b` is
+   incorrect — move the connection to `architecture.toml`.
 2. **Declaring shared resources in two modules.** One module owns each pin,
    peripheral, and clock. Borrowers do not declare; they receive the
    resource through the owner's action parameters.

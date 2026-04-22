@@ -20,7 +20,7 @@ Read `specs/architecture.toml` if it exists — note the MCU target to suggest s
 ## Step 2 — determine input from `$ARGUMENTS`
 
 - **Empty** — ask the user what to fetch. Suggest the MCU name from `specs/architecture.toml` if available.
-- **Direct URL** (starts with `http` and ends in `.pdf`) — proceed to Step 4.
+- **Direct URL** (starts with `http://` or `https://`) — proceed to Step 4. Query strings and content-disposition URLs without a `.pdf` extension are accepted; Step 5's `%PDF` magic-bytes check rejects anything that isn't actually a PDF.
 - **Part number or description** — proceed to Step 3.
 
 ## Step 3 — search for datasheet
