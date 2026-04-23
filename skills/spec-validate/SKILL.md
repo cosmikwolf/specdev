@@ -39,20 +39,18 @@ For each group, give one-sentence context explaining what the rule guarantees, t
 
 ## Step 3 — suggest fixes
 
-After the findings are presented, offer specific fixes. Read the offending TOML file and point at the exact line to change. Examples:
+After the findings are presented, offer specific fixes. Read the offending TOML file and point at the exact line to change. Use `specdev/shared/rule-ids.md` as the decoder — it lists each firmware rule id, its severity, its meaning, and the typical fix pattern. For non-firmware domains, read the loaded `<Domain dir>/domain.toml` `[validation.rules]` table for the canonical id list. Do not invent rule ids.
 
-- `META010` on `specs/modules/Foo.toml#/metadata` — "required metadata object `ConcurrencyModel` is missing; add a `[metadata.ConcurrencyModel]` table with `protection`, `isr_safe`, and `reentrant`."
-- `FSM021` on `specs/modules/Foo.toml#/state_machines/0/transitions/3` — "transition references `to = "bar"` but state `bar` is not declared in `states[]`; rename the target or add the state."
-- `LAYER001` — "module at layer `application` depends on `pac` module `FooPac`; insert a driver or middleware layer, or downgrade the layer on this module if it truly is low-level."
+## Step 4 — hand off for fixes
 
-Do not invent rule ids. If a finding's rule id is unfamiliar, read `<Domain dir>/domain.toml` to find its definition.
-
-## Step 4 — apply fixes only on request
-
-If the user says "fix them," apply the fixes one file at a time, re-running `specdev-analyzer validate` between edits, until clean or until the user stops. If the user only asked to see the report, stop at Step 3.
+If the user says "fix them," do not edit files from this skill — validation and authoring are separate concerns. For each affected module, tell the user to run `/spec-edit <ModuleName>`, which performs the downstream impact analysis that re-validation alone would miss. For errors in `architecture.toml` or `spec.toml` itself, point to `/spec-init` or a direct edit. After the user applies fixes, re-invoke `/spec-validate` to confirm.
 
 ## Step 5 — report
 
 End with one line:
 - Clean: "All checks passed. `<N>` modules validated."
 - Dirty: "`<E>` errors, `<W>` warnings. Rerun after fixes."
+
+## Additional resources
+
+- `examples/validation-report-walkthrough.md` — annotated walkthrough turning raw analyzer output into grouped findings and hand-off instructions.
