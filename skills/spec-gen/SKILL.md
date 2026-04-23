@@ -17,11 +17,11 @@ Act as an implementer, not an improviser. The codegen guides at the resolved `Co
 
 ## Step 1 — gate on validation
 
-Run `specdev-analyzer validate --project <project_root>`. If the exit code is non-zero, stop and tell the user to run `/spec-validate` first. Do not generate code from invalid specs — the output will be wrong in subtle ways.
+Run `specdev-analyzer validate --project <project_root> --no-color`. If the exit code is non-zero, stop and tell the user to run `/spec-validate` first. Do not generate code from invalid specs — the output will be wrong in subtle ways.
 
 ## Step 2 — extract
 
-Run `specdev-analyzer extract --project <project_root> --output /tmp/specdev-gen-<pid>` to produce canonical YAML. Note the output directory — every subsequent step reads from it.
+Run `specdev-analyzer extract --project <project_root> --output /tmp/specdev-extract-<pid>` to produce canonical YAML. Note the output directory — every subsequent step reads from it.
 
 Each module becomes `<ModuleName>.yaml`. There is also one `architecture.yaml` (project-wide summary) and one `requirements.yaml` (flattened).
 
@@ -63,7 +63,7 @@ Output source code that satisfies, in priority order:
 1. **The codegen guide's mapping rules** (e.g. "`ConcurrencyModel.protection = mutex` ⇒ the module struct holds a `SemaphoreHandle_t`").
 2. **The language's syntax conventions** (naming, file placement, header layout).
 3. **The existing project's observable conventions.** Skim other modules' source under the resolved `<source_dir>` (see Step 3.5) and match what they do — indent width, use of `#pragma once` vs include guards, etc.
-4. **The spec's intent.** When the codegen guide does not prescribe a specific choice, choose something idiomatic for the language and justify it in a one-line comment.
+4. **Style-only defaults when the guide is silent.** For *formatter-level* details the codegen guide does not prescribe (indent width, trailing commas, comment placement), match the project's observable conventions from priority 3. For *semantic* choices the guide does not prescribe (error handling strategy, concurrency primitives, module boundaries), stop and ask the user — do not improvise.
 
 For each file written:
 - At the top, emit the auto-generation header the codegen guide specifies (file name, `@spec` pointer to the module TOML, regeneration command).
@@ -80,7 +80,7 @@ Report the first error verbatim if the build fails. Do not attempt to fix build 
 
 ## Step 7 — clean up
 
-Delete the `/tmp/specdev-gen-<pid>` directory once generation is complete. The extracted YAML is a cache, not output.
+Delete the `/tmp/specdev-extract-<pid>` directory once generation is complete. The extracted YAML is a cache, not output.
 
 ## Step 8 — report
 
@@ -89,3 +89,7 @@ One paragraph per module generated:
 - Any codegen guide rule that required a choice and the choice made.
 - Build result (pass/fail; first error if fail).
 - Suggested follow-ups: `/spec-gen <OtherModule>`, wire this module into `main.rs`, or regenerate after editing the spec.
+
+## Additional resources
+
+- `examples/source-dir-resolution.md` — worked cases for resolving `<source_dir>` per target (flat, multi-package, edge cases).

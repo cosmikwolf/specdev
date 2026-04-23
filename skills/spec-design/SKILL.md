@@ -1,6 +1,6 @@
 ---
 name: spec-design
-description: This skill should be used when the user asks to "design a module", "add a module spec", "refine a module", "author a driver spec", "design <ModuleName>", or needs to write/refine a single module TOML under specs/modules/. Authors one module TOML per invocation, then validates it.
+description: This skill should be used when the user asks to "design a module", "add a module spec", "author a driver spec", "design <ModuleName>", or needs to write a single module TOML under specs/modules/. Authors one module TOML per invocation, then validates it. Use for modules that do not yet exist under specs/modules/; to modify an existing module, use /spec-edit.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 argument-hint: <one-line module description>
 ---
@@ -31,7 +31,7 @@ Read these files, in order, from the paths given in the context header (NOT hard
 2. `<Schema dir>/module.schema.yaml` — canonical field list and enums. This is the contract; treat it as authoritative over any other doc.
 3. `<Schema dir>/metadata.schema.yaml` — `MetadataObject` sub-schema used by modules.
 4. `specs/architecture.toml` in the project — for the peripherals/packages the module may use.
-5. Every existing file under `specs/modules/` — for naming conventions, layer placement, and the pattern of fields the user already uses.
+5. Up to 10 existing files under `specs/modules/` — for naming conventions, layer placement, and the pattern of fields the user already uses. Prefer the most recently modified. If more than 10 exist, skim the remaining filenames to confirm no anomalous shape exists rather than reading each in full.
 
 Do not read the codegen guides. They describe how specs turn into code, which is `/spec-gen`'s job.
 
@@ -65,14 +65,14 @@ Write `specs/modules/<ModuleName>.toml`. Obey these rules, in priority order:
    - Error variants: `PascalCase` (they become `enum class` / Rust enum variants downstream).
 5. **Layer discipline.** A module at layer `application` must not depend on a `pac` module directly; walk through middleware/driver. If in doubt, read `author.md`.
 6. **One module per file.** Never put two `part def` siblings in one file; each TOML holds exactly one module.
-7. **No explanatory comments.** The only comment permitted in emitted TOML is the `#:schema` directive on line 1 (for IDE/Taplo integration). Do not add file-header prose, section dividers, or comments that restate or summarize a nearby field. If a fact deserves to live in the file, it belongs in a schema field — not a comment. Prose that describes the project as a whole belongs in `README.md`. `# LOW:` confidence markers produced by `/spec-reverse` are transient review metadata and do not apply here — `/spec-design` authors from interview, not inference, so no LOW markers are ever emitted; if this skill encounters a pre-existing file with LOW markers, leave them alone.
+7. **Comment policy** — follow `specdev/shared/comment-policy.md`. `/spec-design` authors from interview, not inference, so no `# LOW:` markers are ever emitted here; if this skill encounters a pre-existing file with LOW markers, leave them alone.
 
 ## Step 4 — validate
 
-Run `specdev-analyzer validate --project <project_root>` (do not add `--domain` — the analyzer resolves it from `spec.toml`). Show the output to the user.
+Run `specdev-analyzer validate --project <project_root> --no-color` (do not add `--domain` — the analyzer resolves it from `spec.toml`). Show the output to the user.
 
 If there are errors:
-1. Read each error. The `rule` id points at a specific check (LAYER001 = layer dependency, FSM020 = unreachable state, META010 = required metadata, PORT030 = duplicate port name, etc.).
+1. Read each error. The `rule` id points at a specific check — see `specdev/shared/rule-ids.md` for the firmware-domain decoder and fix patterns.
 2. Fix the TOML. Do not mask errors by removing fields — fix the actual modeling problem.
 3. Re-validate until clean.
 
@@ -89,3 +89,7 @@ One-paragraph summary:
 - Key decisions (layer, ownership kind, error strategy) in one line each.
 - Anything the user asked for but was not placed in the file, and where it was recorded instead.
 - Suggested next step: `/spec-design <next module>`, or `/spec-gen <ModuleName>` once at least one module exists.
+
+## Additional resources
+
+- `examples/README.md` — how to use the reference example projects (catalog at `specdev/examples/README.md`) while authoring.

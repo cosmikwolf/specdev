@@ -1,6 +1,6 @@
 ---
 name: spec-edit
-description: This skill should be used when the user asks to "edit <ModuleName>", "update this module spec", "rename this action", "change the pins for <module>", "remove a field", "refactor a module spec", or needs to modify an existing module TOML with downstream impact analysis. Edits one existing module spec per invocation, analyzes same-package/cross-package/project-wide impact, then validates.
+description: This skill should be used when the user asks to "edit <ModuleName>", "update this module spec", "rename this action", "change the pins for <module>", "remove a field", "refactor a module spec", or needs to modify an existing module TOML with downstream impact analysis. Edits one existing module spec per invocation, analyzes same-package/cross-package/project-wide impact, then validates. Use for modules that already exist under specs/modules/; to author a new module, use /spec-design.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 argument-hint: <ModuleName> [change description]
 ---
@@ -90,7 +90,7 @@ Apply the change using `Edit`. Obey the rules from `/spec-design` step 3:
 2. Preserve existing indentation and key order where not semantically changed.
 3. Do not drop required metadata sub-objects.
 4. Keep inline-table vs array-of-tables form consistent with the rest of the file.
-5. **No explanatory comments.** The only comment permitted in the file is the `#:schema` directive on line 1. If the existing file carries other comments (file-header blurbs, section dividers, prose that restates a nearby field), strip them as part of your edit. Facts belong in schema fields; project-level prose belongs in `README.md`. The one carve-out is `# LOW:` confidence markers produced by `/spec-reverse` — leave those alone until the user has confirmed or cleared each one.
+5. **Comment policy** — follow `specdev/shared/comment-policy.md`. If the existing file carries disallowed comments (file-header blurbs, section dividers, prose that restates a nearby field), strip them as part of your edit. Carve-out for this skill: leave `# LOW:` markers from `/spec-reverse` alone until the user has confirmed or cleared each one.
 
 Show a focused diff of the change. For non-trivial edits, wait for user confirmation before running validate.
 
@@ -99,7 +99,7 @@ Show a focused diff of the change. For non-trivial edits, wait for user confirma
 Run `specdev-analyzer validate --project <project_root> --no-color`. Present the output.
 
 On errors:
-1. Map each rule id to a fix (`LAYER001`, `FSM020/21/22`, `PORT030`, `ISR060`, `OWN050`, `REQ001/002`, `META010`).
+1. Map each rule id to a fix using `specdev/shared/rule-ids.md` (firmware domain; other domains: read the loaded `<Domain dir>/domain.toml` `[validation.rules]` table).
 2. Fix the modeling problem — do not delete fields to silence the checker.
 3. Re-run until clean or until the user stops.
 
@@ -111,3 +111,7 @@ One paragraph:
 - Validation result.
 - Downstream modules that likely need a follow-up edit (list by qualified name `<pkg>::<Module>` when packaged, else bare name).
 - Suggested next step: `/spec-edit <qualified-name>` for each affected dependent, or `/spec-gen <qualified-name>` to regenerate code.
+
+## Additional resources
+
+- `examples/edit-rename-action.md` — worked walkthrough of a rename-action edit with same-package / cross-package / project-wide impact buckets. Reference projects cataloged at `specdev/examples/README.md`.

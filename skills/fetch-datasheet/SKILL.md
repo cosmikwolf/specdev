@@ -25,7 +25,7 @@ Read `specs/architecture.toml` if it exists — note the MCU target to suggest s
 
 ## Step 3 — search for datasheet
 
-Search the web: `"<part> datasheet filetype:pdf"`. Prefer manufacturer-hosted PDFs (espressif.com, st.com, ti.com, nxp.com, microchip.com, infineon.com, nordicsemi.com, analog.com). Present the top candidate URLs and ask the user to confirm before downloading.
+Use `WebSearch` with the query `"<part> datasheet filetype:pdf"` to find candidates. Prefer manufacturer-hosted PDFs (espressif.com, st.com, ti.com, nxp.com, microchip.com, infineon.com, nordicsemi.com, analog.com). Present the top candidate URLs and ask the user to confirm one before proceeding — do not use `WebFetch` at this stage. `WebFetch` is reserved for Step 5's download of the confirmed PDF URL.
 
 ## Step 4 — determine metadata
 
@@ -62,21 +62,12 @@ Exit codes:
 
 Read parsed chapters from `docs/datasheets/<part_name>/<doc_type>/parsed/` and its `index.yaml`.
 
-Write `docs/datasheets/<part_name>/<doc_type>/summary.yaml` with structured hardware data:
-
-- `part`, `manufacturer`, `document_type`, `source_url`, `source_file`.
-- `overview` — `description`, `core`, `max_clock_mhz`, `flash`, `sram`.
-- `peripherals` — list of `{name, count, notes}`.
-- `pins` — `total_gpio`, `adc_pins`, `dac_pins`, `touch_pins`, `strapping_pins`.
-- `electrical` — `vdd_range`, `io_voltage`, `max_gpio_current_ma`, `deep_sleep_current_ua`.
-- `timing` — `startup_time_ms`, `clock_sources`.
-- `register_maps` — `{peripheral, chapter_file, base_address}`.
-- `interfaces` — `{name, max_clock_mhz, modes}`.
-- `power_modes` — `{name, typical_current_ma}`.
-- `notes` — free-form.
-
-**Critical:** only populate fields clearly stated in the parsed text. Use `null` for missing data. Never invent or guess. Downstream skills will trust this file to constrain spec authoring.
+Write `docs/datasheets/<part_name>/<doc_type>/summary.yaml`. The full schema, required fields, and authoring rules live in `references/summary-schema.md` — follow it verbatim. Only populate fields clearly stated in the parsed text; write `null` for anything not stated. Never invent values — downstream skills trust this file.
 
 ## Step 8 — report
 
 Output summary: source URL, PDF path, parser results, chapters parsed, images extracted, summary fields populated/total, peripherals found, register maps referenced. Suggest next steps: run `/spec-design` citing this summary, fetch additional related documents (errata, programming guide), or review `summary.yaml` for gaps.
+
+## Additional resources
+
+- `references/summary-schema.md` — full schema for the emitted `summary.yaml`, including required fields and null-handling rules.

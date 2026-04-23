@@ -1,6 +1,6 @@
 ---
 name: spec-init
-description: This skill should be used when the user asks to "init specdev", "set up a new spec project", "scaffold a spec-driven project", "create spec.toml", "initialize specs/", or starts a new specdev project from scratch. Writes spec.toml, architecture.toml, and the specs/ directory structure.
+description: This skill should be used when the user asks to "init specdev", "set up a new spec project", "scaffold a spec-driven project", "create spec.toml", "initialize specs/", or starts a new specdev project from scratch. Writes spec.toml, architecture.toml, and the specs/ directory structure. Use for empty or greenfield projects; to bootstrap specs from an existing source tree, use /spec-reverse.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
@@ -21,24 +21,14 @@ The context header will either show a resolved `spec.toml` (the project was alre
 If the context header shows a resolved `spec.toml`, read it and show the current contents. Ask:
 
 - **Keep** — leave it untouched, stop here.
+- **Update** — change one or more specific fields; confirm only those, leave the rest alone.
 - **Rewrite** — continue, confirm each field one by one, overwrite at the end.
 
 If the context header reports no `spec.toml`, continue — creating one is the whole point of this skill.
 
 ## Step 2 — detect existing build metadata
 
-Scan the project root for build manifests. For each present file, extract fields:
-
-| File | Extract |
-|---|---|
-| `Cargo.toml` | `[package] name`, `[package] edition`, `[package] rust-version`, `[dependencies]` names, `[workspace] members` |
-| `.cargo/config.toml` | `[build] target` triple, `[env]` keys (MCU, RTOS hints), `build-std` presence |
-| `rust-toolchain.toml` | `channel` |
-| `CMakeLists.txt` | `project(...)` name, `set(CMAKE_SYSTEM_PROCESSOR ...)`, linked libraries |
-| `sdkconfig.defaults` | all `CONFIG_*` lines (ESP-IDF) |
-| `platformio.ini` | `board`, `framework`, `lib_deps` |
-
-Use extracted values as defaults for the Step 4 / Step 4b interviews. Do not silently overwrite — always show the defaulted value and let the user confirm or change it. Step 2 extractions that no domain consumes are harmless (they just aren't asked about).
+Scan the project root for build manifests and extract fields per `references/build-manifest-detection.md`. That reference lists every manifest this skill recognizes and the fields to pull from each. Use extracted values as defaults for the Step 4 / Step 4b interviews — show every defaulted value and let the user confirm or change it. Extractions that no domain consumes are harmless (they just aren't surfaced).
 
 ## Step 3 — list available domains
 
@@ -121,13 +111,13 @@ Write `specs/architecture.toml` using the `## architecture.toml skeleton` from t
 
 For each entry in the `init.md`'s `## Extra scaffold directories`, create the directory under the project root and drop a `.gitkeep` file in it (per the init.md's per-dir policy). For each entry in `## Extra scaffold files`, write the file with the specified contents.
 
-Write `specs/requirements/README.md` with a one-paragraph explanation: "Each `.toml` file in this directory declares one or more requirements and, optionally, the external `[[source]]` documents (protocol specs, standards, user briefs) those requirements are derived from. Each requirement has an id (`REQ-<NAMESPACE>-NNN`) and may reference one or more source ids via `source = [...]` with a free-form `source_ref` locator. Modules reference requirements via their `satisfies = [...]` field. Run `specdev-analyzer validate` to check that every satisfied id is declared, every `source` id resolves, and every requirement is satisfied by at least one module."
+Write `specs/requirements/README.md` verbatim from the body in `references/requirements-readme-template.md`.
 
 Do NOT create any module TOMLs yet. Leave `specs/modules/` empty — that is the job of `/spec-design`.
 
 ## Step 7 — verify
 
-Run `specdev-analyzer validate --project <project_root>` and show the output. Expect a clean report (there are no modules yet, so there is nothing to invalidate). If the analyzer complains about `architecture.toml`, fix the fields written in Step 6 based on its messages and re-run until clean.
+Run `specdev-analyzer validate --project <project_root> --no-color` and show the output. Expect a clean report (there are no modules yet, so there is nothing to invalidate). If the analyzer complains about `architecture.toml`, fix the fields written in Step 6 based on its messages and re-run until clean.
 
 ## Step 8 — report
 
@@ -135,3 +125,9 @@ Summarize:
 - Files created (one line each, with paths).
 - The loaded `init.md`'s `## Post-write notes` section, reproduced verbatim under a **Domain notes** heading. Skip this if no `init.md` was loaded.
 - Next skill: `/spec-design <one-line module description>` to add the first module.
+
+## Additional resources
+
+- `references/build-manifest-detection.md` — manifests scanned in Step 2 and fields extracted.
+- `references/requirements-readme-template.md` — verbatim body written to `specs/requirements/README.md` in Step 6.
+- `examples/domain-init.md` — DSL template and real firmware/egui examples for authoring a new domain's `init.md`.
