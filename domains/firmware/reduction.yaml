@@ -2,9 +2,10 @@ metaschema_version: v1
 
 # -----------------------------------------------------------------------------
 # Firmware-domain reduction (v1). Maps authored TOML under `specs/` to the
-# universal (entities, relations) graph defined by the metaschema at
-# `schema/meta/v1/`. Authored TOML is untouched — this file is the sole
-# translation layer.
+# universal (entities, relations) graph defined by the canonical metaschema
+# (closed root-kind and relation-kind enums embedded in the analyzer per
+# doc 15 §11 invariant 5; see `specdev-next/10-metaschema.md`). Authored
+# TOML is untouched — this file is the sole translation layer.
 #
 # v1 scoping choices (see specdev-next/10-metaschema.md):
 #   * `parent.name` only resolves the enclosing file's `name` field (one level).
