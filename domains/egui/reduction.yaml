@@ -2,7 +2,9 @@ metaschema_version: v1
 
 # -----------------------------------------------------------------------------
 # Egui-domain reduction (v1). Maps authored TOML under `specs/` to the
-# universal (entities, relations) graph defined at `schema/meta/v1/`.
+# universal (entities, relations) graph defined by the canonical metaschema
+# (embedded in the analyzer per doc 15 §11 invariant 5; see
+# `specdev-next/10-metaschema.md`).
 #
 # v1 scoping choices (mirror the firmware reduction):
 #   * `parent.name` only resolves the file-root `name` field. Sub-view
