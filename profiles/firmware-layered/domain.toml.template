@@ -1,0 +1,77 @@
+# firmware-layered project graph checks.
+#
+# Each [[project.graph_checks]] entry runs after validate parses the
+# module + architecture + requirements TOMLs. Severity is configured
+# via [validation.rules].<rule_name>.
+
+[domain]
+name = "{{project_name}}"
+
+[validation]
+[validation.rules]
+unique_module_names         = "error"
+modules_acyclic             = "error"
+layer_dependency            = "error"
+connection_endpoints_resolve = "error"
+requirement_ids_unique      = "error"
+requirement_satisfies_resolves = "warning"
+module_satisfies_resolves   = "warning"
+
+# Each module name must be unique across the project.
+[[project.graph_checks]]
+kind = "unique"
+rule = "unique_module_names"
+field = "entities[?kind=='Module'].name"
+
+# Module dependency graph must be acyclic.
+[[project.graph_checks]]
+kind = "acyclic"
+rule = "modules_acyclic"
+nodes_field = "entities[?kind=='Module'].name"
+edges_from = "relations[?kind=='depends_on'].from"
+edges_to = "relations[?kind=='depends_on'].to"
+
+# Modules may only depend on lower layers (application -> middleware ->
+# driver -> HAL -> PAC). Same-layer dependencies are allowed.
+[[project.graph_checks]]
+kind = "layer_dependency"
+rule = "layer_dependency"
+nodes_field = "entities[?kind=='Module'].name"
+layer_field = "entities[?kind=='Module'].attrs.layer"
+edges_from = "relations[?kind=='depends_on'].from"
+edges_to = "relations[?kind=='depends_on'].to"
+ordering = ["application", "middleware", "driver", "HAL", "PAC"]
+
+# Every connection endpoint (`Module.port`) must name an existing port on
+# an existing module.
+[[project.graph_checks]]
+kind = "reference_exists"
+rule = "connection_endpoints_resolve"
+field = "entities[?kind=='Connection'].attrs.from"
+target_field = "entities[?kind=='Port'].name"
+
+[[project.graph_checks]]
+kind = "reference_exists"
+rule = "connection_endpoints_resolve"
+field = "entities[?kind=='Connection'].attrs.to"
+target_field = "entities[?kind=='Port'].name"
+
+# Requirement ids must be unique.
+[[project.graph_checks]]
+kind = "unique"
+rule = "requirement_ids_unique"
+field = "entities[?kind=='Requirement'].name"
+
+# Requirement.satisfies entries must reference existing requirement ids.
+[[project.graph_checks]]
+kind = "reference_exists"
+rule = "requirement_satisfies_resolves"
+field = "relations[?kind=='satisfies'].to"
+target_field = "entities[?kind=='Requirement'].name"
+
+# Module.satisfies entries must reference existing requirement ids.
+[[project.graph_checks]]
+kind = "reference_exists"
+rule = "module_satisfies_resolves"
+field = "relations[?kind=='module_satisfies'].to"
+target_field = "entities[?kind=='Requirement'].name"
