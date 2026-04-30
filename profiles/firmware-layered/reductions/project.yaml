@@ -60,26 +60,35 @@ entities:
 relations:
   # Module-to-module dependency edges (drives modules_acyclic + layer_dependency).
   - kind: depends_on
-    extends: structural
-    from: "specs/modules/*.toml"
+    extends: depends_on
+    from_kind: Module
+    to_kind: Module
+    from_spec: "specs/modules/*.toml"
     for_each: "depends_on[]"
-    from_ref: "${parent.name}"
-    to_ref: "${.}"
+    endpoints:
+      from: "${parent.name}"
+      to: "${.}"
 
   # Requirement-to-parent traceability (drives requirement_satisfies_resolves).
   - kind: satisfies
-    extends: structural
-    from: "specs/requirements.toml"
+    extends: depends_on
+    from_kind: Requirement
+    to_kind: Requirement
+    from_spec: "specs/requirements.toml"
     for_each: "requirement[].satisfies[]"
-    from_ref: "${parent.id}"
-    to_ref: "${.}"
+    endpoints:
+      from: "${parent.id}"
+      to: "${.}"
 
   # Module-to-requirement (drives module_satisfies_resolves). Distinct
   # relation kind from the requirement-tree `satisfies` so graph checks
   # can target each independently.
   - kind: module_satisfies
-    extends: structural
-    from: "specs/modules/*.toml"
+    extends: depends_on
+    from_kind: Module
+    to_kind: Requirement
+    from_spec: "specs/modules/*.toml"
     for_each: "satisfies[]"
-    from_ref: "${parent.name}"
-    to_ref: "${.}"
+    endpoints:
+      from: "${parent.name}"
+      to: "${.}"
