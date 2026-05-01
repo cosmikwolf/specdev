@@ -1,60 +1,63 @@
 ---
 name: spec-edit
-description: This skill should be used when the user asks to "edit <ModuleName>", "update this module spec", "rename this action", "change the pins for <module>", "remove a field", "refactor a module spec", or needs to modify an existing module TOML with downstream impact analysis. Edits one existing module spec per invocation, analyzes same-package/cross-package/project-wide impact, then validates. Use for modules that already exist under specs/modules/; to author a new module, use /spec-design.
+description: This skill should be used when the user asks to "edit <ModuleName>", "update this module spec", "rename this action", "change the pins for <module>", "remove a field", "refactor a module spec", or needs to modify an existing module TOML with downstream impact analysis. Edits one existing module spec per invocation, analyzes impact across the project, then validates. Use for modules that already exist; to author a new module, use /spec-design.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 argument-hint: <ModuleName> [change description]
 ---
 
-!`${CLAUDE_PLUGIN_ROOT}/scripts/resolve-context`
-
 # /spec-edit — Edit a module spec
 
-Edit exactly one existing module TOML per invocation. First positional arg is the module name. It may be bare (`StatusLed`) or qualified as `<pkg>::<Module>` (`drivers::StatusLed`). Qualified form is required when two packages declare modules with the same name. Any remaining text is a free-form change description.
+Edit exactly one existing module TOML per invocation. First positional arg is the module name (e.g., `StatusLed`); remaining text is a free-form change description.
 
 If `$ARGUMENTS` is empty, ask the user which module to edit and what to change. Never guess.
+
+In v1 specdev is single-package — module names are unqualified. Multi-package qualification lands in Phase 8.5 (library) and Phase 12 (firmware).
+
+If `specdev-analyzer` is not on PATH, tell the user to install it and stop.
 
 ---
 
 ## Step 0 — prerequisites
 
-If the context header reports the analyzer is not on PATH, or reports no `spec.toml`, stop and tell the user to run `/spec-init`. Do not edit blind.
+If `specs/specdev/` is absent at the project root, stop and tell the user to run `/spec-init`. Do not edit blind.
+
+Read `spec.toml` to learn the project's `[project].profile`.
 
 ## Step 1 — locate the module
 
-Parse `$ARGUMENTS` for a `<pkg>::<Module>` split.
+Look at `specs/modules/<Module>.toml`.
 
-- **Qualified (`<pkg>::<Module>`)** — look at `specs/modules/<pkg>/<Module>.toml`. If absent, stop with an error.
-- **Bare (`<Module>`)** — glob `specs/modules/**/<Module>.toml`:
-  1. If exactly one match, use it. Record its package as the parent directory name (or `None` if directly under `specs/modules/`).
-  2. If multiple matches (same name in multiple packages), stop and list them: "Ambiguous — qualify as `<pkg>::<Module>`."
-  3. If zero matches, try case-insensitive; try matching by inner `name = "..."`. If still unfound, stop: "No module named `<Module>`. Use `/spec-design <name>` to create it, or list existing modules."
-
-Record the resolved package (if any) — Step 5 uses it to scope searches.
+- If exactly one match: use it.
+- If absent: try case-insensitive match; try matching by inner `name = "..."`. If still unfound, stop: "No module named `<Module>`. Use `/spec-design <name>` to create it, or list existing modules."
 
 ## Step 2 — read context
 
 Read, in this order:
 
 1. The target module file.
-2. `specs/architecture.toml` — for the project's peripherals and connection list.
-3. Every other file under `specs/modules/**/*.toml` — for downstream impact analysis.
-4. `<Schema dir>/module.schema.yaml` and `<Schema dir>/metadata.schema.yaml` — the authoritative field list for edits.
-5. `<Domain dir>/author.md` — if the change touches unfamiliar structure.
+2. **`specs/architecture.toml`** — for the project's platform/runtime/logger picks and `[[connections]]` list.
+3. **Every other file under `specs/modules/*.toml`** — for downstream impact analysis (this is the file set that may reference the target via `depends_on`, ports, hardware ownership, requirement satisfaction).
+4. **`specs/specdev/schemas/module.schema.yaml`** — the project-managed aggregator. Authoritative for the field list.
+5. **`specs/specdev/schemas/inlined/blocks/*.schema.yaml`** + **`bridges/*.schema.yaml`** — for block- and bridge-contributed fields the change might touch.
+6. **`${CLAUDE_PLUGIN_ROOT}/profiles/<profile>/codegen/<language>/module.conventions.md`** — only if the change touches semantically-loaded fields (state machines, metadata, hardware, bindings) and you need to confirm what they drive at codegen time.
 
-Do not read codegen guides — this skill does not generate code.
+Do not read codegen prose for unrelated fields — this skill does not generate code.
 
 ## Step 3 — display the current state
 
 Summarize the module grouped by topic, not raw TOML:
 
-- **Identity** — `name`, `layer`, `depends_on`.
+- **Identity** — `name`, `layer` (firmware-layered) or `visibility` (library-api), `depends_on`.
 - **Actions** — one line per action with `params`, `direction`, `blocking`, `isr_safe`.
 - **State machines** — initial state, state names, event names; skip transition detail unless asked.
-- **Ports** — name + `port_type`.
-- **Hardware** — `pins`, `peripherals`, `clocks`.
+- **Ports** — name + `port_type` + `direction`.
+- **Hardware** (firmware-layered) — `pins`, `peripherals`, `clocks`.
 - **Errors** — one line per variant.
-- **Metadata** — `MemoryModel`, `ConcurrencyModel`, `ErrorHandling`, `Ownership`.
-- **Requirements** — `requirements_satisfied` ids if present.
+- **Metadata** (firmware-layered) — `MemoryModel`, `ConcurrencyModel`, `ErrorHandling`, `Ownership`.
+- **Bindings** — any `bindings.<a>+<b>` entries (Phase 7+).
+- **External deps** — module-scoped crate deps.
+- **Visibility / re_exports / feature_gates** (library-api).
+- **satisfies** — requirement ids if present.
 
 ## Step 4 — interview, if needed
 
@@ -62,44 +65,42 @@ If the request is ambiguous, ask focused questions — batch them in one message
 
 ## Step 5 — impact analysis
 
-Before writing, audit downstream effects. Partition findings into three buckets when the project declares `[[packages]]`:
+Before writing, audit downstream effects. Surface them grouped by category:
 
-- **Same-package impact** — callers or resource conflicts within the target module's package.
-- **Cross-package impact** — callers or references from other packages (expected for public cross-crate APIs; flag so the user knows the blast radius).
-- **Project-wide impact** — concerns that ignore package boundaries (hardware ownership, wiring in `specs/architecture.toml`).
-
-For unpackaged projects, collapse to a single flat report.
-
-Do each that applies:
-
-- **Renaming/removing an action** — grep `depends_on` and source under the target's `package.source_path` first (same-package bucket), then every other package's `source_path` (cross-package bucket). Unqualified references inside the same package resolve locally; qualified `<pkg>::<Module>.action` references from other packages must also be matched.
-- **Renaming/removing a port** — grep `specs/architecture.toml` `[[connections]]` entries; a connection endpoint may appear qualified (`<pkg>::<Module>.port`) or unqualified. List broken wires as **project-wide**.
-- **Changing `layer`** — check every module that `depends_on` this one across *all* packages; if their layer is now higher per `<Domain dir>/domain.toml`, flag `LAYER001`. Report in the Cross-package bucket if the caller's package differs.
-- **Changing `depends_on`** — check for cycles and layer rules both ways. Qualified references cross package boundaries; resolve them before the graph check.
-- **Changing `hardware.peripherals` / `hardware.pins`** — always **project-wide**. Pin conflicts ignore package boundaries. Cross-check `specs/architecture.toml` and grep every module for the same resource.
+- **Renaming/removing an action** — grep `depends_on` and source under `[paths].source` to find call sites. List broken call sites.
+- **Renaming/removing a port** — grep `specs/architecture.toml` `[[connections]]` for `from = "<Module>.<port>"` or `to = "<Module>.<port>"`. List broken wires.
+- **Changing `layer`** (firmware-layered) — check every module that `depends_on` this one; if any caller's layer is now strictly above the target's per the layered ordering (`application > middleware > driver > HAL > PAC`), flag a future `layer_dependency` violation. Same in reverse: if this module now depends on a higher layer, flag.
+- **Changing `depends_on`** — check for cycles by building the new graph mentally.
+- **Changing `hardware.peripherals` / `hardware.pins`** (firmware-layered) — grep every module for the same resource. Two modules owning the same pin/peripheral surfaces as a hardware-ownership violation. Cross-check `architecture.toml [[connections]]` for endpoints that name the renamed/removed peripheral.
 - **Changing `metadata.ConcurrencyModel`** — local check: if any action is `isr_safe = true`, `protection` cannot be `none`.
-- **Changing `metadata.Ownership.owner`** — verify the owner module exists; accept unqualified same-package name or qualified `<pkg>::<Module>`.
+- **Changing `bindings.<a>+<b>`** — confirm referenced `task` / `peripheral` names still exist on the target module after the edit; cross-reference any other bindings that may reference removed entries.
+- **Changing `visibility`** (library-api) — modules that `re_exports` this target may need their re-export `visibility` adjusted.
+- **Changing `feature_gates`** (library-api) — `module_feature_gates_resolve` will fail if a referenced feature is removed.
 
-If any issue surfaces, present them grouped by bucket and **wait for confirmation** before editing.
+If any issue surfaces, present them grouped and **wait for confirmation** before editing.
 
 ## Step 6 — edit
 
-Apply the change using `Edit`. Obey the rules from `/spec-design` step 3:
+Apply the change using `Edit`. Obey the rules from `/spec-design` Step 3:
 
-1. Field names must match `module.schema.yaml`. No invented keys.
+1. Field names must match the project's `module.schema.yaml`. No invented keys.
 2. Preserve existing indentation and key order where not semantically changed.
-3. Do not drop required metadata sub-objects.
+3. Do not drop required metadata sub-objects (firmware-layered).
 4. Keep inline-table vs array-of-tables form consistent with the rest of the file.
-5. **Comment policy** — follow `specdev/shared/comment-policy.md`. If the existing file carries disallowed comments (file-header blurbs, section dividers, prose that restates a nearby field), strip them as part of your edit. Carve-out for this skill: leave `# LOW:` markers from `/spec-reverse` alone until the user has confirmed or cleared each one.
+5. **Comment policy** — follow `${CLAUDE_PLUGIN_ROOT}/shared/comment-policy.md`. If the existing file carries disallowed comments (file-header blurbs, section dividers, prose that restates a nearby field), strip them as part of your edit. Carve-out: leave `# LOW:` markers from `/spec-reverse` alone until the user has confirmed or cleared each one.
 
 Show a focused diff of the change. For non-trivial edits, wait for user confirmation before running validate.
 
 ## Step 7 — validate
 
-Run `specdev-analyzer validate --project <project_root> --no-color`. Present the output.
+Run from the project root:
+
+```sh
+specdev-analyzer validate --no-color
+```
 
 On errors:
-1. Map each rule id to a fix using `specdev/shared/rule-ids.md` (firmware domain; other domains: read the loaded `<Domain dir>/domain.toml` `[validation.rules]` table).
+1. Map each rule name to a fix by reading `specs/specdev/domain.toml` `[validation.rules]` + `[[project.graph_checks]]`. The rule's `kind` (`unique`, `acyclic`, `layer_dependency`, `endpoints_resolve`, etc.) tells you what was checked.
 2. Fix the modeling problem — do not delete fields to silence the checker.
 3. Re-run until clean or until the user stops.
 
@@ -109,9 +110,9 @@ One paragraph:
 
 - What changed (fields + summary).
 - Validation result.
-- Downstream modules that likely need a follow-up edit (list by qualified name `<pkg>::<Module>` when packaged, else bare name).
-- Suggested next step: `/spec-edit <qualified-name>` for each affected dependent, or `/spec-gen <qualified-name>` to regenerate code.
+- Downstream modules that likely need a follow-up edit, with their bare names.
+- Suggested next step: `/spec-edit <Module>` for each affected dependent, or `/spec-gen <Module>` to regenerate code once the change is locked.
 
 ## Additional resources
 
-- `examples/edit-rename-action.md` — worked walkthrough of a rename-action edit with same-package / cross-package / project-wide impact buckets. Reference projects cataloged at `specdev/examples/README.md`.
+- `examples/edit-rename-action.md` — worked walkthrough of a rename-action edit with downstream impact analysis.
