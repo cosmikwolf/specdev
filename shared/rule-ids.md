@@ -1,36 +1,51 @@
-# Validation rule id decoder
+# Validation rule names — where they live
 
-Shared reference used by `/spec-validate`, `/spec-design`, and `/spec-edit` when translating analyzer output. Rule ids and severities are declared per-domain in `<Domain dir>/domain.toml` under `[validation.rules]` — that file is authoritative. This document summarizes the firmware-domain rule ids and the fix pattern for each, because those are the ones most commonly surfaced.
+Validation rule names and severities are **profile-specific** and live in each project's bootstrap-emitted `specs/specdev/domain.toml`. There is no plugin-wide canonical rule-id table any more — profiles author their own checks.
 
-When a rule id appears that is not listed here, read the loaded domain's `domain.toml` `[validation.rules]` table to recover its severity and meaning. Do not invent rule ids.
+## Where to look in a project
 
-## Firmware-domain rule ids
+`specs/specdev/domain.toml` ships two relevant tables:
 
-| Rule | Severity | Meaning | Typical fix |
-|---|---|---|---|
-| `LAYER001` | error | Module `depends_on` a higher layer than its `[layers.allowed_deps]` permits. | Invert the dependency, or move shared types into a lower layer. |
-| `LAYER002` | error | Cyclic module dependency. | Break the cycle by extracting shared types or injecting via port. |
-| `META010` | error | Required metadata category missing (`MemoryModel`, `ConcurrencyModel`, `ErrorHandling`). | Add the missing `[metadata.<Category>]` table with required keys. |
-| `META011` | warning | Metadata value disagrees with the domain default. | Confirm the override is intentional; otherwise use the default. |
-| `FSM020` | error | State machine's `initial` is not in `states[]`. | Rename the initial state or add it to `states[]`. |
-| `FSM021` | error | Transition references an unknown `from` or `to` state. | Rename the target or add the missing state. |
-| `FSM022` | warning | State unreachable from `initial`. | Add a transition that reaches it, or delete the state. |
-| `PORT030` | error | Architecture connection endpoint does not exist on the named module. | Fix the port name on the module, or fix the endpoint in `architecture.toml`. |
-| `TYPE040` | warning | Action / port type not in the language's `type_map`. | Add the type to the language config or rename to a mapped type. |
-| `REQ001` | warning | Requirement not satisfied by any module. | Add the requirement id to a module's `satisfies[]`, or remove the requirement. |
-| `REQ002` | error | Module `satisfies[]` references an unknown requirement id. | Fix the id (typo?) or declare the requirement. |
-| `REQ003` | error | Requirement `source[]` references an unknown source id. | Fix the id or declare the `[[source]]` entry. |
-| `OWN050` | error | Two modules own the same hardware resource (pin, peripheral). | Resolve ownership — exactly one module per resource. |
-| `ISR060` | error | Action is `isr_safe=true` and `blocking=true` simultaneously. | Pick one; the combination is incoherent. |
-| `PKG040` | warning | Module under `specs/modules/<X>/` where `<X>` is not a declared package. | Declare the package in `spec.toml` or move the file. |
-| `PKG041` | info | Module directly under `specs/modules/` in a multi-package project. | Move the file under a `<pkg>/` directory. |
-| `PKG042` | warning | `[[packages]].source_path` does not exist on disk. | Fix the path or remove the package entry. |
-| `PKG043` | error | `depends_on` / architecture endpoint references an unknown package or module. | Fix the qualified reference. |
-| `PKG044` | error | Unqualified reference is ambiguous across multiple packages. | Qualify as `<pkg>::<Module>`. |
-| `MOD_DEPTH` | error | Module file nested deeper than one level under `specs/modules/`. | Flatten to `specs/modules/<pkg>/<Module>.toml` or `specs/modules/<Module>.toml`. |
+- **`[validation.rules]`** — maps rule name → severity (`error`, `warning`, `info`). Example for firmware-layered:
+  ```toml
+  [validation.rules]
+  unique_module_names           = "error"
+  modules_acyclic               = "error"
+  layer_dependency              = "error"
+  connection_endpoints_resolve  = "error"
+  requirement_satisfies_resolves = "warning"
+  ```
+- **`[[project.graph_checks]]`** — declares each check's `kind` (`unique`, `acyclic`, `layer_dependency`, `endpoints_resolve`, etc.), `scope`, and source fields. Read this to learn what the rule actually checks.
 
-## Usage from skills
+## Standard `kind` values
 
-- `/spec-validate` presents findings grouped by rule category. Use this table's fix column as the starting point for the Step 3 "suggest fixes" phase.
-- `/spec-design` and `/spec-edit` use this table when iterating after validate. If a rule id is unfamiliar, read `<Domain dir>/domain.toml` rather than guessing.
-- When the project is not firmware, the rule ids come from the loaded domain's `domain.toml`. The presentation pattern is identical; only the id set differs.
+The analyzer ships these graph-check primitives (any profile may use them):
+
+- **`unique`** — `field` must be unique across the scoped entities.
+- **`acyclic`** — relations under `scope` form a DAG.
+- **`layer_dependency`** / **`layer_dependency_graph`** — for each scoped relation `(from, to)`, the `to` entity's `layer_field` must be ≤ the `from` entity's per `layer_ordering`.
+- **`endpoints_resolve`** — every value at `field` must name a materialized entity.
+- **`reachability`** — every entity in `scope` must be reachable from a root.
+
+Profile-specific rule names map to these primitives via the `kind` field in the `[[project.graph_checks]]` block.
+
+## Schema and resolver error codes
+
+Distinct from rule names, the analyzer emits framework-level codes that are NOT in `domain.toml`:
+
+| Code family | Meaning |
+|---|---|
+| `LAYOUT-001..006` | Project tree shape (missing `specs/specdev/`, missing schema, etc.). |
+| `SCHEMA`, `SCHEMA-ARCH`, `SCHEMA-REQ` | A TOML file violates its JSON Schema. |
+| `METASCHEMA-001..005` | Inlined block/bridge schema is misshapen (kind grammar, `extends`, etc.). |
+| `AGGREGATOR-005` | The aggregator failed to compile after inline. |
+| `DOMAIN-003`, `REDUCE_UNRESOLVED` | A reduction's `extends` chain or relation endpoint references a kind/name that doesn't exist. |
+| `BLOCK-LINT-001..007`, `BRIDGE-LEX-001` | Plugin-author-time lint codes (run via `specdev-analyzer plugin-lint --plugin <root>`). |
+| `BOOTSTRAP-001..002`, `INLINE-001..003`, `MERGE-001..003`, `PLUGIN-001`, `LINEAGE-001`, `DRIFT-INVARIANT-001..003` | Build-time CLI errors (returned as exit-2). |
+
+These codes are stable across profiles and live in the analyzer source (`specdev-analyzer/src/lib.rs` docstring).
+
+## Skill usage
+
+- `/spec-validate`, `/spec-design`, `/spec-edit` translate findings against the project's own `domain.toml`. Read it first.
+- Do not invent rule names. If a name appears in analyzer output that isn't in the project's `domain.toml`, the project is mid-bootstrap or `domain.toml` was hand-edited and got out of sync — flag it for the user, don't paper over it.

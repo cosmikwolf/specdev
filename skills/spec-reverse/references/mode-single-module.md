@@ -35,6 +35,6 @@ For each item, quote the source lines used as evidence. Fields not evidenced are
 
 Present the candidate TOML with LOW-confidence annotations next to LOW fields only (per `specdev/shared/comment-policy.md`, inline `# LOW: inferred, please confirm` markers). Wait for confirmation, then write to `specs/modules/<ModuleName>.toml`.
 
-Run `specdev-analyzer validate --project <project_root> --no-color`; if errors, show them and ask whether to iterate. For unfamiliar rule ids see `specdev/shared/rule-ids.md`.
+Run `specdev-analyzer validate --no-color`; if errors, show them and ask whether to iterate. For unfamiliar rule names, read the project's `specs/specdev/domain.toml` `[[project.graph_checks]]` blocks for the rule's `kind` and meaning.
 
 Report: source files analyzed, field confidence summary, action/state/error counts, validation result.

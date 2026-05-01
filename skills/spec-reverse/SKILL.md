@@ -1,15 +1,17 @@
 ---
 name: spec-reverse
-description: This skill should be used when the user asks to "reverse-engineer specs", "generate specs from code", "document this existing codebase", "reverse <ModuleName>", "spec-reverse --all", or "spec-reverse --ui". Extracts architecture, module, or UI TOML specs from an existing Rust/C/C++ codebase.
+description: This skill should be used when the user asks to "reverse-engineer specs", "generate specs from code", "document this existing codebase", "reverse <ModuleName>", or "spec-reverse --all". Extracts architecture and module TOML specs from an existing Rust codebase against a chosen profile (firmware-layered or library-api).
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
-argument-hint: [<ModuleName> | --all | --ui]
+argument-hint: [<ModuleName> | --all]
 ---
-
-!`${CLAUDE_PLUGIN_ROOT}/scripts/resolve-context`
 
 # /spec-reverse — Extract specs from source
 
 Reverse-engineer TOML specs from existing source. Never invent fields the code does not support. Every claim written must be traceable to a file and line.
+
+**Phase 10 status (2026-04-30):** the analyzer's tree-sitter-backed reverse primitives are not yet shipped. This skill currently performs *evidence-based manual authoring against the inlined-block schemas* — a person-in-the-loop workflow, not an automated extractor. When Phase 10 lands, the skill will get a `--into <Block>` flag that auto-extracts block-shaped fields (peripherals, pins, tasks, etc.) from source. Until then, the skill walks the code with the user and authors specs by hand.
+
+If `specdev-analyzer` is not on PATH, tell the user to install it and stop.
 
 Modes, decided from `$ARGUMENTS`:
 
@@ -17,29 +19,33 @@ Modes, decided from `$ARGUMENTS`:
 |-------|------|-----------|
 | empty or missing | Architecture reverse | `references/mode-architecture.md` |
 | `--all` | Full project reverse | `references/mode-full-project.md` |
-| `--ui` | UI reverse | `references/mode-ui.md` |
 | any other value | Single-module reverse for `<ModuleName>` | `references/mode-single-module.md` |
+
+The legacy `--ui` mode (firmware UI specs) is removed in v1 — the UI surface is not represented in current profiles.
 
 ---
 
 ## Step 0 — prerequisites and bootstrap
 
-If the context header reports the analyzer is not on PATH, stop and tell the user to install it.
+If the project has no `specs/specdev/` directory, this is expected for a greenfield reverse. **Stop and tell the user to run `/spec-init` first** to bootstrap a profile-aware tree. `/spec-reverse` is not a substitute for `/spec-init` in v1; the inlined block schemas drive what fields the reversed module specs may use, and those schemas only exist after `/spec-init` + `specdev-analyzer inline <block>`.
 
-If the context header reports **Status: no `spec.toml` found**, this is expected for a greenfield reverse on an existing codebase. Do **not** stop — instead, bootstrap inline:
+If `specs/specdev/` is present, continue. Read `spec.toml` to learn the project's `[project].profile` and `[project].language`.
 
-1. Produce: `spec.toml` with `[project]` populated (name, domain, languages); a `specs/` skeleton with `modules/`, `requirements/`, and `ui/` (if the domain uses UI) subdirectories; a top-level `architecture.toml` with `[[layers]]` and `[[packages]]`; and a stub `specs/requirements/README.md`. Infer defaults aggressively from source-tree evidence (`Cargo.toml`, `CMakeLists.txt`, `platformio.ini`, etc.) so the user only confirms, not types. For the full interactive interview, invoke `/spec-init` as a separate step first.
-2. Once `spec.toml` and the `specs/` skeleton exist, continue with Step 1 below. Do not re-run the resolve-context header — the project layout is already known.
+For firmware-layered projects, ask the user to confirm which blocks should be inlined before reversing:
+- An MCU block (e.g., `stm32h5-rs`) — needed to put `peripherals` / `pins` into module specs.
+- A runtime block (e.g., `embassy`) — needed to put `tasks` / `channels` into module specs.
+- Any relevant bridge (e.g., `embassy+stm32h5-rs`) — needed for `bindings.<a>+<b>` entries.
+
+If those blocks aren't inlined yet, tell the user the relevant `specdev-analyzer inline <block>` commands and stop. Reversing into a project that lacks the right block schemas will produce module TOMLs the user can't validate.
 
 ## Step 1 — read the authoritative guides
 
-Read these, in order, from the paths in the context header:
+Read these from the project (not the plugin tree):
 
-1. `<Schema dir>/architecture.schema.yaml`, `<Schema dir>/module.schema.yaml`, `<Schema dir>/metadata.schema.yaml`, `<Schema dir>/ui.schema.yaml` — the authoritative field list for every spec file to be written.
-2. `<Domain dir>/author.md` — structural conventions for this domain.
-3. `<Language dir>/syntax.md` — file conventions for the project's language (Rust / C / C++).
-
-Also read `specdev/shared/comment-policy.md` — the TOML comment policy applies to every file this skill writes (including the LOW-marker carve-out unique to this skill).
+1. **`specs/specdev/schemas/module.schema.yaml`** — the project's aggregated module schema. Every field written must be valid against it.
+2. **`specs/specdev/schemas/inlined/blocks/*.schema.yaml`** + **`bridges/*.schema.yaml`** — the block-contributed shape (peripheral kinds, pin ports, task fields, binding shapes).
+3. **`specs/architecture.toml`** — the existing architecture if present, for cross-referencing.
+4. **`${CLAUDE_PLUGIN_ROOT}/shared/comment-policy.md`** — TOML comment policy (with the `# LOW:` carve-out unique to this skill).
 
 ## Step 2 — route by mode
 
@@ -49,17 +55,21 @@ When fanning out parallel per-module work for `--all`, each subagent is the `mod
 
 ## Rules of the road
 
-- **Evidence over invention.** Every field must trace to source. If evidence is missing, leave the field out or mark LOW and ask.
-- **Schema is the contract.** Every key written must appear in `module.schema.yaml`, `architecture.schema.yaml`, or `ui.schema.yaml`.
+- **Evidence over invention.** Every field must trace to source. If evidence is missing, leave the field out or mark `# LOW: inferred from <file>:<line>, please confirm` and ask.
+- **Schema is the contract.** Every key written must validate against `specs/specdev/schemas/module.schema.yaml` (the aggregator). If the code uses a concept the inlined blocks don't model (e.g., raw register pokes that bypass the HAL), capture it as a comment for the user, do not invent a schema field.
 - **One module per file.** Do not fold multiple concerns into a single TOML.
 - **Stop on structural ambiguity.** If a source file plausibly represents two modules, ask before splitting.
-- **Comment policy** — follow `specdev/shared/comment-policy.md`. This skill's carve-out: inline `# LOW: inferred from <source>:<line>, please confirm` markers are permitted on inferred fields and are removed once the user confirms each one.
-- **Rule ids** — when validate surfaces an unfamiliar rule id, read `specdev/shared/rule-ids.md` (firmware) or the loaded `<Domain dir>/domain.toml` `[validation.rules]` table.
+- **Comment policy** — follow `${CLAUDE_PLUGIN_ROOT}/shared/comment-policy.md`. This skill's carve-out: inline `# LOW: inferred from <source>:<line>, please confirm` markers are permitted on inferred fields and are removed once the user confirms each one.
+- **Profile-shaped reverse.** firmware-layered's required fields differ from library-api's. Reverse against the project's actual profile, not a generic shape.
+
+## Validate after each module
+
+After writing any module TOML, run `specdev-analyzer validate --no-color` and fix schema/graph-check failures before moving to the next module. Do not batch a `--all` run without iterating validate per module — drift compounds.
 
 ## Additional resources
 
 - `references/mode-architecture.md` — procedure for the no-args architecture pass.
 - `references/mode-single-module.md` — procedure for `<ModuleName>` single-module reversal.
-- `references/mode-ui.md` — procedure for `--ui` UI reversal.
 - `references/mode-full-project.md` — procedure for `--all` end-to-end reversal, including the project-shape survey and parallel fan-out.
 - `references/module-reverser-subagent.md` — invocation contract for the `module-reverser` subagent dispatched during `--all`.
+- The legacy `references/mode-ui.md` is retained for historical reference but is unused — the UI surface is not represented in current profiles.

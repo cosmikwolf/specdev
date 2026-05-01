@@ -1,11 +1,11 @@
 # spec-design — using the reference examples
 
-The canonical catalog of example module TOMLs lives at `specdev/examples/README.md`. Do not re-list modules here — consult that file for the authoritative per-project tables.
+Reference example projects under `${CLAUDE_PLUGIN_ROOT}/examples/` may exist and can be useful for shape inspiration. Note: as of v1, examples are inherited from the prior architecture and may not validate against the current `profiles + blocks + bridges` schemas. Treat them as illustrative, not authoritative.
 
 ## Using examples while authoring
 
-1. Identify the target project's domain from its `spec.toml` (`[project] domain`).
-2. Open `specdev/examples/README.md` and find the project for that domain.
-3. From the table there, pick a module whose shape resembles what is about to be authored (driver vs middleware vs view, with/without FSM, etc.).
-4. Open the picked module's TOML and model the new file on its field order and style.
-5. Confirm every field against `<Schema dir>/module.schema.yaml` (the authoritative contract) before writing — examples drift; the schema does not.
+1. Identify the target project's profile from its `spec.toml` (`[project].profile`).
+2. List `${CLAUDE_PLUGIN_ROOT}/examples/` and pick a project whose shape resembles what is about to be authored (firmware module vs library module, with/without state machine, etc.).
+3. Open a representative module's TOML and use it for naming/style inspiration.
+4. **Confirm every field against the project-managed `specs/specdev/schemas/module.schema.yaml`** — examples drift; the project's aggregated schema does not.
+5. If the example uses a field the schema rejects, the field comes from a non-inlined block — either inline the block (`specdev-analyzer inline <block>`) or drop the field.
