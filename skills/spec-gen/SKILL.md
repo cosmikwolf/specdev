@@ -1,95 +1,125 @@
 ---
 name: spec-gen
-description: This skill should be used when the user asks to "generate code", "codegen", "run spec-gen", "generate <ModuleName>", "codegen all modules", "implement this spec", or needs source code generated from validated specdev specs. Handles single modules, packaged modules (`pkg::Module`), and `--all` batch generation.
+description: This skill should be used when the user asks to "generate code", "codegen", "run spec-gen", "generate <ModuleName>", "codegen all modules", or "implement this spec". Generates Rust source code AND Cargo.toml from validated specdev specs (blocks + bridges + profiles model).
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 argument-hint: <ModuleName | --all>
 ---
 
-!`${CLAUDE_PLUGIN_ROOT}/scripts/resolve-context`
-
-# /spec-gen — Code generation
+# /spec-gen — Code generation (blocks + bridges + profiles)
 
 Generate source code for one named module, or for every module when invoked with `--all`. User input: `$ARGUMENTS`.
 
-Act as an implementer, not an improviser. The codegen guides at the resolved `Codegen` path are the rules; the extracted YAML is the data; the language guides at the resolved `Languages` path are the style. If the three disagree, the schema/codegen guides win.
+The spec is the source of truth for **every Cargo dependency**. Cargo.toml is OUTPUT, not input — emitted deterministically from `architecture.toml` + module-level `external_deps[]`. Source files (`.rs`) are emitted by following the assembled codegen prompt; Cargo.toml is emitted by the analyzer (no Claude judgment involved).
+
+Act as an implementer. The codegen prose at `specs/specdev/codegen/<lang>/...` is the contract; the assembled prompt assembles those prose files in deterministic order. Emit code that follows the prose; do not improvise design choices the prose doesn't prescribe.
 
 ---
 
 ## Step 1 — gate on validation
 
-Run `specdev-analyzer validate --project <project_root> --no-color`. If the exit code is non-zero, stop and tell the user to run `/spec-validate` first. Do not generate code from invalid specs — the output will be wrong in subtle ways.
+Run from the project root:
 
-## Step 2 — extract
+```sh
+specdev-analyzer validate --no-color
+```
 
-Run `specdev-analyzer extract --project <project_root> --output /tmp/specdev-extract-<pid>` to produce canonical YAML. Note the output directory — every subsequent step reads from it.
+If exit code is non-zero, stop. Tell the user to run `/spec-validate` and fix findings before generating. Do not generate from invalid specs.
 
-Each module becomes `<ModuleName>.yaml`. There is also one `architecture.yaml` (project-wide summary) and one `requirements.yaml` (flattened).
+## Step 2 — resolve targets
 
-## Step 3 — resolve the targets
+- If `$ARGUMENTS` is `--all`: every `.toml` file under `specs/modules/`.
+- If `$ARGUMENTS` is a name: `specs/modules/<Name>.toml` must exist.
 
-Extract output is nested for multi-package projects: `<out>/<ModuleName>.yaml` for unpackaged modules, `<out>/<package>/<ModuleName>.yaml` for packaged ones. Treat packaged modules as `<pkg>::<Module>` when referring to them in logs and disambiguation.
+Discover module list via `ls specs/modules/*.toml`. Multi-package projects are out of scope in v1 — single-package only (Phase 8.5 lands library multi-package).
 
-- If `$ARGUMENTS` is `--all`: targets are every module YAML under the extract output (recursive), excluding `architecture.yaml` and `requirements.yaml`.
-- If `$ARGUMENTS` is `<pkg>::<Module>`: the single target is `<out>/<pkg>/<Module>.yaml`.
-- If `$ARGUMENTS` is a bare `<Module>`: search all packages. If exactly one match, use it. If multiple, stop and ask the user to qualify it. If zero, fail with the list of available modules.
+## Step 3 — assemble the prompt for each target
 
-For every target, note whether it has a `state_machines[]` array (→ also consult `gen-fsm.md`) and whether any action targets a UI element (→ also consult `gen-ui.md`, only if the project has a `ui/` spec section).
+For each target module `<Name>`:
 
-## Step 3.5 — resolve `<source_dir>` per target
+```sh
+specdev-analyzer prompt --module <Name>
+```
 
-Every codegen guide writes files under a placeholder `<source_dir>` (effectively what the guide calls `src/`). Resolve it per target:
+The output is a deterministic, lex-ordered concatenation of:
 
-1. If the target module's YAML carries a top-level `package: <name>` key, look up that package in the project's `spec.toml` `[[packages]]` list and use its `source_path` joined with `src/` — e.g. `crates/drivers/src/`.
-2. Otherwise, use the project's `[source] root` from `spec.toml` (typically `src/`).
+1. Profile module conventions (`specs/specdev/codegen/<lang>/module.conventions.md`).
+2. Per relevant block (lex-sorted): `codegen/<lang>/blocks/<name>/README.md`.
+3. Per relevant bridge (lex-sorted): `codegen/<lang>/bridges/<name>/README.md`.
+4. Architecture (`specs/architecture.toml`), TOML-fenced.
+5. Module spec, TOML-fenced.
 
-Record `<source_dir>` for each target. Wherever a codegen guide says `src/<module_name>/mod.rs`, substitute `<source_dir>/<module_name>/mod.rs`. Single-package projects stay unchanged (source root is `src/`, substitution is a no-op).
+Read the prompt. It tells you:
+- What file path(s) to emit (the profile prose says where).
+- How to map fields to types/methods (block + bridge prose).
+- What infrastructure picks (panic handler, logger backend, MCU part) Cargo.toml will reflect.
 
-## Step 4 — read the rules
+## Step 4 — generate source files
 
-For each target module, read — from the paths in the context header, not hard-coded plugin paths:
+Output the source files the prompt prescribes, following these priority rules when prose disagrees with itself:
 
-1. `<Codegen dir>/gen-module.md` — the field-to-code mapping rules. This file is the contract.
-2. `<Codegen dir>/gen-fsm.md` — if the module has `state_machines[]`.
-3. `<Codegen dir>/gen-ui.md` — if the module participates in a UI.
-4. `<Language dir>/syntax.md` — project-wide style rules (naming, formatting, import ordering).
-5. `<Language dir>/build.md` — where to place files, how to register them with the build system.
-
-If the target source file already exists, read it too. Preserve user edits outside the auto-generated regions where the language's conventions allow.
-
-## Step 5 — generate
-
-Output source code that satisfies, in priority order:
-
-1. **The codegen guide's mapping rules** (e.g. "`ConcurrencyModel.protection = mutex` ⇒ the module struct holds a `SemaphoreHandle_t`").
-2. **The language's syntax conventions** (naming, file placement, header layout).
-3. **The existing project's observable conventions.** Skim other modules' source under the resolved `<source_dir>` (see Step 3.5) and match what they do — indent width, use of `#pragma once` vs include guards, etc.
-4. **Style-only defaults when the guide is silent.** For *formatter-level* details the codegen guide does not prescribe (indent width, trailing commas, comment placement), match the project's observable conventions from priority 3. For *semantic* choices the guide does not prescribe (error handling strategy, concurrency primitives, module boundaries), stop and ask the user — do not improvise.
+1. **Bridge prose wins over block prose** for cross-block wiring.
+2. **Block prose wins over profile prose** for block-specific fields.
+3. **Profile prose wins** for project-shape decisions (file layout, no_std attrs, error handling strategy).
 
 For each file written:
-- At the top, emit the auto-generation header the codegen guide specifies (file name, `@spec` pointer to the module TOML, regeneration command).
-- Under the header, import order and visibility as per the language guide.
-- No placeholder bodies. If a function cannot be implemented because the spec lacks information, stop and ask before writing a `todo!()` / `return -1;` stub.
+- File header line: `// SPDX-License-Identifier: <project license>` if the spec declares one in `spec.toml [project].license`.
+- A regen-pointer comment: `// @spec specs/modules/<Name>.toml` so a reader can navigate from source to spec.
+- No `todo!()` / `unimplemented!()` placeholders. If the spec lacks information needed to implement a function body, **stop and ask the user** — do not improvise.
 
-Do **not** modify files outside the auto-generated regions. If hand-written code exists in the target file, preserve it and warn in the report.
+Do not modify files outside the auto-generated regions. If hand-written code already exists in the target file, preserve it and warn in the report.
 
-## Step 6 — compile gate (best effort)
+## Step 5 — emit Cargo.toml
 
-If the project's build system is detected (`Cargo.toml`, `CMakeLists.txt`, `platformio.ini`), run a build. For Rust: `cargo check --quiet` from the project root. For C/C++: whatever the `build.md` prescribes.
+```sh
+specdev-analyzer cargo-toml --output Cargo.toml
+```
 
-Report the first error verbatim if the build fails. Do not attempt to fix build errors that stem from missing scaffolding outside the generation scope (e.g. "main.rs does not register this module") — surface the problem to the user with a one-line action item.
+The analyzer renders Cargo.toml deterministically from `spec.toml [project]` + `architecture.toml` (`[platform]`, `[runtime]`, `[logger]`, `[[external_deps]]`, `[msrv]`, `[[features]]`) + per-module `external_deps[]`. Lex-sorted; byte-stable.
 
-## Step 7 — clean up
+If stderr has `warning:` lines (typically version conflicts when two modules declare the same crate at different versions), surface them in the report. The user reconciles by editing the spec, not the generated Cargo.toml.
 
-Delete the `/tmp/specdev-extract-<pid>` directory once generation is complete. The extracted YAML is a cache, not output.
+**Do not edit the generated Cargo.toml by hand.** If you need a dep that isn't there, add it to the spec — `[[external_deps]]` in `architecture.toml` for project-wide infra, or `external_deps[]` in a module file for module-scoped deps — and re-run this step.
+
+## Step 6 — emit memory.x (firmware-layered only, Rust)
+
+For firmware-layered projects: `architecture.toml [platform].mcu_part` drives the linker script.
+
+If `mcu_part` is unset, emit a placeholder comment in `memory.x` and a warning in the report. If the project has a hand-authored `memory.x`, preserve it (do not overwrite).
+
+The MCU-specific MEMORY layout comes from the relevant MCU block's codegen prose. For STM32H5 specifically (`mcu_part = "stm32h5XX"`), see `codegen/rust/blocks/stm32h5-rs/README.md`'s memory layout section if present; otherwise emit a generic `MEMORY { FLASH ... RAM ... }` skeleton with a `// FILL IN` comment.
+
+Library-api projects: skip this step.
+
+## Step 7 — compile gate
+
+For Rust projects:
+
+```sh
+cargo check --quiet
+```
+
+If the build fails, report the first error verbatim and stop. Do not auto-edit code to fix build errors stemming from missing scaffolding outside the per-module emission scope (e.g. `main.rs` doesn't register this module yet) — surface the gap as a one-line action item.
+
+For firmware-layered, `cargo check` against the host won't pass without the target triple. Use:
+
+```sh
+cargo check --quiet --target <[platform].target_triple from architecture.toml>
+```
+
+If the target isn't installed (`rustup target add ...` missing), surface the install command in the report; don't try to install it automatically.
 
 ## Step 8 — report
 
 One paragraph per module generated:
-- Source file(s) written.
-- Any codegen guide rule that required a choice and the choice made.
+- Source file(s) written, with paths relative to project root.
+- Any prose rule that required a choice and the choice made (e.g., "embassy bridge `handoff = "shared"` chose `Mutex<CriticalSectionRawMutex, ...>`").
 - Build result (pass/fail; first error if fail).
-- Suggested follow-ups: `/spec-gen <OtherModule>`, wire this module into `main.rs`, or regenerate after editing the spec.
+- Any `cargo-toml` warnings (version conflicts, missing typed picks).
+- Suggested follow-ups: `/spec-gen <OtherModule>`, wire this module into `main.rs`, regenerate after editing the spec, etc.
 
-## Additional resources
+## What this skill does NOT do
 
-- `examples/source-dir-resolution.md` — worked cases for resolving `<source_dir>` per target (flat, multi-package, edge cases).
+- **Multi-package coordination.** Single-package only in v1; Phase 8.5 lands library multi-package.
+- **Cargo.toml editing.** The analyzer's `cargo-toml` subcommand is the only path to write Cargo.toml. If a dep is missing, edit the spec.
+- **Auto-fix build errors.** Report and stop; the user fixes (likely by editing the spec).
+- **Generate placeholders.** No `todo!()` / stubs — stop and ask if the spec is incomplete.
