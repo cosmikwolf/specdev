@@ -13,6 +13,14 @@ The spec is the source of truth for **every Cargo dependency**. Cargo.toml is OU
 
 Act as an implementer. The codegen prose at `specs/specdev/codegen/<lang>/...` is the contract; the assembled prompt assembles those prose files in deterministic order. Emit code that follows the prose; do not improvise design choices the prose doesn't prescribe.
 
+Before any analyzer invocation, run the env preamble from `${CLAUDE_PLUGIN_ROOT}/shared/plugin-root-preamble.md`:
+
+```sh
+export SPECDEV_PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT}"
+```
+
+Skip if `SPECDEV_PLUGIN_ROOT` is already set or every invocation passes `--plugin-root`.
+
 ---
 
 ## Step 1 — gate on validation
