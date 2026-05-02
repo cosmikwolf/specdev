@@ -10,9 +10,19 @@ Initialize a new spec-driven project by interviewing the user, then delegating f
 
 The current model is **profiles + blocks + bridges** (doc 15). The legacy "domains" model is retired — profiles own project shape; blocks contribute concrete frameworks/libraries/hardware; bridges wire pairs of blocks.
 
-If `specdev-analyzer` is not on PATH, tell the user to install it (`cargo install --git https://github.com/tenkai/specdev-analyzer`) and stop. Do not attempt to write files without the analyzer.
+If `specdev-analyzer` is not on PATH, tell the user to install it (`cargo install --git https://github.com/cosmikwolf/specdev-analyzer`) and stop. Do not attempt to write files without the analyzer.
 
 ---
+
+## Step 0 — session env preamble
+
+Run the export from `${CLAUDE_PLUGIN_ROOT}/shared/plugin-root-preamble.md` before any analyzer invocation:
+
+```sh
+export SPECDEV_PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT}"
+```
+
+See the shared file for the full rationale and skip-conditions. Short version: `CLAUDE_PLUGIN_ROOT` is set in this skill body but is **not** inherited by Bash subshells, so exporting `SPECDEV_PLUGIN_ROOT` once makes plugin-root resolution work for the rest of the session.
 
 ## Step 1 — refuse to clobber
 
@@ -71,7 +81,7 @@ This emits the full `specs/specdev/` machinery (schemas, reductions, codegen pro
 If the analyzer fails:
 - `BOOTSTRAP-001` — target tree already exists or profile name invalid; surface message verbatim.
 - `BOOTSTRAP-002` — unknown placeholder in profile template (a plugin authoring bug); ask the user to file an issue against the plugin.
-- `PLUGIN-001` — plugin root not resolvable; tell the user to set `CLAUDE_PLUGIN_ROOT` or pass `--plugin-root`.
+- `PLUGIN-001` — plugin root not resolvable. Run Step 0's `export SPECDEV_PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT}"` if you skipped it; otherwise pass `--plugin-root <path-to-specdev-plugin>` explicitly. Do not rely on `CLAUDE_PLUGIN_ROOT` propagating into Bash subshells.
 
 Do not attempt to repair these errors by hand-writing files.
 

@@ -8,7 +8,15 @@ allowed-tools: Read, Bash, Glob, Grep
 
 Run the analyzer and translate its output into actionable feedback. Act as a second pair of eyes, not a rewriter — do not edit specs unless the user asks.
 
-If `specdev-analyzer` is not on PATH, tell the user to install it (`cargo install --git https://github.com/tenkai/specdev-analyzer`) and stop.
+If `specdev-analyzer` is not on PATH, tell the user to install it (`cargo install --git https://github.com/cosmikwolf/specdev-analyzer`) and stop.
+
+Before any analyzer invocation, run the env preamble from `${CLAUDE_PLUGIN_ROOT}/shared/plugin-root-preamble.md`:
+
+```sh
+export SPECDEV_PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT}"
+```
+
+Skip if `SPECDEV_PLUGIN_ROOT` is already set or every invocation passes `--plugin-root`.
 
 ---
 

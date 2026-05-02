@@ -13,6 +13,14 @@ Reverse-engineer TOML specs from existing source. Never invent fields the code d
 
 If `specdev-analyzer` is not on PATH, tell the user to install it and stop.
 
+Before any analyzer invocation, run the env preamble from `${CLAUDE_PLUGIN_ROOT}/shared/plugin-root-preamble.md`:
+
+```sh
+export SPECDEV_PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT}"
+```
+
+Skip if `SPECDEV_PLUGIN_ROOT` is already set or every invocation passes `--plugin-root`.
+
 Modes, decided from `$ARGUMENTS`:
 
 | Input | Mode | Procedure |

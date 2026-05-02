@@ -15,6 +15,14 @@ In v1 specdev is single-package — module names are unqualified. Multi-package 
 
 If `specdev-analyzer` is not on PATH, tell the user to install it and stop.
 
+Before any analyzer invocation, run the env preamble from `${CLAUDE_PLUGIN_ROOT}/shared/plugin-root-preamble.md`:
+
+```sh
+export SPECDEV_PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT}"
+```
+
+Skip if `SPECDEV_PLUGIN_ROOT` is already set or every invocation passes `--plugin-root`.
+
 ---
 
 ## Step 0 — prerequisites
