@@ -64,7 +64,8 @@ Summarize the module grouped by topic, not raw TOML:
 - **Metadata** (firmware-layered) — `MemoryModel`, `ConcurrencyModel`, `ErrorHandling`, `Ownership`.
 - **Bindings** — any `bindings.<a>+<b>` entries (Phase 7+).
 - **External deps** — module-scoped crate deps.
-- **Visibility / re_exports / feature_gates** (library-api).
+- **Visibility / feature_gates** (library-api). Re-exports live as `[[items]]` with `kind = "re_export"`.
+- **items[]** (Phase 14) — public-API surface entries; re-exports use `kind = "re_export"`.
 - **satisfies** — requirement ids if present.
 
 ## Step 4 — interview, if needed
@@ -82,7 +83,7 @@ Before writing, audit downstream effects. Surface them grouped by category:
 - **Changing `hardware.peripherals` / `hardware.pins`** (firmware-layered) — grep every module for the same resource. Two modules owning the same pin/peripheral surfaces as a hardware-ownership violation. Cross-check `architecture.toml [[connections]]` for endpoints that name the renamed/removed peripheral.
 - **Changing `metadata.ConcurrencyModel`** — local check: if any action is `isr_safe = true`, `protection` cannot be `none`.
 - **Changing `bindings.<a>+<b>`** — confirm referenced `task` / `peripheral` names still exist on the target module after the edit; cross-reference any other bindings that may reference removed entries.
-- **Changing `visibility`** (library-api) — modules that `re_exports` this target may need their re-export `visibility` adjusted.
+- **Changing `visibility`** (library-api) — modules whose `[[items]]` `kind = "re_export"` references this module may need their re-export `visibility` adjusted.
 - **Changing `feature_gates`** (library-api) — `module_feature_gates_resolve` will fail if a referenced feature is removed.
 
 If any issue surfaces, present them grouped and **wait for confirmation** before editing.
