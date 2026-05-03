@@ -1,8 +1,10 @@
 # specdev
 
-A Claude Code plugin for spec-driven development. Describe your firmware or GUI app as TOML specs, validate them against a machine-checkable schema, then generate Rust / C / C++ code — or reverse-engineer specs from code you already have.
+A Claude Code plugin for spec-driven development. Describe your project as TOML specs, validate them against a machine-checkable schema, then generate Rust code — or reverse-engineer specs from code you already have.
 
-Pairs with the [`specdev-analyzer`](https://github.com/cosmikwolf/specdev-analyzer) CLI, which does the actual validation, extraction, and audit. The plugin provides the interactive authoring workflow; the analyzer provides the checks.
+The plugin models a project as a **profile** (project shape) composed with **blocks** (concrete frameworks, libraries, hardware families) and **bridges** (pairwise wirings between blocks). All three ship in the plugin and are inlined into the project's own `specs/specdev/` tree by deterministic CLI operations; once inlined, the project owns its content.
+
+Pairs with the [`specdev-analyzer`](https://github.com/cosmikwolf/specdev-analyzer) CLI, which does validation, extraction, audit, inline, bootstrap, prompt assembly, and Cargo.toml emission. The plugin provides the interactive authoring workflow; the analyzer provides the mechanical operations.
 
 ## Install
 
@@ -32,101 +34,96 @@ Pairs with the [`specdev-analyzer`](https://github.com/cosmikwolf/specdev-analyz
 From an empty directory:
 
 ```
-/spec-init                    # scaffold spec.toml + specs/
-/spec-design "driver for an SSD1306 OLED over I2C"
+/spec-init                    # interview → analyzer bootstrap → specs/specdev/ + spec.toml
+                              # then inline the blocks and bridges your project needs:
+specdev-analyzer inline stm32h5-rs
+specdev-analyzer inline embassy
+specdev-analyzer inline-bridge embassy+stm32h5-rs
+
 /spec-design "status LED with solid/blinking/breathing"
 /spec-validate                # check schema + graph invariants
-/spec-gen --all               # write source code for every module
+/spec-gen StatusLed           # assemble prompt → Claude emits source → analyzer emits Cargo.toml
 ```
 
-From an existing codebase:
+From an existing codebase (single-module mode is the supported v1 path; `--all` is gated on Phase 10):
 
 ```
-/spec-reverse --all           # extract specs from src/
+/spec-init                    # bootstrap a profile first
+/spec-reverse StatusLed       # walk source with Claude, author one module spec
 /spec-validate
-/spec-edit StatusLed          # refine anything with LOW-confidence fields
 ```
 
 ## Commands
 
-| Command          | Purpose                                                            |
-| ---------------- | ------------------------------------------------------------------ |
-| `/spec-init`     | Scaffold `spec.toml` and the `specs/` directory tree.              |
-| `/spec-design`   | Author one module TOML interactively.                              |
-| `/spec-edit`     | Modify an existing module with downstream impact analysis.         |
-| `/spec-design-ui`| Design firmware UI specs (displays, inputs, indicators, screens, nav). Firmware domain only. |
-| `/spec-validate` | Run the analyzer and translate findings into actionable fixes.     |
-| `/spec-gen`      | Generate source code from validated specs.                         |
-| `/spec-gen-ui`   | Generate firmware UI rendering code, or emit Mermaid interaction diagrams. Firmware domain only. |
-| `/spec-reverse`  | Reverse-engineer specs from existing Rust / C / C++ source.        |
-| `/fetch-datasheet` | Download, parse, and summarize a hardware datasheet PDF.         |
+| Command            | Purpose                                                                            |
+| ------------------ | ---------------------------------------------------------------------------------- |
+| `/spec-init`       | Interview, then `specdev-analyzer bootstrap` to scaffold `spec.toml` + `specs/specdev/`. |
+| `/spec-design`     | Author one module TOML interactively against the project's aggregated schema.      |
+| `/spec-edit`       | Modify an existing module with downstream impact analysis.                         |
+| `/spec-validate`   | Run `specdev-analyzer validate` and translate findings into actionable fixes.      |
+| `/spec-gen`        | Assemble a deterministic codegen prompt, emit Rust source, then emit Cargo.toml.   |
+| `/spec-reverse`    | Reverse-engineer a single module spec from existing source. (`--all` Phase 10-pending.) |
+| `/fetch-datasheet` | Download, parse, and summarize a hardware datasheet PDF.                           |
 
-Every skill reads project configuration from `spec.toml` at invocation time, so the same commands work across firmware and GUI (egui) projects without changes.
+Block and bridge inlining is driven directly via `specdev-analyzer inline <block>` / `inline-bridge <a>+<b>`. A dedicated `/spec-block` skill is planned but not yet shipped.
 
 ## Project layout
 
-Single-crate project:
+After `specdev-analyzer bootstrap` and a few inlines, a single-package project looks like:
 
 ```
 my-project/
-├── spec.toml                  # domain, language, spec_version, paths
-├── src/                       # source code
+├── spec.toml                            # [project] name, profile, language, [paths]
+├── src/                                 # source code
 └── specs/
-    ├── architecture.toml      # cross-module wiring
-    ├── modules/*.toml         # one module per file
-    ├── requirements/*.toml    # requirements referenced by modules
-    └── ui/*.toml              # optional UI specs
+    ├── architecture.toml                # cross-module wiring (profile-shaped)
+    ├── requirements.toml                # requirements referenced by modules
+    ├── modules/*.toml                   # one module per file
+    └── specdev/                         # machinery: schemas, reductions, codegen, lineage
+        ├── schemas/
+        │   ├── module.schema.yaml       # aggregator: $refs to inlined/
+        │   ├── architecture.schema.yaml
+        │   ├── requirements.schema.yaml
+        │   └── inlined/
+        │       ├── blocks/<name>.schema.yaml
+        │       └── bridges/<name>.schema.yaml
+        ├── reductions/
+        │   ├── project.yaml
+        │   ├── blocks/<name>.yaml
+        │   └── bridges/<name>.yaml      # canonical; project-local under bridges/local/
+        ├── codegen/<lang>/
+        │   ├── module.conventions.md    # profile conventions
+        │   ├── blocks/<name>/README.md
+        │   └── bridges/<name>/README.md
+        ├── upstream/                    # bytes-as-of-inlining; the merge base for --merge
+        ├── domain.toml                  # user-edited graph-check rules
+        └── lineage.toml                 # provenance + content hash for every inlined unit
 ```
 
-Multi-crate Cargo workspace (or CMake multi-subproject):
+`specs/specdev/` is committed to git. It is part of the project, not a hidden cache. Once the project is bootstrapped, no runtime path reaches into the plugin — the analyzer operates entirely from `specs/specdev/`.
 
-```
-my-workspace/
-├── spec.toml                  # includes [[packages]] name + source_path
-├── crates/core/     src/…
-├── crates/drivers/  src/…
-└── specs/
-    ├── architecture.toml      # endpoints may be <pkg>::<Module>.<port>
-    ├── modules/
-    │   ├── core/Clock.toml
-    │   └── drivers/Led.toml   # depends_on = ["core::Clock"]
-    └── requirements/*.toml    # requirements are not packaged
-```
+## Profiles, blocks, and bridges
 
-Package membership is derived from the filesystem path — never written inside a module TOML. Cross-package references use `<pkg>::<Module>` syntax; unqualified names resolve within the same package first.
+What ships in the plugin:
 
-## Customization
+- **Profiles** — project-shape skeletons. One-shot scaffolding at bootstrap; no ongoing dependency.
+  - `firmware-layered` — embedded Rust on Cortex-M, layered architecture (PAC → HAL → driver → middleware → application), ports + connections wiring, hardware ownership, Cargo.toml-emitting platform/runtime/logger sections.
+  - `library-api` — pure Rust library, visibility-driven module boundaries, re-exports, Cargo features.
+- **Blocks** — concrete frameworks, libraries, or hardware families. Each ships a schema fragment, reduction rules, per-language codegen prose, and README.
+  - `embassy` (Rust async runtime), `stm32h5-rs` (STM32H5 HAL).
+- **Bridges** — pairwise wirings between two named blocks.
+  - `embassy+stm32h5-rs`.
 
-Every schema, domain guide, language guide, and codegen guide can be overridden per-project by dropping a copy under `.specdev/`:
+Adding a block or bridge: drop it under `blocks/<name>/` or `bridges/<a>+<b>/` in the plugin (or any git repo / local path) and pull it in via `specdev-analyzer inline <block> --from <url|path>`. Plugin CI lints the layout via `specdev-analyzer plugin-lint`. See `15-blocks-and-bridges.md` (the authoritative composition design) in the planning workspace for the full model.
 
-```
-my-project/
-└── .specdev/
-    ├── schema/firmware/v1/module.schema.yaml   # project-specific schema extension
-    ├── domains/firmware/author.md              # house style for module TOMLs
-    ├── languages/rust/syntax.md                # team formatting conventions
-    └── codegen/firmware-rust/gen-module.md     # customized codegen rules
-```
+User-contributed blocks and bridges are first-class: `--from <url|path>` works against any git repo or local checkout, lineage records the origin, and `specdev drift` / `inline --merge` handle updates with 3-way merge against `specs/specdev/upstream/`.
 
-Resolution order: explicit path in `spec.toml` `[paths.overrides]` → `.specdev/<kind>/<name>/` → plugin defaults. Skills embed the analyzer's `resolve` output as their context header, so every skill automatically picks up overrides.
+## Scope and status
 
-## Examples
-
-- [`examples/blinky-a2dp/`](examples/blinky-a2dp/) — ESP32 Bluetooth A2DP audio sink with a DotStar status LED. Four modules across `driver` and `middleware` layers, a requirements file, and a wired architecture.
-- [`examples/counter-egui/`](examples/counter-egui/) — minimal egui desktop GUI: one view, one persisted store, two buttons. Shows the same workflow on a non-firmware domain.
-
-Each example validates and extracts cleanly. Run the analyzer against either directory to see the output.
-
-## Domains and languages
-
-Shipped out of the box:
-
-- **Domains:** `firmware`, `egui`
-- **Languages:** `rust`, `c`, `cpp`
-
-Add a new domain by dropping a `schema/<name>/v1/` tree, a `domains/<name>/` directory (with `domain.toml`, `author.md`, `validate.md`), and codegen guides under `codegen/<name>-<language>/`. The analyzer discovers them automatically.
-
-Add a new language by writing a tree-sitter adapter (grammar + `.scm` queries + a small Rust adapter impl in the analyzer crate) plus a `languages/<name>/` guide.
+- **v1 is single-package.** Multi-package (`[[packages]]` workspace) machinery lands in Phase 8.5 (library) and Phase 12 (firmware). Skills currently refuse multi-package projects with a clear message.
+- **Rust only.** A C-language stack lands in Phase 9.
+- **`/spec-reverse --all`** is Phase 10-pending. Single-module reverse is the supported workflow today; it is a person-in-the-loop authoring flow against the inlined-block schemas, not an automated extractor.
+- **Examples directory** (`examples/blinky-a2dp`, `examples/counter-egui`) is reference material from the prior arc. It will not validate against the current analyzer; new examples land alongside Phase 8.5 (library) and Phase 12 (firmware) dogfood.
 
 ## License
 

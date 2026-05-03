@@ -2,7 +2,9 @@
 
 Entered from the main SKILL.md when `$ARGUMENTS` is a bare module name (not `--all` or `--ui`). Produces exactly one module TOML under `specs/modules/`.
 
-## Step 4 — Single-module reverse
+## Single-module reverse
+
+Entered after the main SKILL.md's Steps 0–2 have run (env preamble, `analyzer reverse` pre-flight, authoritative guides read).
 
 1. Read `specs/architecture.toml`. If missing, stop: *"Run `/spec-reverse` (no args) first to produce architecture."*
 2. Read every existing `specs/modules/**/*.toml` for cross-module context.
@@ -12,6 +14,10 @@ Entered from the main SKILL.md when `$ARGUMENTS` is a bare module name (not `--a
    - C/C++: `src/<snake_case>.c`, `src/<snake_case>.cpp`, plus matching header.
 
    If not found at expected paths, ask the user.
+
+5. **Author a stub `specs/modules/<ModuleName>.toml`** with the bare minimum required by the project's profile (typically `name`, plus required metadata fields the schema demands). The stub exists so `extract-items` can resolve a source file for this module.
+
+6. Run `specdev-analyzer extract-items --module <ModuleName>` from the project root. The YAML output enumerates every top-level item in the source file (kind, name, signature, attributes, span). Use it as the structural basis for filling out the rest of the spec — it is authoritative about what's in the source.
 
 ### Extraction checklist
 
