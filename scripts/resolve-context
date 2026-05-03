@@ -31,7 +31,7 @@ if ! command -v "${ANALYZER_BIN}" >/dev/null 2>&1; then
 
 Install with:
 
-    cargo install --git https://github.com/tenkai/specdev-analyzer
+    cargo install --git https://github.com/cosmikwolf/specdev-analyzer
 
 Or set \`ANALYZER_BIN\` to an absolute path.
 EOF

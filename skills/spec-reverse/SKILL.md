@@ -1,15 +1,15 @@
 ---
 name: spec-reverse
-description: This skill should be used when the user asks to "reverse-engineer specs", "generate specs from code", "document this existing codebase", "reverse <ModuleName>", or "spec-reverse --all". Extracts architecture and module TOML specs from an existing Rust codebase against a chosen profile (firmware-layered or library-api).
+description: This skill should be used when the user asks to "reverse-engineer specs", "generate specs from code", "document this existing codebase", "reverse <ModuleName>", or "spec-reverse --all". Extracts architecture and module TOML specs from an existing Rust codebase against a chosen profile (firmware-layered or library-api), using Phase 10's tree-sitter `extract-items` surface plus inlined block READMEs as authoring context.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
-argument-hint: [<ModuleName> | --all]
+argument-hint: [<ModuleName> | --all] [--into <a,b,...>]
 ---
 
 # /spec-reverse — Extract specs from source
 
 Reverse-engineer TOML specs from existing source. Never invent fields the code does not support. Every claim written must be traceable to a file and line.
 
-**Phase 10 status (2026-04-30):** the analyzer's tree-sitter-backed reverse primitives are not yet shipped. This skill currently performs *evidence-based manual authoring against the inlined-block schemas* — a person-in-the-loop workflow, not an automated extractor. When Phase 10 lands, the skill will get a `--into <Block>` flag that auto-extracts block-shaped fields (peripherals, pins, tasks, etc.) from source. Until then, the skill walks the code with the user and authors specs by hand.
+Per **D40** (2026-05-01), `/spec-reverse` is the **migration tool** for v1 — one-shot for moving an existing codebase into the spec-driven world. Continuous source-vs-spec drift detection (audit) is deferred to Phase 14.x; this skill does not replace audit.
 
 If `specdev-analyzer` is not on PATH, tell the user to install it and stop.
 
@@ -29,37 +29,84 @@ Modes, decided from `$ARGUMENTS`:
 | `--all` | Full project reverse | `references/mode-full-project.md` |
 | any other value | Single-module reverse for `<ModuleName>` | `references/mode-single-module.md` |
 
-The legacy `--ui` mode (firmware UI specs) is removed in v1 — the UI surface is not represented in current profiles.
+Optional `--into <block,...>` scopes the reverse vocabulary to specific inlined blocks (e.g. `--into embassy,stm32h5-rs`). Without it, all inlined blocks contribute their READMEs to the prompt context.
 
 ---
 
 ## Step 0 — prerequisites and bootstrap
 
-If the project has no `specs/specdev/` directory, this is expected for a greenfield reverse. **Stop and tell the user to run `/spec-init` first** to bootstrap a profile-aware tree. `/spec-reverse` is not a substitute for `/spec-init` in v1; the inlined block schemas drive what fields the reversed module specs may use, and those schemas only exist after `/spec-init` + `specdev-analyzer inline <block>`.
+If the project has no `specs/specdev/` directory, this is expected for a greenfield reverse. **Stop and tell the user to run `/spec-init` first** to bootstrap a profile-aware tree. `/spec-reverse` is not a substitute for `/spec-init`; the inlined block schemas drive what fields the reversed module specs may use, and those schemas only exist after `/spec-init` + `specdev-analyzer inline <block>`.
 
 If `specs/specdev/` is present, continue. Read `spec.toml` to learn the project's `[project].profile` and `[project].language`.
 
-For firmware-layered projects, ask the user to confirm which blocks should be inlined before reversing:
+For firmware-layered projects, the relevant blocks should be inlined before reversing (the analyzer's pre-flight in Step 1 will tell you which are present):
 - An MCU block (e.g., `stm32h5-rs`) — needed to put `peripherals` / `pins` into module specs.
 - A runtime block (e.g., `embassy`) — needed to put `tasks` / `channels` into module specs.
 - Any relevant bridge (e.g., `embassy+stm32h5-rs`) — needed for `bindings.<a>+<b>` entries.
 
-If those blocks aren't inlined yet, tell the user the relevant `specdev-analyzer inline <block>` commands and stop. Reversing into a project that lacks the right block schemas will produce module TOMLs the user can't validate.
+If the relevant blocks aren't inlined yet, stop after Step 1 and tell the user the `specdev-analyzer inline <block>` commands they need.
 
-## Step 1 — read the authoritative guides
+## Step 1 — analyzer pre-flight
 
-Read these from the project (not the plugin tree):
+Run from the project root:
+
+```sh
+specdev-analyzer reverse [--into <a,b,...>]
+```
+
+The analyzer reports the inlined blocks, the effective vocabulary (`--into` if passed, else all inlined), any errors, and any warnings. Error/warning codes:
+
+- `[REVERSE-001]` — `--into` named a block that's not inlined. Either inline it, drop it from `--into`, or correct the spelling.
+- `[REVERSE-002]` — no blocks inlined and no `--into`. Stop and tell the user to inline at least one block or pass `--into`.
+- `[REVERSE-003]` (warning) — 2+ blocks inlined and no `--into`; vocabulary is ambiguous. Either accept that the skill will use READMEs from every inlined block as prompt context, or restart with `--into <a,b,...>` to scope.
+
+Do not proceed past `[REVERSE-002]` — the skill cannot author against an empty vocabulary.
+
+## Step 2 — read the authoritative guides
+
+Read these from the project (not the plugin tree), then the plugin-root files:
 
 1. **`specs/specdev/schemas/module.schema.yaml`** — the project's aggregated module schema. Every field written must be valid against it.
 2. **`specs/specdev/schemas/inlined/blocks/*.schema.yaml`** + **`bridges/*.schema.yaml`** — the block-contributed shape (peripheral kinds, pin ports, task fields, binding shapes).
 3. **`specs/architecture.toml`** — the existing architecture if present, for cross-referencing.
-4. **`${CLAUDE_PLUGIN_ROOT}/shared/comment-policy.md`** — TOML comment policy (with the `# LOW:` carve-out unique to this skill).
+4. **`${CLAUDE_PLUGIN_ROOT}/blocks/<name>/README.md`** for each block in the effective vocabulary (Step 1 output) — the design-time prose that tells you what shape the block expects in module specs.
+5. **`${CLAUDE_PLUGIN_ROOT}/bridges/<a>+<b>/README.md`** for any inlined bridge — the wiring patterns the bridge prescribes for `bindings.<a>+<b>` entries.
+6. **`${CLAUDE_PLUGIN_ROOT}/shared/comment-policy.md`** — TOML comment policy (with the `# LOW:` carve-out unique to this skill).
 
-## Step 2 — route by mode
+## Step 3 — route by mode
 
 From the mode table above, load the matching reference file and follow it end to end. Only one mode runs per invocation (except `--all`, which composes the others via `mode-full-project.md`).
 
-When fanning out parallel per-module work for `--all`, each subagent is the `module-reverser` agent described in `references/module-reverser-subagent.md`.
+## Step 4 — extract structured items per module (Phase 10 surface)
+
+Once a module spec stub exists at `specs/modules/<Name>.toml` (with at least `name = "<Name>"` and the `[paths].source` mapping resolvable to the module's source file via the profile's source-naming convention), run:
+
+```sh
+specdev-analyzer extract-items --module <Name>
+```
+
+The analyzer walks the source file with tree-sitter and emits a YAML report listing every top-level item (functions, structs, enums, traits, impls, types, consts, statics, re-exports, macros, extern blocks). The output is the **substrate** for filling out the module spec — it tells you authoritatively what's in the source. Use it to:
+
+- Cross-check `actions[]` (firmware-layered) or public API surface (library-api) against actual `pub fn` / `pub struct` / `pub use` items.
+- Identify state-machine enums (look for enum kinds with variants used in `match` dispatches — extract-items reports the enum, you read the source for the dispatch pattern).
+- Confirm error variants from the module's error enum.
+- Distinguish public API (`visibility: pub`) from internal items.
+
+If the source file doesn't exist yet (rare for reverse), `extract-items` emits an empty list — that's a signal you don't have a target to reverse from.
+
+## Step 5 — author the namespaced TOML
+
+With Step 1's vocabulary, Step 2's authoritative guides, Step 4's structured items, and the source itself in hand: author the module TOML. Block-namespaced fields use the block's top-level property (e.g., `[stm32h5]`, `[embassy.tasks]`); bridge-namespaced fields use `[bindings."<a>+<b>"]`.
+
+## Step 6 — validate after each module
+
+After writing any module TOML, run from the project root:
+
+```sh
+specdev-analyzer validate --no-color
+```
+
+Fix schema/graph-check failures before moving to the next module. Do not batch a `--all` run without iterating validate per module — drift compounds.
 
 ## Rules of the road
 
@@ -69,15 +116,18 @@ When fanning out parallel per-module work for `--all`, each subagent is the `mod
 - **Stop on structural ambiguity.** If a source file plausibly represents two modules, ask before splitting.
 - **Comment policy** — follow `${CLAUDE_PLUGIN_ROOT}/shared/comment-policy.md`. This skill's carve-out: inline `# LOW: inferred from <source>:<line>, please confirm` markers are permitted on inferred fields and are removed once the user confirms each one.
 - **Profile-shaped reverse.** firmware-layered's required fields differ from library-api's. Reverse against the project's actual profile, not a generic shape.
-
-## Validate after each module
-
-After writing any module TOML, run `specdev-analyzer validate --no-color` and fix schema/graph-check failures before moving to the next module. Do not batch a `--all` run without iterating validate per module — drift compounds.
+- **Vocabulary discipline.** Only use block-namespaced fields whose blocks were in Step 1's effective vocabulary. If a peripheral surfaces in source that no inlined block covers, capture it as a `# LOW:` comment and recommend inlining a covering block before recursing.
 
 ## Additional resources
 
 - `references/mode-architecture.md` — procedure for the no-args architecture pass.
-- `references/mode-single-module.md` — procedure for `<ModuleName>` single-module reversal.
-- `references/mode-full-project.md` — procedure for `--all` end-to-end reversal, including the project-shape survey and parallel fan-out.
-- `references/module-reverser-subagent.md` — invocation contract for the `module-reverser` subagent dispatched during `--all`.
-- The legacy `references/mode-ui.md` is retained for historical reference but is unused — the UI surface is not represented in current profiles.
+- `references/mode-single-module.md` — procedure for `<ModuleName>` single-module reversal (uses Step 4's `extract-items` output as the structural basis).
+- `references/mode-full-project.md` — procedure for `--all` end-to-end reversal: project-shape survey, then a sequential per-module loop using the same single-module procedure. Parallel fan-out via the `module-reverser` subagent is supported but not required; sequential walk produces a cleaner audit trail and avoids racing on `validate` invocations.
+- `references/module-reverser-subagent.md` — invocation contract for the `module-reverser` subagent dispatched during `--all` if the user opts into parallel fan-out.
+
+## What this skill does NOT do
+
+- **Replace `/spec-init`.** Bootstrap first; this skill needs the inlined block schemas to author against.
+- **Inline blocks or bridges.** That's `/spec-inline` / `/spec-inline-bridge`. If the source uses a peripheral or runtime construct that no inlined block covers, stop and recommend the relevant inline.
+- **Continuous audit.** Per D40, source-vs-spec audit lands as a Phase 14.x amendment over Phase 14's items[] substrate. Until then, `/spec-reverse` is the migration tool, not the maintenance tool.
+- **Edit existing specs.** That's `/spec-edit`. If `specs/modules/<Name>.toml` already exists, ask whether to compare/replace/cancel before overwriting.

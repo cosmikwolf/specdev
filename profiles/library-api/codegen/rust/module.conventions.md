@@ -123,6 +123,57 @@ Public-API discipline:
 - Avoid `pub` on internal helpers, even if they're "obviously useful"
   to crate consumers; promote later if a real consumer asks.
 
+## Const tables and `build.rs`
+
+When a module's body computes a non-trivial lookup table — entries
+derived from a formula (exponentials, log curves, ratio tables, packed
+sample sets) rather than a handful of named constants — prefer
+**`build.rs` table generation** over `const fn` evaluation:
+
+```rust
+// build.rs
+use std::{env, fs, path::Path};
+
+fn main() {
+    let out = Path::new(&env::var("OUT_DIR").unwrap()).join("ratio_curve.rs");
+    let mut entries = Vec::with_capacity(128);
+    for i in 0..128u32 {
+        let v = compute_ratio(i);
+        entries.push(format!("    {v},"));
+    }
+    let body = format!(
+        "pub static RATIO_CURVE: [u32; 128] = [\n{}\n];\n",
+        entries.join("\n")
+    );
+    fs::write(out, body).unwrap();
+    println!("cargo:rerun-if-changed=build.rs");
+}
+```
+
+```rust
+// src/ratio_curve.rs
+include!(concat!(env!("OUT_DIR"), "/ratio_curve.rs"));
+```
+
+Why over `const fn`:
+- `Ord` and floating-point operations on associated `const`s are still
+  unstable on stable Rust; `build.rs` sidesteps the entire trait-stability
+  surface.
+- Intermediate overflow on `u32` / `i32` arithmetic is easier to reason
+  about in a regular `fn` than under `const`-context restrictions.
+- Compile-time evaluation of large `const fn` table builders blows up
+  build times on cold caches; `build.rs` runs once per build directory
+  and re-runs only when its source changes.
+
+Do **not** put the table values in the module spec — the spec records
+the *shape* (length, element type, "computed from a formula") and points
+the implementer at `build.rs`. Anchor-point fidelity (matching
+documented values at e.g. index 0, 64, 127) belongs in a `#[test]` in
+the module, not in the spec.
+
+For trivial constants (single named values, small enums-as-numbers),
+keep them inline as `pub const NAME: T = ...;`.
+
 ## no_std and alloc
 
 Library projects targeting `no_std` declare the constraint at crate

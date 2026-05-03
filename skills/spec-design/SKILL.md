@@ -38,17 +38,18 @@ Read these files, in order, from the project under design (NOT from the plugin t
 
 1. **`specs/specdev/schemas/module.schema.yaml`** — the project-managed aggregator. Treat this as the contract; every key written must be valid against it. The aggregator's `allOf:` chain references inlined block + bridge schemas under `specs/specdev/schemas/inlined/`.
 2. **`specs/specdev/schemas/inlined/blocks/*.schema.yaml`** — each inlined block contributes a top-level property name (e.g., stm32h5-rs contributes `stm32h5`, embassy contributes `embassy`). Read these to know which block-specific fields the module may carry.
-3. **`specs/specdev/schemas/inlined/bridges/*.schema.yaml`** (if any) — bridges contribute `bindings.<a>+<b>` shapes. Read these to learn the binding contract for any pair of inlined blocks.
-4. **`specs/architecture.toml`** — the project-wide picks (target triple, mcu_part, panic handler, logger, connections). The module may only reference peripherals/pins consistent with the inlined MCU block; cross-check against the block's allowed `kind` enum.
-5. **Up to 10 existing files under `specs/modules/`** — for naming conventions, layer placement, and the pattern of fields the user already uses. Prefer the most recently modified. If more than 10 exist, skim filenames to confirm no anomalous shape exists.
-6. **`${CLAUDE_PLUGIN_ROOT}/profiles/<profile>/codegen/<language>/module.conventions.md`** (read but do not over-apply) — this is *codegen* prose. It informs what fields drive what code, but it is not authoring guidance per se. Use it to understand which spec choices have semantic weight downstream.
-7. **`${CLAUDE_PLUGIN_ROOT}/profiles/<profile>/README.md`** — high-level profile philosophy.
+3. **`${CLAUDE_PLUGIN_ROOT}/blocks/<name>/README.md`** — the design-time guidance for each inlined block (when to use it, conventions, leg-3 "do NOT mention sibling block" rules). Distinct from `codegen/<lang>/README.md` (which `/spec-gen` consumes); this is the authoring view.
+4. **`specs/specdev/schemas/inlined/bridges/*.schema.yaml`** (if any) — bridges contribute `bindings.<a>+<b>` shapes. Read these to learn the binding contract for any pair of inlined blocks. For each, also read `${CLAUDE_PLUGIN_ROOT}/bridges/<a>+<b>/README.md` for the wiring patterns the bridge prescribes.
+5. **`specs/architecture.toml`** — the project-wide picks (target triple, mcu_part, panic handler, logger, connections). The module may only reference peripherals/pins consistent with the inlined MCU block; cross-check against the block's allowed `kind` enum.
+6. **Up to 10 existing files under `specs/modules/`** — for naming conventions, layer placement, and the pattern of fields the user already uses. Prefer the most recently modified. If more than 10 exist, skim filenames to confirm no anomalous shape exists.
+7. **`${CLAUDE_PLUGIN_ROOT}/profiles/<profile>/README.md`** — profile philosophy and "when to use" guidance.
+8. **`${CLAUDE_PLUGIN_ROOT}/profiles/<profile>/codegen/<language>/module.conventions.md`** (read but do not over-apply) — this is *codegen* prose. It informs what fields drive what code, but it is not authoring guidance per se. Use it to understand which spec choices have semantic weight downstream.
 
 ## Step 2 — interview
 
-Ask the user for fields not reasonably inferable from `$ARGUMENTS`. The required and conventional set varies by profile.
+Ask the user for fields not reasonably inferable from `$ARGUMENTS`. The canonical interview shape is whatever the profile's `module.schema.yaml` declares as required + the inlined-block fields the project intends to use. The lists below are **illustrative examples per shipped profile**, not the authoritative source — read the profile schema for the binding contract.
 
-### firmware-layered
+### firmware-layered (illustrative)
 
 - **Name** — PascalCase, matches `Identifier` pattern. Default: derived from `$ARGUMENTS`.
 - **Layer** — one of `application`, `middleware`, `driver`, `HAL`, `PAC` (from `enums.schema.yaml#/$defs/LayerKind`). Default from description (e.g., "driver for an I2C sensor" → `driver`).
@@ -62,7 +63,7 @@ Ask the user for fields not reasonably inferable from `$ARGUMENTS`. The required
 - **Bindings** — if both `embassy` and `stm32h5-rs` are inlined and a bridge is present, ask whether this module declares any `bindings."embassy+stm32h5-rs".peripheral_tasks[]` entries (each entry: `task`, `peripheral`, optional `handoff` ∈ `{owned, shared}`).
 - **satisfies** — requirement ids if `specs/requirements.toml` declares any.
 
-### library-api
+### library-api (illustrative)
 
 - **Name** — PascalCase.
 - **visibility** — `pub` / `pub(crate)` / `pub(super)`.
@@ -71,6 +72,10 @@ Ask the user for fields not reasonably inferable from `$ARGUMENTS`. The required
 - **feature_gates** — list of feature names; ANY-of `cfg(feature = "...")` semantics.
 - **external_deps** — module-scoped crates (CrateReference shape: `{crate, version, source?, features?, default_features?}`).
 - **satisfies** — requirement ids if any.
+
+### rust-workspace
+
+`/spec-design` operates on a **single member crate**, not the workspace. If the project root is a rust-workspace, `cd` into the target member crate's directory (which has its own `specs/specdev/`) and run the skill there — the member's profile (typically `library-api` or `firmware-layered`) shapes the interview. If the user names a workspace member by name, ask which member to design under and route to its `specs/`.
 
 Batch all relevant questions in one message. Show defaults so a fluent user can accept them all.
 
