@@ -40,13 +40,58 @@ are `pub`; helpers are bare. Do **not** emit `pub(crate)` on items
 inside a `crate`-visible module — the module's own visibility already
 constrains reach.
 
-## Re-exports
+## Item emission (Phase 14)
 
-`module.re_exports[]` becomes `pub use` (or `pub(crate) use`) statements
-at the top of the module file:
+`module.items[]` carries the module's contractual surface entries — one
+per top-level Rust construct that has spec significance (typically
+because it satisfies a requirement or is a contractual public re-export).
+The shape is **prose-first**: each item carries a `description` of what
+it does, NOT a signature mirror of how it's typed. The optional
+`signature_hint` field exists as an escape hatch for cases where prose
+alone is insufficient (FFI declarations, macro contracts, generics-heavy
+trait impls); avoid it for ordinary functions and types.
+
+Sparseness rule: every item except `kind = "re_export"` must carry
+`satisfies` (≥1 requirement id). The schema enforces this — items
+without traceability fail validation. `re_export` items are exempt
+because `pub use` is inherently contractual.
+
+Example:
+
+```toml
+[[items]]
+name = "render"
+kind = "fn"
+description = "Composites a frame from the layout tree onto the back buffer."
+satisfies = ["REQ-API-001"]
+
+[[items]]
+name = "Style"
+kind = "struct"
+description = "Append-only collection of style overrides keyed by node id."
+satisfies = ["REQ-API-014"]
+```
+
+Notice neither item names its parameters, return type, or struct fields
+— that's source-level concern, captured in code. The spec describes the
+*contract*; the source describes the *implementation*. When a `pub fn`
+or `pub struct` lacks an items[] entry, codegen emits it but does NOT
+trace it to a requirement; an in-source-only public item is permitted
+(non-spec-significant API surface) but uncommon.
+
+## Re-exports (via items[])
+
+Re-exports are authored as `[[items]]` entries with `kind = "re_export"`.
+Each becomes a `pub use` (or `pub(crate) use`) statement at the top of
+the module file:
 
 ```rust
-// re_exports = [{ target: Inner, visibility: pub, alias: PublicName }]
+# [[items]]
+# name = "PublicName"
+# kind = "re_export"
+# description = "Convenience alias for Inner."
+# target = "inner::Inner"
+# visibility = "pub"
 pub use inner::Inner as PublicName;
 ```
 
@@ -55,17 +100,15 @@ Re-export rules:
 - `visibility = "pub"` → `pub use`. Re-exported item is part of the
   crate's public API.
 - `visibility = "crate"` → `pub(crate) use`. Internal use only.
-- `alias` present → `as <alias>`. Otherwise the original name is
-  preserved.
-- `target` is a sibling module name; emit `target_name::TargetName` as
-  the path. (When `target` is package-qualified `<package>::<Module>`,
-  emit `package::module::Item`.)
+- `name` differing from the trailing `target` segment → `as <name>`.
+  Otherwise the original name is preserved.
+- `target` is a path string. In-crate forms: `<sibling_module>::<Item>`.
+  Cross-package forms: `<package>::<module>::<Item>` for multi-package
+  projects.
 
-The `re_exports_resolve` graph check verifies each `target` is a real
-module before codegen runs.
-
-Do **not** emit `pub use` for a `private` re-export — the schema
-already forbids that combination.
+`re_export` items are exempt from the items[] sparseness rule — the
+inherently-contractual nature of a `pub use` makes `satisfies` optional
+(but still permitted when an explicit traceability link is wanted).
 
 ## Feature gates
 

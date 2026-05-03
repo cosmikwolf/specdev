@@ -116,6 +116,37 @@ For trivial constants (single named values, small enums-as-numbers),
 keep them inline as `pub const NAME: T = ...;` — `build.rs` is for
 *tables*, not all constants.
 
+## Item emission (Phase 14)
+
+`module.items[]` is an OPTIONAL surface in firmware-layered (firmware
+modules' contractual surface lives mostly in `actions[]`, `ports[]`,
+`state_machines[]`, and `errors[]` rather than in items[]'s public-API
+shape). When present, items[] entries carry top-level Rust constructs
+worth tracing to requirements — most often `pub` const tables (driver
+calibration data), `pub` static peripheral handles, or trait impls
+that fulfill a `verified_by` contract.
+
+The shape is **prose-first**: each item's `description` summarizes what
+the construct contractually provides, NOT how it's typed. The optional
+`signature_hint` field exists as an escape hatch for FFI declarations,
+macro contracts, and other cases where prose alone is insufficient;
+avoid it for ordinary firmware functions.
+
+Sparseness rule: every item except `kind = "re_export"` must carry
+`satisfies` (≥1 requirement id). The schema enforces this. For
+firmware-layered, items[] is most useful for:
+
+- `kind = "const"` calibration tables that satisfy a measured-behavior
+  requirement (`["DRV-CALIB-003"]`).
+- `kind = "fn"` ISR handlers whose timing budget is a requirement.
+- `kind = "impl"` trait impls that satisfy a contractual interface
+  required by upper-layer code.
+
+When firmware module specs are content-rich in actions/ports/state
+machines, items[] often stays empty — that's correct. items[] is a
+**supplemental** traceability surface for firmware-layered, not a
+replacement for the structural fields.
+
 ## Action emission
 
 Each `actions[]` entry becomes a method on the module struct. The
