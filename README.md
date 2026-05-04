@@ -123,7 +123,6 @@ User-contributed blocks and bridges are first-class: `--from <url|path>` works a
 - **v1 is single-package.** Multi-package (`[[packages]]` workspace) machinery lands in Phase 8.5 (library) and Phase 12 (firmware). Skills currently refuse multi-package projects with a clear message.
 - **Rust only.** A C-language stack lands in Phase 9.
 - **`/spec-reverse --all`** is Phase 10-pending. Single-module reverse is the supported workflow today; it is a person-in-the-loop authoring flow against the inlined-block schemas, not an automated extractor.
-- **Examples directory** (`examples/blinky-a2dp`, `examples/counter-egui`) is reference material from the prior arc. It will not validate against the current analyzer; new examples land alongside Phase 8.5 (library) and Phase 12 (firmware) dogfood.
 
 ## License
 
