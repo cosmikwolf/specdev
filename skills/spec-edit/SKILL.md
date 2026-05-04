@@ -40,16 +40,25 @@ Look at `specs/modules/<Module>.toml`.
 
 ## Step 2 — read context
 
-Read, in this order:
+Run the analyzer's context cone for the target module — it returns the bounded sibling set + schemas + READMEs in one call:
 
-1. The target module file.
-2. **`specs/architecture.toml`** — for the project's platform/runtime/logger picks and `[[connections]]` list.
-3. **Every other file under `specs/modules/*.toml`** — for downstream impact analysis (this is the file set that may reference the target via `depends_on`, ports, hardware ownership, requirement satisfaction).
-4. **`specs/specdev/schemas/module.schema.yaml`** — the project-managed aggregator. Authoritative for the field list.
-5. **`specs/specdev/schemas/inlined/blocks/*.schema.yaml`** + **`bridges/*.schema.yaml`** — for block- and bridge-contributed fields the change might touch.
-6. **`${CLAUDE_PLUGIN_ROOT}/profiles/<profile>/codegen/<language>/module.conventions.md`** — only if the change touches semantically-loaded fields (state machines, metadata, hardware, bindings) and you need to confirm what they drive at codegen time.
+```sh
+specdev-analyzer context --module <Module> --output /tmp/specdev-ctx-$$.yaml
+```
+
+Read every file path listed under `files:` and `related_files:`. The cone replaces the "every other file under `specs/modules/*.toml`" sweep — Step 5's impact analysis runs against `related_modules` (upstream / downstream / port_endpoints / binding_endpoints / hardware_owners / re_export_targets) instead of the full module tree, with the same logic.
+
+Order to read:
+
+1. The target module file (in `files.target_module`).
+2. `files.architecture` — for `[[connections]]` and project-wide picks.
+3. Each file in `related_files` — bounded sibling set; this is the impact-analysis input.
+4. `files.schema` (aggregator + inlined block + inlined bridge schemas) — authoritative for the field list.
+5. `${CLAUDE_PLUGIN_ROOT}/profiles/<profile>/codegen/<language>/module.conventions.md` — only if the change touches semantically-loaded fields (state machines, metadata, hardware, bindings) and you need to confirm what they drive at codegen time.
 
 Do not read codegen prose for unrelated fields — this skill does not generate code.
+
+The cone is one hop deep. If impact analysis surfaces a transitive concern (e.g. a sibling that itself owns a downstream chain), re-invoke `context --module <Sibling>` for the next-hop view rather than reading siblings of siblings preemptively.
 
 ## Step 3 — display the current state
 
@@ -74,7 +83,7 @@ If the request is ambiguous, ask focused questions — batch them in one message
 
 ## Step 5 — impact analysis
 
-Before writing, audit downstream effects. Surface them grouped by category:
+Before writing, audit downstream effects. The cone's `related_modules` block is the bounded input set for this audit — `upstream` / `downstream` / `port_endpoints` / `binding_endpoints` / `hardware_owners` / `re_export_targets` enumerate the modules that a change to the target may break. Surface findings grouped by category:
 
 - **Renaming/removing an action** — grep `depends_on` and source under `[paths].source` to find call sites. List broken call sites.
 - **Renaming/removing a port** — grep `specs/architecture.toml` `[[connections]]` for `from = "<Module>.<port>"` or `to = "<Module>.<port>"`. List broken wires.

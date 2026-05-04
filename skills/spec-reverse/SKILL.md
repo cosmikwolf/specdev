@@ -64,14 +64,19 @@ Do not proceed past `[REVERSE-002]` — the skill cannot author against an empty
 
 ## Step 2 — read the authoritative guides
 
-Read these from the project (not the plugin tree), then the plugin-root files:
+For single-module reversal, run the analyzer's context cone for the to-be-reversed module name. The cone returns the schema files + plugin-tree READMEs + (when present) sibling cone in one call:
 
-1. **`specs/specdev/schemas/module.schema.yaml`** — the project's aggregated module schema. Every field written must be valid against it.
-2. **`specs/specdev/schemas/inlined/blocks/*.schema.yaml`** + **`bridges/*.schema.yaml`** — the block-contributed shape (peripheral kinds, pin ports, task fields, binding shapes).
-3. **`specs/architecture.toml`** — the existing architecture if present, for cross-referencing.
-4. **`${CLAUDE_PLUGIN_ROOT}/blocks/<name>/README.md`** for each block in the effective vocabulary (Step 1 output) — the design-time prose that tells you what shape the block expects in module specs.
-5. **`${CLAUDE_PLUGIN_ROOT}/bridges/<a>+<b>/README.md`** for any inlined bridge — the wiring patterns the bridge prescribes for `bindings.<a>+<b>` entries.
-6. **`${CLAUDE_PLUGIN_ROOT}/shared/comment-policy.md`** — TOML comment policy (with the `# LOW:` carve-out unique to this skill).
+```sh
+specdev-analyzer context --module <Name> --output /tmp/specdev-ctx-$$.yaml
+```
+
+For greenfield reversal the module won't yet exist, and the cone returns `status: module-not-found` with `files.schema`, `files.block_readmes`, `files.bridge_readmes`, `files.profile_readme`, `files.module_conventions`, and `files.architecture` populated — exactly the surfaces this step needs. Read every path under `files:` (project-relative paths and `${CLAUDE_PLUGIN_ROOT}/...` paths alike); when `related_files` is non-empty (already-reversed siblings), read those for naming conventions and pattern reuse.
+
+Plus the comment-policy file (not surfaced via the cone since it isn't a per-module concern):
+
+- **`${CLAUDE_PLUGIN_ROOT}/shared/comment-policy.md`** — TOML comment policy (with the `# LOW:` carve-out unique to this skill).
+
+For `--all` mode, the per-module loop in `references/mode-full-project.md` invokes `context` once per module rather than reading the whole tree per pass.
 
 ## Step 3 — route by mode
 
