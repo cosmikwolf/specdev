@@ -1,6 +1,6 @@
 ---
 name: spec-sync-items
-description: This skill should be used when the user asks to "sync items", "reconcile spec items with source", "run items propose", "audit module items", "what's drifted between my spec and source", or wants to align a module's `[[items]]` array with what tree-sitter actually finds in the source file. Orchestrates the Phase 14 three-stage agentic sync — deterministic detection → AI-advisory rationale fill → human approval → spec mutation. Refuses to skip stages.
+description: This skill should be used when the user asks to "sync items", "reconcile spec items with source", "run items propose", "audit module items", "what's drifted between my spec and source", or wants to align a module's `[[items]]` array with what tree-sitter actually finds in the source file. Three stages: deterministic detect → Claude-advisory propose with rationale → human-approved apply. Refuses to skip stages. For schema/graph-check errors, use /spec-validate. For inlined-block-vs-plugin drift, use /spec-drift.
 allowed-tools: Read, Edit, Write, Bash, Glob, Grep
 ---
 
@@ -140,6 +140,3 @@ End with one line:
 
 If apply fires `ITEM-309` for a `remove-from-spec` or `update-spec` action, the spec moved between `propose` and `apply` (the user manually edited `[[items]]` in the meantime). Re-run `propose --clobber` and the new diff will reflect the current state.
 
-## V1 surface note
-
-The Phase 14 v1 skill set is **nine** skills (5 thin wrappers from Phase 11a + 3 orchestrators from Phase 11b + this skill). The earlier "8-skill v1" framing in design docs predates Phase 14's commitment; `/spec-sync-items` is the ninth.
