@@ -1,6 +1,6 @@
 ---
 name: spec-bootstrap
-description: This skill should be used when the user asks to "bootstrap a project", "run specdev bootstrap", "scaffold from a profile non-interactively", or wants to invoke `specdev-analyzer bootstrap` directly with explicit profile/language/name arguments. Thin wrapper over the analyzer's `bootstrap` subcommand. For interview-driven scaffolding (with build-manifest detection and architecture refinement), use `/spec-init` instead.
+description: This skill should be used when the user passes explicit `--profile`/`--language`/`--name` flags, when an automation script invokes specdev, or when the user says "bootstrap with these args" or "skip the interview". Thin wrapper over the analyzer's `bootstrap` subcommand — no interview, no defaults inferred. For interview-driven scaffolding ("set up a new specdev project", "init my repo") with build-manifest detection and architecture refinement, use `/spec-init` instead.
 allowed-tools: Read, Bash, Glob, Grep
 argument-hint: --profile <name> --language <lang> --name <project> [<target-dir>]
 ---
@@ -25,7 +25,7 @@ Skip if `SPECDEV_PLUGIN_ROOT` is already set or every invocation passes `--plugi
 
 User input: `$ARGUMENTS`. Required flags:
 
-- `--profile <name>` — must match a directory under `${CLAUDE_PLUGIN_ROOT}/profiles/`. v1 ships `firmware-layered`, `library-api`, `rust-workspace`. List them with `ls "${CLAUDE_PLUGIN_ROOT}/profiles/"` if the user asks.
+- `--profile <name>` — must match a directory under `${CLAUDE_PLUGIN_ROOT}/profiles/`. List the available set dynamically with `ls "${CLAUDE_PLUGIN_ROOT}/profiles/"` — every directory there is a valid choice, including any user-authored profiles. Read `${CLAUDE_PLUGIN_ROOT}/profiles/<name>/README.md` for the profile's purpose.
 - `--language <lang>` — `rust` is the only v1 option. C lands in Phase 9.
 - `--name <project>` — lowercase letters/digits/underscores/hyphens; must start with a letter; ≤64 chars. Becomes `[project].name` in the generated `spec.toml`.
 
@@ -72,10 +72,12 @@ Report:
 - Profile, language, name, and target directory used.
 - Number of files emitted (one-line summary of the new tree, e.g., `specs/specdev/{schemas,reductions,codegen}/...`).
 - Validate result.
-- Suggested next step:
-  - `firmware-layered` → `/spec-inline stm32h5-rs && /spec-inline embassy && /spec-inline-bridge embassy+stm32h5-rs`, then `/spec-design <module>`.
+- Suggested next step: depends on the profile. For shipped profiles:
+  - `firmware-layered` → inline the project's MCU block + runtime block + matching bridge (example: `/spec-inline stm32h5-rs && /spec-inline embassy && /spec-inline-bridge embassy+stm32h5-rs`), then `/spec-design <module>`.
   - `library-api` → `/spec-design <module>`.
-  - `rust-workspace` → bootstrap each member with `cd <member> && /spec-bootstrap --profile library-api --language rust --name <member-name>`.
+  - `audio-plugin` → inline the audio-framework block + optional UI block + matching bridge (example: `/spec-inline nih-plug && /spec-inline egui && /spec-inline-bridge egui+nih-plug`), then `/spec-design <plugin shell module>`.
+  - `rust-workspace` → bootstrap each member crate with its own profile (`cd <member> && /spec-bootstrap --profile <profile> --language rust --name <member-name>`).
+  - For any other profile (including user-authored), read `${CLAUDE_PLUGIN_ROOT}/profiles/<profile>/README.md` for the canonical next-steps guidance.
 
 ## What this skill does NOT do
 

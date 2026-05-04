@@ -46,6 +46,8 @@ Verify: file size > 0, and the first four bytes are `%PDF`. If verification fail
 
 ## Step 6 — run parser
 
+This step requires `uv` (Astral's Python runner). If `uv` is not on PATH, tell the user to install it (`curl -LsSf https://astral.sh/uv/install.sh | sh`, or `brew install uv`) and stop. As a fallback for users who do not want `uv`, `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/parse_datasheet.py` works if the script's dependencies are already installed in the active Python environment — but `uv run` is the supported invocation because it auto-resolves the script's inline dependency declarations.
+
 Execute:
 
 ```

@@ -1,6 +1,6 @@
 ---
 name: spec-inline
-description: This skill should be used when the user asks to "inline a block", "add embassy/stm32h5/lvgl/etc to the spec", "run specdev inline", "import a block", or wants to copy a canonical block from the plugin tree into the project's `specs/specdev/`. Thin wrapper over `specdev-analyzer inline`. Use `--merge` when re-inlining an already-inlined block to update it.
+description: This skill should be used when the user names any block (e.g. "inline embassy", "add stm32h5-rs", "inline nih-plug", "add egui", or any user-authored block) or asks to "inline a block", "add a block to the spec", "run specdev inline", "import a block". Thin wrapper over `specdev-analyzer inline`. Resolves block names dynamically against `${CLAUDE_PLUGIN_ROOT}/blocks/` so user-authored blocks work the same as plugin-shipped ones. Use `--merge` when re-inlining an already-inlined block to update it. To wire two inlined blocks together, use /spec-inline-bridge.
 allowed-tools: Read, Bash, Glob, Grep
 argument-hint: <block-name> [--merge]
 ---
@@ -25,7 +25,7 @@ Skip if `SPECDEV_PLUGIN_ROOT` is already set or every invocation passes `--plugi
 
 User input: `$ARGUMENTS`. Expected: `<block-name> [--merge]`.
 
-- `<block-name>` (required) — must match a directory under `${CLAUDE_PLUGIN_ROOT}/blocks/`. v1 ships `embassy`, `stm32h5-rs` (and historically `stm32f4-rs`). List them with `ls "${CLAUDE_PLUGIN_ROOT}/blocks/"` if the user asks.
+- `<block-name>` (required) — must match a directory under `${CLAUDE_PLUGIN_ROOT}/blocks/`. Never hardcode the available set; list dynamically with `ls "${CLAUDE_PLUGIN_ROOT}/blocks/"` — every directory there is a valid choice, including user-authored blocks. Read `${CLAUDE_PLUGIN_ROOT}/blocks/<name>/README.md` for what the block contributes.
 - `--merge` (optional) — required to re-inline an already-inlined block; performs a 3-way merge from the recorded upstream snapshot to the current plugin version. Without it, re-inline is refused.
 
 If `<block-name>` is missing, ask the user once and stop.
@@ -68,7 +68,7 @@ Report:
 - Files written / changed (count or short list under `specs/specdev/inlined/blocks/<block>/`).
 - New `lineage.toml` entry confirmed (or merged with existing).
 - Validate result.
-- If a paired bridge is the obvious next step (e.g. user just inlined `embassy` after `stm32h5-rs`, or vice versa), suggest `/spec-inline-bridge embassy+stm32h5-rs`. Otherwise no follow-up suggestion.
+- If a paired bridge exists in the plugin tree for this block + an already-inlined block, suggest the corresponding `/spec-inline-bridge <a>+<b>` (lex-ordered). Discover paired bridges with `ls "${CLAUDE_PLUGIN_ROOT}/bridges/" | grep <block-name>` — surface only bridges where the *other* endpoint is already inlined in the project. Otherwise no follow-up suggestion.
 
 ## On merge conflicts
 

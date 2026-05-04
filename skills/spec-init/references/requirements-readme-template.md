@@ -8,4 +8,4 @@ Each `.toml` file in this directory declares one or more requirements and, optio
 
 ---
 
-This template is domain-agnostic — requirements are declared the same way in firmware, egui, and any future domain.
+This template is profile-agnostic — requirements are declared the same way regardless of which profile (firmware-layered, library-api, audio-plugin, rust-workspace, or a user-authored profile) the project uses.

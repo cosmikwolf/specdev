@@ -1,6 +1,6 @@
 ---
 name: spec-inline-bridge
-description: This skill should be used when the user asks to "inline a bridge", "wire two blocks together", "add embassy+stm32h5-rs to the spec", "run specdev inline-bridge", or wants to inline a canonical bridge between two already-inlined blocks. Thin wrapper over `specdev-analyzer inline-bridge`. The bridge name is `<a>+<b>` with `a` and `b` lex-ordered.
+description: This skill should be used when the user names any `<a>+<b>` bridge (lex-ordered: `a < b`; e.g. `embassy+stm32h5-rs`, `egui+nih-plug`, or any user-authored bridge), or asks to "inline a bridge", "wire two blocks together", "wire <X> to <Y>", "connect two blocks", "add `<a>+<b>` to the spec", or "run specdev inline-bridge". Thin wrapper over `specdev-analyzer inline-bridge`. Resolves bridge names dynamically against `${CLAUDE_PLUGIN_ROOT}/bridges/` so user-authored bridges work the same as plugin-shipped ones.
 allowed-tools: Read, Bash, Glob, Grep
 argument-hint: <bridge-name> [--merge]
 ---
@@ -25,14 +25,14 @@ Skip if `SPECDEV_PLUGIN_ROOT` is already set or every invocation passes `--plugi
 
 User input: `$ARGUMENTS`. Expected: `<bridge-name> [--merge]`.
 
-- `<bridge-name>` (required) — `<a>+<b>` form, lex-ordered (`a < b`). v1 canonical: `embassy+stm32h5-rs`. List available with `ls "${CLAUDE_PLUGIN_ROOT}/bridges/"`.
+- `<bridge-name>` (required) — `<a>+<b>` form, lex-ordered (`a < b`). Never hardcode the available set; list dynamically with `ls "${CLAUDE_PLUGIN_ROOT}/bridges/"` — every directory there is a valid choice, including user-authored bridges. Read `${CLAUDE_PLUGIN_ROOT}/bridges/<a>+<b>/README.md` for the wiring contract.
 - `--merge` (optional) — required to re-inline an already-inlined bridge; performs a 3-way merge from the recorded upstream snapshot.
 
 Pre-flight: both blocks named in the bridge **must already be inlined** in the project. The analyzer surfaces a clear error if not, but a friendly heads-up here saves the user a round-trip:
 
-- For `embassy+stm32h5-rs`, both `specs/specdev/inlined/blocks/embassy/` and `specs/specdev/inlined/blocks/stm32h5-rs/` must exist. If either is missing, instruct: "Inline the missing block first: `/spec-inline <block>`."
+- Split `<bridge-name>` on `+` to get `<a>` and `<b>`. Check that both `specs/specdev/inlined/blocks/<a>/` and `specs/specdev/inlined/blocks/<b>/` exist. If either is missing, instruct: "Inline the missing block first: `/spec-inline <block>`."
 
-If the bridge name violates lex-ordering (e.g. user types `stm32h5-rs+embassy`), reject with the corrected form (`embassy+stm32h5-rs`) and stop. Do not silently rewrite — the user might have typed the wrong block.
+If the bridge name violates lex-ordering (e.g. user types `b+a` when `a < b`), reject with the corrected `<a>+<b>` form and stop. Do not silently rewrite — the user might have typed the wrong block.
 
 ## Step 2 — run inline-bridge
 

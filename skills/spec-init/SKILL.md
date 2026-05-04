@@ -1,6 +1,6 @@
 ---
 name: spec-init
-description: This skill should be used when the user asks to "init specdev", "set up a new spec project", "scaffold a spec-driven project", "bootstrap a profile", "create spec.toml", "initialize specs/", or starts a new specdev project from scratch. Wraps `specdev-analyzer bootstrap`, picks a profile (firmware-layered / library-api), and seeds the `specs/specdev/` tree. Use for empty or greenfield projects; to bootstrap specs from an existing source tree, use /spec-reverse.
+description: This skill should be used when the user asks to "init specdev", "set up a new spec project", "scaffold a spec-driven project", "bootstrap a profile", "create spec.toml", "initialize specs/", or starts a new specdev project from scratch. Wraps `specdev-analyzer bootstrap`, picks a profile from whatever ships under `${CLAUDE_PLUGIN_ROOT}/profiles/` (including end-user-authored profiles), and seeds the `specs/specdev/` tree. Use for empty or greenfield projects. For non-interactive scaffolding with explicit args, use /spec-bootstrap. To bootstrap specs from an existing source tree, use /spec-reverse.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
@@ -40,25 +40,20 @@ Scan the project root for build manifests and extract fields per `references/bui
 
 ## Step 3 — list available profiles
 
-Profiles ship in the plugin tree. List them:
+Profiles ship in the plugin tree. List them dynamically — never hardcode the set, since end users may author their own profiles:
 
 ```sh
 ls "${CLAUDE_PLUGIN_ROOT}/profiles/"
 ```
 
-For each profile name, read `${CLAUDE_PLUGIN_ROOT}/profiles/<name>/README.md` and summarize in one line. As of v1 the canonical profiles are:
-
-- **`firmware-layered`** — embedded Rust on Cortex-M, layered architecture (PAC → HAL → driver → middleware → application), ports + connections wiring, hardware ownership.
-- **`library-api`** — pure Rust library, visibility-driven module boundaries, feature gates, no hardware concepts.
-
-If the user added a custom profile under their plugin tree, surface it here as well — do not hardcode the list.
+For each profile name returned, read `${CLAUDE_PLUGIN_ROOT}/profiles/<name>/README.md` and surface one line per profile (the README's first paragraph or a one-sentence summary). Present the list to the user verbatim — every directory under `profiles/` is a valid choice; user-authored profiles surface here the same way as plugin-shipped ones.
 
 ## Step 4 — interview
 
 Ask all of these in one message. Show defaults from Step 2 in parentheses:
 
 1. **Project name** — lowercase, digits, underscores, hyphens; must start with a letter; ≤64 chars. (default: detected `[package].name` or directory name)
-2. **Profile** — one of the names listed in Step 3. (default: `firmware-layered` if a `Cargo.toml` with `cortex-m`/`embassy`/`stm32*` deps was detected; `library-api` if a non-bin `Cargo.toml` was detected; otherwise ask)
+2. **Profile** — one of the names listed in Step 3. Default heuristics for shipped profiles: `firmware-layered` if a `Cargo.toml` with `cortex-m`/`embassy`/`stm32*`/`nrf*`/`esp*` deps was detected; `library-api` if a non-bin `Cargo.toml` was detected; `audio-plugin` if a `nih-plug` / `vst3-sys` / `clack-host` dep was detected; `rust-workspace` if `[workspace]` was detected. Otherwise ask. For user-authored profiles no default is inferred — ask.
 3. **Language** — `rust` is the only option in v1. C lands in Phase 9. (default: `rust`)
 4. **Bootstrap directory** — usually the current working directory, but the analyzer creates it if absent and refuses if `specs/specdev/` is already present. (default: `.`)
 
@@ -89,7 +84,9 @@ Do not attempt to repair these errors by hand-writing files.
 
 Read the emitted `specs/architecture.toml`. The template ships pre-filled with sane defaults; bootstrap-emitted architecture is valid as-is. This step is interview-driven refinement, not error recovery — only edit fields the user actually wants to change.
 
-### firmware-layered
+The illustrative refinement shapes below cover the **shipped profiles**. For any other profile (including user-authored), read `${CLAUDE_PLUGIN_ROOT}/profiles/<profile>/README.md` and the emitted `specs/architecture.toml` together — the README enumerates which architecture-template fields the profile considers required vs optional, and the emitted template carries commented hints. Apply the same "only edit what the user actually wants to change" rule.
+
+### firmware-layered (illustrative)
 
 Pre-filled, confirm or change:
 - `[platform].target_triple` — `thumbv8m.main-none-eabihf` (Cortex-M33 / STM32H5). Common alternatives: `thumbv7em-none-eabihf` (M4F/M7F; STM32F4/H7), `thumbv6m-none-eabi` (M0/M0+).
@@ -105,7 +102,7 @@ Optional (offer but don't insist):
 - `[runtime.critical_section_impl]` — only when overriding `cortex-m`'s bundled impl.
 - `[[external_deps]]` — project-wide crates beyond the typed slots (e.g., `heapless`, `static-cell`).
 
-### library-api
+### library-api (illustrative)
 
 The library-api architecture template is minimal — no required fields. Offer:
 - `msrv = "1.75"` — minimum supported Rust version, becomes `Cargo.toml`'s `rust-version`.
@@ -134,14 +131,17 @@ Summarize:
 - Files created (one line each, with paths).
 - The selected profile and a one-line reminder of what it shapes (firmware-layered → layered embedded; library-api → Rust library).
 - Validate result.
-- **Suggested next steps**:
-  - **firmware-layered** — inline at least one MCU block + a runtime block before authoring modules: `specdev-analyzer inline stm32h5-rs && specdev-analyzer inline embassy && specdev-analyzer inline-bridge embassy+stm32h5-rs`. Then `/spec-design <one-line module description>`.
+- **Suggested next steps**: shape depends on the profile.
+  - **firmware-layered** — inline at least one MCU block + a runtime block + the matching bridge before authoring modules. List shipped MCU/runtime blocks with `ls "${CLAUDE_PLUGIN_ROOT}/blocks/"` and shipped bridges with `ls "${CLAUDE_PLUGIN_ROOT}/bridges/"`; pick the pair matching the project's MCU and runtime. Example for STM32H5 + Embassy: `/spec-inline stm32h5-rs && /spec-inline embassy && /spec-inline-bridge embassy+stm32h5-rs`. Then `/spec-design <one-line module description>`.
   - **library-api** — go straight to `/spec-design <one-line module description>` to add the first module.
+  - **audio-plugin** — inline an audio framework block (e.g. `nih-plug`) and optionally a UI block (e.g. `egui`) plus the matching bridge if the framework + UI are paired. Example: `/spec-inline nih-plug && /spec-inline egui && /spec-inline-bridge egui+nih-plug`. Then `/spec-design <plugin shell module>`.
+  - **rust-workspace** — bootstrap each member crate with its own profile (`cd <member> && /spec-bootstrap --profile <profile> --language rust --name <member-name>`).
+  - **other / user-authored profile** — read the profile's README at `${CLAUDE_PLUGIN_ROOT}/profiles/<profile>/README.md`; the README is the authoritative source for what to do next.
 
 ## What this skill does NOT do
 
 - **Author module specs.** That's `/spec-design`'s job. Bootstrap leaves `specs/modules/` empty.
-- **Inline blocks or bridges.** The user (or a future `/spec-block` skill) drives `specdev-analyzer inline` / `inline-bridge`.
+- **Inline blocks or bridges.** Use `/spec-inline <block>` and `/spec-inline-bridge <a>+<b>` after bootstrap.
 - **Edit an existing project.** Re-running `spec-init` over a bootstrapped tree is refused at Step 1; for changes, edit the relevant template-emitted file directly.
 - **Pick MCU hardware.** It asks the user; it does not auto-detect from `.cargo/config.toml` target triples (the architecture template defaults are sane for the most common case but require confirmation).
 
