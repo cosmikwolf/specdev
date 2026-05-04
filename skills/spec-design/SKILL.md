@@ -34,16 +34,17 @@ Read `spec.toml` to learn the project's `[project].profile` and `[project].langu
 
 ## Step 1 — read the authoritative guides
 
-Read these files, in order, from the project under design (NOT from the plugin tree):
+Run the analyzer's context cone for the proposed module name. The cone tells the skill which files to read; you read only those, instead of the whole `specs/modules/` tree:
 
-1. **`specs/specdev/schemas/module.schema.yaml`** — the project-managed aggregator. Treat this as the contract; every key written must be valid against it. The aggregator's `allOf:` chain references inlined block + bridge schemas under `specs/specdev/schemas/inlined/`.
-2. **`specs/specdev/schemas/inlined/blocks/*.schema.yaml`** — each inlined block contributes a top-level property name (e.g., stm32h5-rs contributes `stm32h5`, embassy contributes `embassy`). Read these to know which block-specific fields the module may carry.
-3. **`${CLAUDE_PLUGIN_ROOT}/blocks/<name>/README.md`** — the design-time guidance for each inlined block (when to use it, conventions, leg-3 "do NOT mention sibling block" rules). Distinct from `codegen/<lang>/README.md` (which `/spec-gen` consumes); this is the authoring view.
-4. **`specs/specdev/schemas/inlined/bridges/*.schema.yaml`** (if any) — bridges contribute `bindings.<a>+<b>` shapes. Read these to learn the binding contract for any pair of inlined blocks. For each, also read `${CLAUDE_PLUGIN_ROOT}/bridges/<a>+<b>/README.md` for the wiring patterns the bridge prescribes.
-5. **`specs/architecture.toml`** — the project-wide picks (target triple, mcu_part, panic handler, logger, connections). The module may only reference peripherals/pins consistent with the inlined MCU block; cross-check against the block's allowed `kind` enum.
-6. **Up to 10 existing files under `specs/modules/`** — for naming conventions, layer placement, and the pattern of fields the user already uses. Prefer the most recently modified. If more than 10 exist, skim filenames to confirm no anomalous shape exists.
-7. **`${CLAUDE_PLUGIN_ROOT}/profiles/<profile>/README.md`** — profile philosophy and "when to use" guidance.
-8. **`${CLAUDE_PLUGIN_ROOT}/profiles/<profile>/codegen/<language>/module.conventions.md`** (read but do not over-apply) — this is *codegen* prose. It informs what fields drive what code, but it is not authoring guidance per se. Use it to understand which spec choices have semantic weight downstream.
+```sh
+specdev-analyzer context --module <ProposedName> --output /tmp/specdev-ctx-$$.yaml
+```
+
+For a module that does not yet exist, the cone returns `status: module-not-found`; `files.schema`, `files.block_readmes`, `files.bridge_readmes`, `files.profile_readme`, `files.module_conventions`, and `files.architecture` are still populated (they don't depend on M). `related_modules` is empty in this path; `excluded_module_count` carries the total existing-module count for orientation.
+
+Then read every file path listed under `files:` and (when the module exists) under `related_files:`. The schemas establish the contract; the READMEs are the authoring view (distinct from the codegen prose `/spec-gen` consumes). The architecture file carries project-wide picks. `${CLAUDE_PLUGIN_ROOT}/profiles/<profile>/codegen/<language>/module.conventions.md` is *codegen* prose — read but do not over-apply; it informs which spec choices have semantic weight downstream.
+
+When the module already exists or a sibling-shape inference is needed, the cone's `related_files` gives the bounded sibling set to read (lex-sorted, project-relative). The cone is one hop deep — if a sibling references something farther out, re-invoke `context --module <Sibling>` for that next-hop view.
 
 ## Step 2 — interview
 
