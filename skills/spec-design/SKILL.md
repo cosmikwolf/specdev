@@ -48,55 +48,15 @@ When the module already exists or a sibling-shape inference is needed, the cone'
 
 ## Step 2 — interview
 
-Ask the user for fields not reasonably inferable from `$ARGUMENTS`. The canonical interview shape is whatever the profile's `module.schema.yaml` declares as required + the inlined-block fields the project intends to use. The lists below are **illustrative examples per shipped profile**, not the authoritative source — read the profile schema for the binding contract.
+Ask the user for fields not reasonably inferable from `$ARGUMENTS`. The canonical interview shape is whatever the profile's `module.schema.yaml` declares as required + the inlined-block fields the project intends to use — that schema is the binding contract.
 
-### firmware-layered (illustrative)
-
-- **Name** — PascalCase, matches `Identifier` pattern. Default: derived from `$ARGUMENTS`.
-- **Layer** — one of `application`, `middleware`, `driver`, `HAL`, `PAC` (from `enums.schema.yaml#/$defs/LayerKind`). Default from description (e.g., "driver for an I2C sensor" → `driver`).
-- **depends_on** — list of existing module names. Default empty.
-- **Hardware** — pins / peripherals / clocks the module owns or borrows. Cross-check against `specs/architecture.toml` and the inlined MCU block's schema (e.g., for `stm32h5`: `peripherals[].kind` must be one of the block's enum).
-- **Ports** — name + `port_type` + `direction` for each port. These appear as endpoints in `architecture.toml [[connections]]`.
-- **Actions** — public action surface. One line per action, with `params`, `direction`, `blocking`, `isr_safe`.
-- **State machine** — if the module has one, ask for initial state, state names, triggering events. Defer transition details to the TOML.
-- **Errors** — one short variant name + one-line description each.
-- **Metadata** — `MemoryModel`, `ConcurrencyModel`, `ErrorHandling`, `Ownership`. Pick explicit, well-justified values; do not default through.
-- **Bindings** — if both `embassy` and `stm32h5-rs` are inlined and a bridge is present, ask whether this module declares any `bindings."embassy+stm32h5-rs".peripheral_tasks[]` entries (each entry: `task`, `peripheral`, optional `handoff` ∈ `{owned, shared}`).
-- **satisfies** — requirement ids if `specs/requirements.toml` declares any.
-
-### library-api (illustrative)
-
-- **Name** — PascalCase.
-- **visibility** — `pub` / `pub(crate)` / `pub(super)`.
-- **depends_on** — list of existing module names.
-- **items** — `[[items]]` entries for the module's contractual surface (Phase 14). Re-exports use `kind = "re_export"` with `{target, visibility, alias?}`; other public-API items (`fn`, `struct`, `enum`, `trait`, `impl`, ...) require `satisfies` (≥1 requirement id).
-- **feature_gates** — list of feature names; ANY-of `cfg(feature = "...")` semantics.
-- **external_deps** — module-scoped crates (CrateReference shape: `{crate, version, source?, features?, default_features?}`).
-- **satisfies** — requirement ids if any.
-
-### rust-workspace
-
-`/spec-design` operates on a **single member crate**, not the workspace. If the project root is a rust-workspace, `cd` into the target member crate's directory (which has its own `specs/specdev/`) and run the skill there — the member's profile (typically `library-api` or `firmware-layered`) shapes the interview. If the user names a workspace member by name, ask which member to design under and route to its `specs/`.
+For shipped profiles, illustrative interview-question lists are in `references/interview-shapes.md` (firmware-layered, library-api, rust-workspace routing). For user-authored profiles, read the profile's `module.schema.yaml` and `README.md` directly — no illustrative shape is provided.
 
 Batch all relevant questions in one message. Show defaults so a fluent user can accept them all.
 
 ## Step 3 — write the TOML
 
-Write `specs/modules/<ModuleName>.toml`. Obey these rules, in priority order:
-
-1. **Schema is the contract.** Every field name must appear somewhere in the aggregator's reachable schemas. No invented keys. The schema uses `unevaluatedProperties: false`, which is `allOf`-aware — block-contributed properties pass through.
-2. **Required fields by profile.** firmware-layered requires `name` + `layer`; library-api requires `name` + `visibility`. Whatever else the profile's `module.schema.yaml` lists as required must be present.
-3. **Required metadata (firmware-layered).** `metadata.MemoryModel`, `metadata.ConcurrencyModel`, `metadata.ErrorHandling`, `metadata.Ownership` must all be present. Pick explicit values.
-4. **Prefer inline tables for ≤3 params.** `params = [{name = "...", type = "u32", direction = "in"}]` is easier to read than an array-of-tables for short lists. Flip to `[[actions.params]]` when an action has >3 params.
-5. **Naming conventions.**
-   - Module names: PascalCase (`StatusLed`, `BtA2dpSink`).
-   - Action names: `snake_case`.
-   - Event names: `snake_case`, suffixed `_evt` (`set_solid_evt`, not `setSolid`).
-   - State names: `snake_case`.
-   - Error variants: `PascalCase` (they become Rust enum variants).
-6. **Layer discipline (firmware-layered).** A module at layer `application` must not directly depend on a `PAC` module — walk through `middleware` / `driver` / `HAL`. The `layer_dependency` graph check enforces this.
-7. **One module per file.** Each TOML holds exactly one module.
-8. **Comment policy** — follow `${CLAUDE_PLUGIN_ROOT}/shared/comment-policy.md`. `/spec-design` authors from interview, not inference, so no `# LOW:` markers — those are unique to `/spec-reverse`.
+Write `specs/modules/<ModuleName>.toml` following the priority-ordered authoring rules in `references/toml-authoring-rules.md`: schema-as-contract, required fields by profile, required metadata for firmware-layered, inline-table preference, naming conventions, layer discipline, one-module-per-file, and the comment policy carve-outs.
 
 ## Step 4 — validate
 
@@ -131,6 +91,11 @@ One paragraph:
 - Key decisions in one line each (layer / visibility, ownership kind, error strategy, bindings).
 - Anything the user asked for that wasn't placed in the file, and where it was recorded instead.
 - Suggested next step: `/spec-design <next module>`, or `/spec-gen <ModuleName>` once at least one module exists and a code-path exists for the inlined blocks/bridges.
+
+## Additional resources
+
+- `references/interview-shapes.md` — illustrative interview shapes per shipped profile (firmware-layered, library-api) and the rust-workspace routing rule.
+- `references/toml-authoring-rules.md` — priority-ordered authoring rules shared with `/spec-edit`: schema-as-contract, required fields, naming conventions, layer discipline, comment policy.
 
 ## What this skill does NOT do
 

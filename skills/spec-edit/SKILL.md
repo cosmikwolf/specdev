@@ -83,29 +83,13 @@ If the request is ambiguous, ask focused questions — batch them in one message
 
 ## Step 5 — impact analysis
 
-Before writing, audit downstream effects. The cone's `related_modules` block is the bounded input set for this audit — `upstream` / `downstream` / `port_endpoints` / `binding_endpoints` / `hardware_owners` / `re_export_targets` enumerate the modules that a change to the target may break. Surface findings grouped by category:
+Audit downstream effects per `references/impact-analysis-matrix.md`. The cone's `related_modules` block (`upstream` / `downstream` / `port_endpoints` / `binding_endpoints` / `hardware_owners` / `re_export_targets`) is the bounded input set; the matrix enumerates what to grep / cross-check for each change type (action rename, port rename, layer change, `depends_on` change, hardware reassignment, concurrency-model change, binding edit, visibility change, feature-gate edit).
 
-- **Renaming/removing an action** — grep `depends_on` and source under `[paths].source` to find call sites. List broken call sites.
-- **Renaming/removing a port** — grep `specs/architecture.toml` `[[connections]]` for `from = "<Module>.<port>"` or `to = "<Module>.<port>"`. List broken wires.
-- **Changing `layer`** (firmware-layered) — check every module that `depends_on` this one; if any caller's layer is now strictly above the target's per the layered ordering (`application > middleware > driver > HAL > PAC`), flag a future `layer_dependency` violation. Same in reverse: if this module now depends on a higher layer, flag.
-- **Changing `depends_on`** — check for cycles by building the new graph mentally.
-- **Changing `hardware.peripherals` / `hardware.pins`** (firmware-layered) — grep every module for the same resource. Two modules owning the same pin/peripheral surfaces as a hardware-ownership violation. Cross-check `architecture.toml [[connections]]` for endpoints that name the renamed/removed peripheral.
-- **Changing `metadata.ConcurrencyModel`** — local check: if any action is `isr_safe = true`, `protection` cannot be `none`.
-- **Changing `bindings.<a>+<b>`** — confirm referenced `task` / `peripheral` names still exist on the target module after the edit; cross-reference any other bindings that may reference removed entries.
-- **Changing `visibility`** (library-api) — modules whose `[[items]]` `kind = "re_export"` references this module may need their re-export `visibility` adjusted.
-- **Changing `feature_gates`** (library-api) — `module_feature_gates_resolve` will fail if a referenced feature is removed.
-
-If any issue surfaces, present them grouped and **wait for confirmation** before editing.
+If any issue surfaces, present findings grouped by change type and **wait for confirmation** before editing.
 
 ## Step 6 — edit
 
-Apply the change using `Edit`. Obey the rules from `/spec-design` Step 3:
-
-1. Field names must match the project's `module.schema.yaml`. No invented keys.
-2. Preserve existing indentation and key order where not semantically changed.
-3. Do not drop required metadata sub-objects (firmware-layered).
-4. Keep inline-table vs array-of-tables form consistent with the rest of the file.
-5. **Comment policy** — follow `${CLAUDE_PLUGIN_ROOT}/shared/comment-policy.md`. If the existing file carries disallowed comments (file-header blurbs, section dividers, prose that restates a nearby field), strip them as part of your edit. Carve-out: leave `# LOW:` markers from `/spec-reverse` alone until the user has confirmed or cleared each one.
+Apply the change using `Edit`, following the priority-ordered TOML authoring rules in `${CLAUDE_PLUGIN_ROOT}/skills/spec-design/references/toml-authoring-rules.md` (schema-as-contract, required fields, inline-table preference, naming conventions, layer discipline, one-module-per-file, comment policy). The "When editing existing TOML" section at the bottom is the spec-edit-specific carve-out: preserve existing indentation/key order where not semantically changed; strip disallowed comments as part of the edit; leave `# LOW:` markers from `/spec-reverse` alone until the user has confirmed each one.
 
 Show a focused diff of the change. For non-trivial edits, wait for user confirmation before running validate.
 
@@ -133,4 +117,5 @@ One paragraph:
 
 ## Additional resources
 
+- `references/impact-analysis-matrix.md` — change-type → downstream-check mapping used in Step 5 (action rename, port rename, layer change, `depends_on` change, hardware reassignment, concurrency-model change, binding edit, visibility change, feature-gate edit).
 - `examples/edit-rename-action.md` — worked walkthrough of a rename-action edit with downstream impact analysis.

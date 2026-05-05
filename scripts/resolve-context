@@ -1,8 +1,9 @@
 #!/bin/sh
 # resolve-context — emit the resolved context for the current project.
 #
-# Called by every SKILL.md via:
-#   !`${CLAUDE_PLUGIN_ROOT}/scripts/resolve-context`
+# Standalone helper (not auto-invoked by skills — those use the env-export
+# preamble in shared/plugin-root-preamble.md). Run manually when you want a
+# rendered view of the resolved schema/domain/language paths a project will use.
 #
 # Delegates to `specdev-analyzer resolve`, which implements the full D13
 # resolution chain:
@@ -10,7 +11,7 @@
 #   2. `./.specdev/<kind>/<name>/`
 #   3. plugin defaults (under $CLAUDE_PLUGIN_ROOT)
 #
-# Emits markdown on stdout; skills inject it as context.
+# Emits markdown on stdout.
 
 set -e
 

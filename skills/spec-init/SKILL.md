@@ -84,36 +84,7 @@ Do not attempt to repair these errors by hand-writing files.
 
 Read the emitted `specs/architecture.toml`. The template ships pre-filled with sane defaults; bootstrap-emitted architecture is valid as-is. This step is interview-driven refinement, not error recovery — only edit fields the user actually wants to change.
 
-The illustrative refinement shapes below cover the **shipped profiles**. For any other profile (including user-authored), read `${CLAUDE_PLUGIN_ROOT}/profiles/<profile>/README.md` and the emitted `specs/architecture.toml` together — the README enumerates which architecture-template fields the profile considers required vs optional, and the emitted template carries commented hints. Apply the same "only edit what the user actually wants to change" rule.
-
-### firmware-layered (illustrative)
-
-Pre-filled, confirm or change:
-- `[platform].target_triple` — `thumbv8m.main-none-eabihf` (Cortex-M33 / STM32H5). Common alternatives: `thumbv7em-none-eabihf` (M4F/M7F; STM32F4/H7), `thumbv6m-none-eabi` (M0/M0+).
-- `[platform.mcu_core]` / `[platform.mcu_runtime]` — `cortex-m` / `cortex-m-rt`.
-- `[runtime.panic_handler]` — `panic-probe`.
-- `[logger.provider]` / `[logger.backend]` — `defmt` / `defmt-rtt`.
-
-Commented in the template; uncomment + set if the user knows the part:
-- `[platform].mcu_part` (e.g., `"stm32h563"`, `"stm32f411"`, `"nrf52840"`) — drives the inlined MCU block's HAL feature flag at codegen time. Optional in the schema, but strongly recommended; without it, codegen emits a `// SPEC WARNING` comment.
-
-Optional (offer but don't insist):
-- `[runtime.allocator]` (e.g., `embedded-alloc`) — only if modules need `alloc`.
-- `[runtime.critical_section_impl]` — only when overriding `cortex-m`'s bundled impl.
-- `[[external_deps]]` — project-wide crates beyond the typed slots (e.g., `heapless`, `static-cell`).
-
-### library-api (illustrative)
-
-The library-api architecture template is minimal — no required fields. Offer:
-- `msrv = "1.75"` — minimum supported Rust version, becomes `Cargo.toml`'s `rust-version`.
-- `[[features]]` entries — Cargo features the library exposes.
-
-### Optional `[project]` fields (both profiles)
-
-Write to `spec.toml` only if the user asks:
-- `edition` — `"2018"`, `"2021"` (default), or `"2024"`.
-- `license` — SPDX identifier (e.g., `"MIT OR Apache-2.0"`).
-- `description` — one-line, ≤200 chars (libraries should set this; it appears on crates.io).
+For per-profile refinement shapes (firmware-layered, library-api, optional `[project]` fields), see `references/architecture-refinement.md`. For user-authored profiles, read `${CLAUDE_PLUGIN_ROOT}/profiles/<profile>/README.md` and the emitted `specs/architecture.toml` together — the README enumerates which fields the profile considers required vs optional.
 
 ## Step 7 — verify
 
@@ -131,12 +102,7 @@ Summarize:
 - Files created (one line each, with paths).
 - The selected profile and a one-line reminder of what it shapes (firmware-layered → layered embedded; library-api → Rust library).
 - Validate result.
-- **Suggested next steps**: shape depends on the profile.
-  - **firmware-layered** — inline at least one MCU block + a runtime block + the matching bridge before authoring modules. List shipped MCU/runtime blocks with `ls "${CLAUDE_PLUGIN_ROOT}/blocks/"` and shipped bridges with `ls "${CLAUDE_PLUGIN_ROOT}/bridges/"`; pick the pair matching the project's MCU and runtime. Example for STM32H5 + Embassy: `/spec-inline stm32h5-rs && /spec-inline embassy && /spec-inline-bridge embassy+stm32h5-rs`. Then `/spec-design <one-line module description>`.
-  - **library-api** — go straight to `/spec-design <one-line module description>` to add the first module.
-  - **audio-plugin** — inline an audio framework block (e.g. `nih-plug`) and optionally a UI block (e.g. `egui`) plus the matching bridge if the framework + UI are paired. Example: `/spec-inline nih-plug && /spec-inline egui && /spec-inline-bridge egui+nih-plug`. Then `/spec-design <plugin shell module>`.
-  - **rust-workspace** — bootstrap each member crate with its own profile (`cd <member> && /spec-bootstrap --profile <profile> --language rust --name <member-name>`).
-  - **other / user-authored profile** — read the profile's README at `${CLAUDE_PLUGIN_ROOT}/profiles/<profile>/README.md`; the README is the authoritative source for what to do next.
+- **Suggested next steps**: render per-profile guidance from `${CLAUDE_PLUGIN_ROOT}/shared/profile-next-steps.md` (covers firmware-layered, library-api, audio-plugin, rust-workspace, and user-authored profiles).
 
 ## What this skill does NOT do
 
@@ -148,4 +114,6 @@ Summarize:
 ## Additional resources
 
 - `references/build-manifest-detection.md` — manifests scanned in Step 2 and fields extracted as interview defaults.
+- `references/architecture-refinement.md` — illustrative per-profile architecture refinements for Step 6 (firmware-layered platform/runtime/logger picks, library-api `msrv`/features, optional `[project]` fields).
 - `references/requirements-readme-template.md` — verbatim body for an optional `specs/requirements/README.md` file (write only if the project intends to track requirements).
+- `${CLAUDE_PLUGIN_ROOT}/shared/profile-next-steps.md` — per-profile suggested next steps rendered in Step 8 (shared with `/spec-bootstrap`).

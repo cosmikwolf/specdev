@@ -87,4 +87,5 @@ End with one line:
 
 ## Additional resources
 
+- `${CLAUDE_PLUGIN_ROOT}/shared/rule-ids.md` — where validation rule names live (the project's own `specs/specdev/domain.toml`), the analyzer's stable code families (`LAYOUT-*`, `SCHEMA*`, `METASCHEMA-*`, `DOMAIN-*`, `BLOCK-LINT-*`, `BRIDGE-LEX-*`, `BOOTSTRAP-*`, `INLINE-*`, `MERGE-*`, `PLUGIN-*`, `LINEAGE-*`, `DRIFT-INVARIANT-*`), and the standard graph-check `kind` primitives (`unique`, `acyclic`, `layer_dependency`, `endpoints_resolve`, `reachability`).
 - `examples/validation-report-walkthrough.md` — annotated walkthrough turning raw analyzer output into grouped findings and hand-off instructions.

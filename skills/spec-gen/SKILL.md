@@ -32,43 +32,10 @@ Read `spec.toml` from the project root.
 
 ## Step 1.5 — resolve handoff mode (strict vs skeleton)
 
-Phase 13 (doc 16 §4) introduces `[project].handoff_mode` and a strict/skeleton split. Resolve which mode this `/spec-gen` invocation runs in **before** assembling any prompt:
+Phase 13 (doc 16 §4) splits `/spec-gen` into a strict/skeleton fork. Resolve mode **before** assembling any prompt by checking `$ARGUMENTS` for `--strict` / `--skeleton` and falling back to `spec.toml [project].handoff_mode` (`"skeleton"` → skeleton, `"implementation"` or absent → strict). The full resolution rules and the skeleton-mode procedure are in `references/skeleton-mode.md`.
 
-1. If the user passed `--strict` in `$ARGUMENTS`, mode is `strict`.
-2. Else if the user passed `--skeleton`, mode is `skeleton`.
-3. Else read `spec.toml [project].handoff_mode`:
-   - `"skeleton"` → mode is `skeleton`
-   - `"implementation"` or absent → mode is `strict`
-
-`--strict` and `--skeleton` are mutually exclusive. The flag is not the same as a target name; if `$ARGUMENTS` contains both `--strict|--skeleton` and a module name, treat the module name as the target and the flag as the mode.
-
-### If mode is `skeleton`
-
-Skeleton mode is the analyzer's job — Claude does **not** emit code in this branch. Run:
-
-```sh
-specdev-analyzer gen --project . --skeleton
-```
-
-The analyzer:
-
-- Refuses if the source dir (`paths.source` from `spec.toml`) is non-empty, library-api isn't the profile (v1 limitation), or `cargo check` fails on the emitted tree.
-- Emits `<source>/lib.rs` + one `<source>/<module_snake>.rs` per module spec, with `unimplemented!("REQ-…: <one-line>")` bodies projected from each module's `[[items]]` entries.
-- Renders Cargo.toml.
-- Writes `specs/HANDOFF.md` with the coverage matrix (requirement → satisfying modules; orphans flagged), per-module skeleton inventory, plugin-gaps free-text section, and suggested next steps.
-- Runs `cargo check`; on failure rolls back the entire skeleton tree and exits non-zero.
-
-After a successful run, read `specs/HANDOFF.md` and report:
-
-- One sentence per module (stub count, re-export count).
-- The orphan-requirement list (rows in the matrix flagged ORPHAN).
-- The "suggested next steps" tail (which modules have `context_files` and are ready for `--strict`, which still need `context_files`).
-
-Do not invoke any other Step in this skill in skeleton mode. Do not run `prompt` / emit source / run `cargo-toml` separately — the analyzer's `gen --skeleton` command handles all of it atomically.
-
-### If mode is `strict`
-
-Continue with Steps 2–9 below. The existing no-`todo!()` rule applies; if the spec is incomplete, **stop and ask** rather than improvise (or the user should re-run with `--skeleton` to get a navigable scaffold instead of a partial implementation).
+- If mode is `skeleton`, follow `references/skeleton-mode.md` end-to-end and **do not** invoke any other step in this skill — the analyzer's `gen --skeleton` command emits source, Cargo.toml, and HANDOFF.md atomically.
+- If mode is `strict`, continue with Steps 2–9 below. The no-`todo!()` rule applies; if the spec is incomplete, stop and ask rather than improvise (the user can re-run with `--skeleton` for a navigable scaffold instead of a partial implementation).
 
 ## Step 2 — gate on validation
 
@@ -178,4 +145,5 @@ One paragraph per module generated:
 ## Additional resources
 
 - `references/workspace-mode.md` — full procedure when `[project].profile == "rust-workspace"` (W1–W6: workspace manifest read, validation gate, member dep graph, per-member walk, workspace-root Cargo.toml emit, summary report).
+- `references/skeleton-mode.md` — Step 1.5 mode-resolution rules and the skeleton-mode procedure (analyzer-emitted `unimplemented!()` scaffolds + HANDOFF.md, library-api only in v1).
 - `references/firmware-layered-postprocess.md` — `memory.x` emission rules for `firmware-layered` projects (placeholder when `mcu_part` is unset, preserve hand-authored versions, MCU-block-driven layout).

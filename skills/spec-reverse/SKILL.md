@@ -80,38 +80,7 @@ For `--all` mode, the per-module loop in `references/mode-full-project.md` invok
 
 ## Step 3 — route by mode
 
-From the mode table above, load the matching reference file and follow it end to end. Only one mode runs per invocation (except `--all`, which composes the others via `mode-full-project.md`).
-
-## Step 4 — extract structured items per module (Phase 10 surface)
-
-Once a module spec stub exists at `specs/modules/<Name>.toml` (with at least `name = "<Name>"` and the `[paths].source` mapping resolvable to the module's source file via the profile's source-naming convention), run:
-
-```sh
-specdev-analyzer extract-items --module <Name>
-```
-
-The analyzer walks the source file with tree-sitter and emits a YAML report listing every top-level item (functions, structs, enums, traits, impls, types, consts, statics, re-exports, macros, extern blocks). The output is the **substrate** for filling out the module spec — it tells you authoritatively what's in the source. Use it to:
-
-- Cross-check `actions[]` (firmware-layered) or public API surface (library-api) against actual `pub fn` / `pub struct` / `pub use` items.
-- Identify state-machine enums (look for enum kinds with variants used in `match` dispatches — extract-items reports the enum, you read the source for the dispatch pattern).
-- Confirm error variants from the module's error enum.
-- Distinguish public API (`visibility: pub`) from internal items.
-
-If the source file doesn't exist yet (rare for reverse), `extract-items` emits an empty list — that's a signal you don't have a target to reverse from.
-
-## Step 5 — author the namespaced TOML
-
-With Step 1's vocabulary, Step 2's authoritative guides, Step 4's structured items, and the source itself in hand: author the module TOML. Block-namespaced fields use the block's top-level property (e.g., `[stm32h5]`, `[embassy.tasks]`); bridge-namespaced fields use `[bindings."<a>+<b>"]`.
-
-## Step 6 — validate after each module
-
-After writing any module TOML, run from the project root:
-
-```sh
-specdev-analyzer validate --no-color
-```
-
-Fix schema/graph-check failures before moving to the next module. Do not batch a `--all` run without iterating validate per module — drift compounds.
+From the mode table above, load the matching reference file and follow it end to end. Only one mode runs per invocation (except `--all`, which composes the others via `mode-full-project.md`). The mode files own per-mode procedure (stub creation, `extract-items` invocation, TOML authoring, per-module validate); this SKILL.md owns only the cross-mode scaffold above and the rules below.
 
 ## Rules of the road
 
@@ -129,6 +98,7 @@ Fix schema/graph-check failures before moving to the next module. Do not batch a
 - `references/mode-single-module.md` — procedure for `<ModuleName>` single-module reversal (uses Step 4's `extract-items` output as the structural basis).
 - `references/mode-full-project.md` — procedure for `--all` end-to-end reversal: project-shape survey, then a sequential per-module loop using the same single-module procedure. Parallel fan-out via the `module-reverser` subagent is supported but not required; sequential walk produces a cleaner audit trail and avoids racing on `validate` invocations.
 - `references/module-reverser-subagent.md` — invocation contract for the `module-reverser` subagent dispatched during `--all` if the user opts into parallel fan-out.
+- `${CLAUDE_PLUGIN_ROOT}/skills/spec-design/references/toml-authoring-rules.md` — priority-ordered TOML authoring rules shared with `/spec-design` and `/spec-edit`. Rule 8 carves out the `# LOW:` marker convention that's unique to `/spec-reverse`; rules 1–7 apply once the user confirms inferred fields and the markers are stripped.
 
 ## What this skill does NOT do
 
