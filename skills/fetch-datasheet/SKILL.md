@@ -5,8 +5,6 @@ allowed-tools: Read, Write, Edit, Bash, Glob, Grep, WebSearch, WebFetch
 argument-hint: <part-number | URL | description>
 ---
 
-!`${CLAUDE_PLUGIN_ROOT}/scripts/resolve-context`
-
 # /fetch-datasheet — Download, parse, summarize hardware datasheets
 
 Fetch a hardware datasheet, parse it into chapters, and generate a structured summary that downstream skills can cite. Follow these steps in order. Never invent values — when a field is not stated in the parsed text, write `null`.

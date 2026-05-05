@@ -72,12 +72,7 @@ Report:
 - Profile, language, name, and target directory used.
 - Number of files emitted (one-line summary of the new tree, e.g., `specs/specdev/{schemas,reductions,codegen}/...`).
 - Validate result.
-- Suggested next step: depends on the profile. For shipped profiles:
-  - `firmware-layered` → inline the project's MCU block + runtime block + matching bridge (example: `/spec-inline stm32h5-rs && /spec-inline embassy && /spec-inline-bridge embassy+stm32h5-rs`), then `/spec-design <module>`.
-  - `library-api` → `/spec-design <module>`.
-  - `audio-plugin` → inline the audio-framework block + optional UI block + matching bridge (example: `/spec-inline nih-plug && /spec-inline egui && /spec-inline-bridge egui+nih-plug`), then `/spec-design <plugin shell module>`.
-  - `rust-workspace` → bootstrap each member crate with its own profile (`cd <member> && /spec-bootstrap --profile <profile> --language rust --name <member-name>`).
-  - For any other profile (including user-authored), read `${CLAUDE_PLUGIN_ROOT}/profiles/<profile>/README.md` for the canonical next-steps guidance.
+- Suggested next step: render per-profile guidance from `${CLAUDE_PLUGIN_ROOT}/shared/profile-next-steps.md` (firmware-layered, library-api, audio-plugin, rust-workspace, user-authored).
 
 ## What this skill does NOT do
 
