@@ -108,10 +108,18 @@ prose discipline doesn't catch.
 Both `[nih_plug]` and `[egui]` tables MUST be on the SAME module (the
 plugin_shell-layer module). The bindings table lives on that same
 module. v1 does NOT support cross-module bindings (e.g. an engine
-module's parameter rendered in a shell module's editor). This is a
-named bounded follow-up (spike §7) — trigger to commit cross-module
-bindings is the first dogfood needing engine-published metering
-surfaced in the editor.
+module's parameter rendered in a shell module's editor).
+
+A misplaced binding surfaces at validate time as
+`REDUCE_UNRESOLVED: unresolved Parameter endpoint <id>` (or
+`unresolved Region endpoint <id>`) with a follow-up `hint:` line that
+names this bridge — fix by moving the bindings table to the module
+that owns both `[nih_plug]` and `[egui]`, or by moving the missing
+declaration onto the module that owns the bindings table.
+
+Cross-module support is a named bounded follow-up (spike §7) —
+trigger to commit cross-module bindings is the first dogfood needing
+engine-published metering surfaced in the editor.
 
 ## Deferred (revisit triggers per spike §7 + D50)
 

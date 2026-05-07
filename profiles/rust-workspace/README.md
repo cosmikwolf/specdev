@@ -80,3 +80,22 @@ README.md                     # this file
 
 No `module.schema.yaml` / `module.conventions.md` — workspaces have no
 module surface; that's per-member.
+
+## Why bootstrap drops ~240 files into your tree
+
+Each `specdev-analyzer bootstrap` invocation inlines a complete copy of
+the active profile's schemas, reductions, codegen prose, and language
+tier under `specs/specdev/`. For a `rust-workspace` shell, that's
+roughly 230–250 files: profile schemas + project reduction + the rust
+language tier (`items.schema.yaml` + `items.scm`) + per-block schemas
+that get inlined when you later run `specdev inline <block>`.
+
+The workspace root and every member each get their own self-contained
+inlined tree — that's not duplication, it's the "project owns its
+content" invariant (D33). Each member must be extractable and runnable
+as a standalone project; sharing files across the workspace would
+violate that. If you have N members, expect N+1 inlined trees of this
+size. Subsequent `specdev inline` calls add files but won't multiply.
+
+This is intentional and expected; the file count surprised the first
+docs-first adopter (zfm dogfood F-008, 2026-05-04).

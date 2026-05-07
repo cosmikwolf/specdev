@@ -106,6 +106,17 @@ plugin crate is **excluded** from skeleton mode in v1. The engine
 crate (when it uses `library-api`) gets skeleton mode normally;
 silence-and-log stubs for the plugin crate are a bounded follow-up.
 
+## Out-of-band context (escape hatch)
+
+Audio plugins often carry algorithmic prose that doesn't fit the
+structural spec — DSP block diagrams, FM-operator routing, anti-alias
+filter design notes, MIDI controller mappings. Per-module
+`context_files = ["docs/dsp-notes.md", ...]` inlines those prose paths
+into the assembled codegen prompt. Paths are project-relative; missing
+files raise `CONTEXT-001` at validate time. Use this for audio-thread
+math and protocol prose; structural facts (parameters, ports, panels,
+bindings) belong in the schema-driven tables.
+
 ## Extending
 
 Add blocks via `specdev inline <block>` once they ship — Phase 15-C
@@ -113,6 +124,16 @@ ships `nih-plug` (`[nih_plug]` table on the plugin shell module) and
 Phase 15-D ships `egui` (`[egui]` table for editor topology). Bridges
 via `specdev inline-bridge <a>+<b>` — Phase 15-E ships
 `egui+nih-plug` (parameter → widget bindings).
+
+> **Bridge co-residency rule (v1).** When you inline a bridge whose
+> two endpoint blocks both contribute tables on a module
+> (e.g. `egui+nih-plug` requires both `[nih_plug]` and `[egui]`), all
+> three — both block tables AND the bindings table — must live on the
+> SAME module (typically the `plugin_shell` module). v1 does not
+> support cross-module bindings; the analyzer surfaces this as a
+> `REDUCE_UNRESOLVED` finding with a `hint:` line pointing at the
+> bridge's README. Each bridge's README documents whether co-residency
+> applies.
 
 To customize the layer ordering or add additional graph checks, edit
 the project's `specs/specdev/domain.toml` directly — once
