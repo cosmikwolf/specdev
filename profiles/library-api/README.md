@@ -82,6 +82,20 @@ as DisplayInner;` at the top.
 - **Typed library-api API constraints** (MSRV, no_std/alloc support as
   enum fields). Currently expressed as free-form `requirement.text`.
 
+## Out-of-band context (escape hatch)
+
+When a module needs prose that doesn't fit the structural spec — a DSP
+algorithm derivation, a protocol's wire-format quirks, a citations-list
+the codegen agent must consult — declare it via the per-module
+`context_files = ["docs/dsp-notes.md", ...]` field. The analyzer's
+`prompt --module <Name>` step inlines each file's contents alongside
+the schema-derived prose when assembling the codegen prompt. Paths are
+project-relative; missing files raise `CONTEXT-001` at validate time.
+
+Use sparingly: structural facts (item lists, dependencies, satisfies)
+belong in the schema; `context_files` is for the irreducibly prose
+context that schema can't carry.
+
 ## Extending
 
 Add blocks via `specdev inline <block>` once the relevant blocks ship.
