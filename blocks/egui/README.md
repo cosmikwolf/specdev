@@ -28,7 +28,7 @@ Don't use this block if:
   raw skia). Those would land as separate blocks; the topology
   vocabulary would likely differ enough to justify it.
 
-## Why topology only (D47)
+## Why topology only (EGUI-TOPOLOGY-ONLY)
 
 The egui block models topology — WHERE controls live — but NOT WHICH
 widgets render WHICH parameters. That cross-cutting concern lives in
@@ -117,7 +117,7 @@ free_form, label_block each have their own scaffold pattern).
   block's prose mentions "the bridge owns this" without naming
   specific parameters or widgets.
 
-## Deferred (revisit triggers per §12 + spike §7)
+## Deferred (revisit triggers per §12)
 
 - **Themed styling** — `[egui.style]` for color palettes, font
   choices, knob skins. Promote when a real plugin shows a need

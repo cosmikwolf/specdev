@@ -18,8 +18,8 @@ metaschema_version: "v1"
 #
 # NIH-EGUI-003..009 (region-purpose constraint + per-kind parameter-type
 # constraints) are documented in the bridge's codegen prose as discipline
-# rules. Promotion to graph-check primitives is a bounded follow-up per
-# D50: trigger is the first dogfood that lands a misbinding the codegen
+# rules. Promotion to graph-check primitives is a bounded follow-up
+# (WIDGET-KIND-V1): trigger is the first dogfood that lands a misbinding the codegen
 # prose discipline doesn't catch. Until then, the bridge's emission code
 # rejects mismatched `widget_kind` ↔ `parameter.kind` pairs at codegen
 # time with a clear error.

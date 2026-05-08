@@ -67,7 +67,7 @@ Emit one `nih_export_<fmt>!(<PluginShellType>)` line per format in
 ## Layer emission rules
 
 `module.layer` drives where the module lives in the dependency
-hierarchy. The four-tier ordering (D44):
+hierarchy. The four-tier ordering:
 
 | Layer            | Typical content                                          | Allowed deps           |
 |------------------|----------------------------------------------------------|------------------------|
@@ -78,7 +78,7 @@ hierarchy. The four-tier ordering (D44):
 
 The `layer_dependency` graph check rejects upward dependencies. v1
 restricts each plugin crate to **one** `plugin_shell` module — multi-shell
-per crate is bounded-deferred (spike §7). Modules at `host_interface`
+per crate is a bounded follow-up. Modules at `host_interface`
 are not authored; the value exists in the enum so the layer ordering
 has a complete top edge.
 
@@ -138,7 +138,7 @@ impl Plugin for MyPlugin {
 to be set. When `[plugin].url` / `email` is omitted in the spec, emit
 the literal `""` empty string (the host displays nothing).
 
-## Per-format constants (D46)
+## Per-format constants
 
 `[plugin].category` is a closed enum mapped to per-format constants by
 this lookup table. Codegen reads category once and emits all relevant
@@ -212,7 +212,7 @@ window — useful for local development and CI smoke tests.
 
 The `process()` callback runs on the host's audio thread. Three rules
 are non-negotiable in this profile (and the basis for the deferred
-`realtime_path_no_alloc` graph-check, D48):
+`realtime_path_no_alloc` graph-check):
 
 1. **No allocation.** No `Vec::new()`, `Box::new()`, `String::new()`,
    `format!`, `to_owned`, or any other heap call. Allocate during
@@ -275,7 +275,7 @@ Rust-callable public surface to re-export to). They DO apply on the
 engine crate (which uses the library-api profile) when it re-exports
 DSP primitives across module boundaries.
 
-**Skeleton mode is library-api only (D49).** A plugin crate's
+**Skeleton mode is library-api only.** A plugin crate's
 `process()` callback runs on the audio thread; emitting
 `unimplemented!()` there would abort-crash the host. The engine crate
 (library-api) gets skeleton mode normally; the plugin crate (this

@@ -57,8 +57,8 @@ embedded firmware.
 Three required tables in `specs/architecture.toml`:
 
 - `[plugin]` — vendor / display / formats / category. Drives
-  `nih_export_*!` macro selection (D45) and per-format constant
-  emission (`VST3_CATEGORIES`, `CLAP_FEATURES` per D46).
+  `nih_export_*!` macro selection and per-format constant emission
+  (`VST3_CATEGORIES`, `CLAP_FEATURES`).
 - `[audio]` — main bus channel layout, sample-rate bounds, latency,
   optional aux input/output sidechains.
 - `[runtime]` — panic strategy (`abort` is required for VST3 cdylib),
@@ -85,7 +85,7 @@ Optional `[[features]]` declares Cargo features (parity with
 - `requirements_have_satisfiers` — orphan-check on `nature = "module"`
   requirements.
 
-## Cargo.toml emission (D45)
+## Cargo.toml emission
 
 Cargo.toml is **emitted by the analyzer**, not hand-edited:
 
@@ -98,7 +98,7 @@ The standalone bin path is always `src/bin/standalone.rs`; codegen
 emits this file when standalone is in the format set. The bin links
 the same lib so the `Plugin` impl is reused.
 
-## Skeleton mode (D49)
+## Skeleton mode
 
 Skeleton mode (`gen --skeleton`) emits `unimplemented!()` stubs.
 Because panicking on the audio thread would abort-crash the host, the

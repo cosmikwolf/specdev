@@ -63,7 +63,7 @@ labels to the left by default.
 
 ## Per-kind widget emission
 
-The 8 widget kinds (D50) map to egui calls as follows. Each entry
+The 8 widget kinds (WIDGET-KIND-V1) map to egui calls as follows. Each entry
 shows the canonical emission for one binding stanza inside a grid
 region; vertical / horizontal layouts use the same widget call with
 different label placement.
@@ -207,7 +207,7 @@ parameter (e.g., a knob next to a numeric value display).
 
 The bridge's emission code SHOULD reject mismatched kind/type pairs at
 codegen time. Validate-time graph-check enforcement is bounded-deferred
-per D50; the v1 emission discipline:
+per WIDGET-KIND-V1; the v1 emission discipline:
 
 | widget_kind     | required parameter.kind  | violation behavior at codegen |
 |-----------------|--------------------------|-------------------------------|
@@ -224,7 +224,7 @@ Region-purpose constraint: each `parameter_widgets[]` entry's region
 SHOULD have `purpose = "parameter_controls"`. Bindings into other
 purposes (metering, free_form, label_block, preset_selector) emit a
 codegen-time warning and are skipped. These will become validate-time
-NIH-EGUI-003..009 errors when D50's bounded-deferral trigger fires.
+NIH-EGUI-003..009 errors when WIDGET-KIND-V1's bounded-deferral trigger fires.
 
 ## Range hint emission
 
@@ -280,7 +280,7 @@ The bridge's emission must:
 Three concerns this bridge is silent on (handled elsewhere):
 
 - **Crate-type emission.** The audio-plugin profile's prose owns
-  Cargo.toml shape (cdylib + optional standalone bin per D45). This
+  Cargo.toml shape (cdylib + optional standalone bin). This
   bridge contributes no Cargo.toml content.
 - **Plugin trait skeleton.** The nih-plug block's prose owns the
   `impl Plugin for X` skeleton, the parameter struct (`#[derive(Params)]`),
