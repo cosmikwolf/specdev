@@ -1,6 +1,6 @@
 # Suggested next steps after bootstrap, by profile
 
-Used by `/spec-init` and `/spec-bootstrap` to render per-profile guidance after a successful `specdev-analyzer bootstrap`. Single source of truth — keep both skills pointed here rather than maintaining two copies.
+Used by `/spec-init` to render per-profile guidance after a successful `specdev-analyzer bootstrap`.
 
 For any profile not listed below (including user-authored profiles), read `${CLAUDE_PLUGIN_ROOT}/profiles/<profile>/README.md` — the README is authoritative for what to do next.
 
@@ -37,7 +37,7 @@ Then `/spec-design <plugin shell module>`.
 Bootstrap each member crate with its own profile:
 
 ```
-cd <member> && /spec-bootstrap --profile <profile> --language rust --name <member-name>
+cd <member> && /spec-init --non-interactive --profile <profile> --language rust --name <member-name>
 ```
 
 ## Other / user-authored profile

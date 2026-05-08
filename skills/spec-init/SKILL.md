@@ -1,14 +1,15 @@
 ---
 name: spec-init
-description: This skill should be used when the user asks to "init specdev", "set up a new spec project", "scaffold a spec-driven project", "bootstrap a profile", "create spec.toml", "initialize specs/", or starts a new specdev project from scratch. Wraps `specdev-analyzer bootstrap`, picks a profile from whatever ships under `${CLAUDE_PLUGIN_ROOT}/profiles/` (including end-user-authored profiles), and seeds the `specs/specdev/` tree. Use for empty or greenfield projects. For non-interactive scaffolding with explicit args, use /spec-bootstrap. To bootstrap specs from an existing source tree, use /spec-reverse.
+description: This skill should be used when the user asks to "init specdev", "set up a new spec project", "scaffold a spec-driven project", "bootstrap a profile", "create spec.toml", "initialize specs/", or starts a new specdev project from scratch. Wraps `specdev-analyzer bootstrap`, picks a profile from whatever ships under `${CLAUDE_PLUGIN_ROOT}/profiles/` (including end-user-authored profiles), and seeds the `specs/specdev/` tree. Use for empty or greenfield projects. Pass `--non-interactive --profile <name> --language <lang> --name <project> [<target>]` to skip the interview (for automation or fluent users who already know the answers). To bootstrap specs from an existing source tree, use /spec-reverse.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
+argument-hint: [--non-interactive --profile <name> --language <lang> --name <project> [<target-dir>]]
 ---
 
 # /spec-init — Project scaffolding
 
 Initialize a new spec-driven project by interviewing the user, then delegating file emission to `specdev-analyzer bootstrap`. The analyzer is the source of truth for what a freshly-bootstrapped project looks like; this skill is a thin wrapper that picks the profile, fills the architecture's required fields, and verifies the result.
 
-The current model is **profiles + blocks + bridges** (doc 15). The legacy "domains" model is retired — profiles own project shape; blocks contribute concrete frameworks/libraries/hardware; bridges wire pairs of blocks.
+The current model is **profiles + blocks + bridges**: profiles own project shape; blocks contribute concrete frameworks/libraries/hardware; bridges wire pairs of blocks.
 
 If `specdev-analyzer` is not on PATH, tell the user to install it (`cargo install --git https://github.com/cosmikwolf/specdev-analyzer`) and stop. Do not attempt to write files without the analyzer.
 
@@ -23,6 +24,15 @@ export SPECDEV_PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT}"
 ```
 
 See the shared file for the full rationale and skip-conditions. Short version: `CLAUDE_PLUGIN_ROOT` is set in this skill body but is **not** inherited by Bash subshells, so exporting `SPECDEV_PLUGIN_ROOT` once makes plugin-root resolution work for the rest of the session.
+
+## Step 0.5 — resolve mode
+
+Inspect `$ARGUMENTS`:
+
+- If it carries `--non-interactive` AND all of `--profile <name>`, `--language <lang>`, `--name <project>` (target dir is positional and optional, default `.`), this is **non-interactive mode**. Skip Steps 2, 3, 4 and 6 entirely; carry the provided values into Step 5 verbatim. Step 1 (refuse-to-clobber) and Steps 7–8 still run.
+- Otherwise this is **interactive mode** — continue with Step 1 below. Never silently fill in missing flags from defaults; interactive mode's whole point is surfacing defaults via Step 2's manifest detection and Step 4's interview.
+
+If `--non-interactive` is passed without all three required flags, stop and ask the user for the missing ones in a single message.
 
 ## Step 1 — refuse to clobber
 
@@ -54,7 +64,7 @@ Ask all of these in one message. Show defaults from Step 2 in parentheses:
 
 1. **Project name** — lowercase, digits, underscores, hyphens; must start with a letter; ≤64 chars. (default: detected `[package].name` or directory name)
 2. **Profile** — one of the names listed in Step 3. Default heuristics for shipped profiles: `firmware-layered` if a `Cargo.toml` with `cortex-m`/`embassy`/`stm32*`/`nrf*`/`esp*` deps was detected; `library-api` if a non-bin `Cargo.toml` was detected; `audio-plugin` if a `nih-plug` / `vst3-sys` / `clack-host` dep was detected; `rust-workspace` if `[workspace]` was detected. Otherwise ask. For user-authored profiles no default is inferred — ask.
-3. **Language** — `rust` is the only option in v1. C lands in Phase 9. (default: `rust`)
+3. **Language** — `rust` is the only option in v1; C-language support is on the roadmap. (default: `rust`)
 4. **Bootstrap directory** — usually the current working directory, but the analyzer creates it if absent and refuses if `specs/specdev/` is already present. (default: `.`)
 
 These four questions are all the schema requires. Profile-specific decisions (target triple, MCU part, license, MSRV, …) live in `architecture.toml` / optional `[project]` fields and are filled in Step 6, after the analyzer has emitted templates.
@@ -116,4 +126,4 @@ Summarize:
 - `references/build-manifest-detection.md` — manifests scanned in Step 2 and fields extracted as interview defaults.
 - `references/architecture-refinement.md` — illustrative per-profile architecture refinements for Step 6 (firmware-layered platform/runtime/logger picks, library-api `msrv`/features, optional `[project]` fields).
 - `references/requirements-readme-template.md` — verbatim body for an optional `specs/requirements/README.md` file (write only if the project intends to track requirements).
-- `${CLAUDE_PLUGIN_ROOT}/shared/profile-next-steps.md` — per-profile suggested next steps rendered in Step 8 (shared with `/spec-bootstrap`).
+- `${CLAUDE_PLUGIN_ROOT}/shared/profile-next-steps.md` — per-profile suggested next steps rendered in Step 8.

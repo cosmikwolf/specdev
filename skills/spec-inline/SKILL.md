@@ -83,6 +83,6 @@ Do not attempt to auto-resolve conflict markers from within this skill.
 ## What this skill does NOT do
 
 - **Inline bridges.** Use `/spec-inline-bridge`.
-- **Bootstrap a project.** Use `/spec-bootstrap` or `/spec-init` first; `inline` requires `specs/specdev/` to exist.
+- **Bootstrap a project.** Use `/spec-init` first; `inline` requires `specs/specdev/` to exist.
 - **Author module specs that consume the block.** Use `/spec-design` after inline.
 - **Edit the inlined files by hand.** They're project-managed but plugin-owned; hand-edits surface as drift in `/spec-drift`.

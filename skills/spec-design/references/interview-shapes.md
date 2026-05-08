@@ -23,7 +23,7 @@ For user-authored profiles, no illustrative shape is provided here; read the pro
 - **Name** — PascalCase.
 - **visibility** — `pub` / `pub(crate)` / `pub(super)`.
 - **depends_on** — list of existing module names.
-- **items** — `[[items]]` entries for the module's contractual surface (Phase 14). Re-exports use `kind = "re_export"` with `{target, visibility, alias?}`; other public-API items (`fn`, `struct`, `enum`, `trait`, `impl`, ...) require `satisfies` (≥1 requirement id).
+- **items** — `[[items]]` entries for the module's contractual surface. Re-exports use `kind = "re_export"` with `{target, visibility, alias?}`; other public-API items (`fn`, `struct`, `enum`, `trait`, `impl`, ...) require `satisfies` (≥1 requirement id).
 - **feature_gates** — list of feature names; ANY-of `cfg(feature = "...")` semantics.
 - **external_deps** — module-scoped crates (CrateReference shape: `{crate, version, source?, features?, default_features?}`).
 - **satisfies** — requirement ids if any.

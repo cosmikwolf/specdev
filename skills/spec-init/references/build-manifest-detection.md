@@ -13,14 +13,14 @@
 | `Cargo.toml` | `[workspace] members` | warn the user; v1 of specdev is single-package |
 | `.cargo/config.toml` | `[build] target` triple | `architecture.toml [platform].target_triple` default (firmware-layered) |
 | `rust-toolchain.toml` | `channel` | informational only — not written to spec |
-| `CMakeLists.txt` | `project(...)` name | `[project].name` default (C projects, Phase 9+) |
+| `CMakeLists.txt` | `project(...)` name | `[project].name` default (C projects; on the roadmap) |
 | `platformio.ini` | `board`, `framework` | informational only |
 
 ## Usage rules
 
 - Show every defaulted value to the user and let them confirm or change it. Never write a value extracted from a manifest without confirmation.
 - Extractions that no profile consumes are harmless — they simply aren't surfaced by any interview question.
-- If multiple manifests disagree (e.g. a `Cargo.toml` workspace with nested crates), prefer the outermost manifest and warn the user that v1 specdev is single-package only (Phase 8.5 lands library multi-package; Phase 12 lands firmware multi-package).
+- If multiple manifests disagree (e.g. a `Cargo.toml` workspace with nested crates), prefer the outermost manifest and warn the user that v1 specdev is single-package only (multi-package support is on the roadmap).
 - Do not run any manifest tool (`cargo metadata`, `cmake --trace`). Read-only text extraction only — `/spec-init` must work without any toolchain installed.
 
 ## Adding a new manifest type

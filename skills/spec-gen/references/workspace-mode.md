@@ -1,6 +1,6 @@
 # spec-gen — workspace mode (W1–W6)
 
-Triggered when the project root's `spec.toml [project].profile == "rust-workspace"`. Walks every member crate in topological dep-order and emits a single workspace-level summary at the end. Per **G-001** (Phase 11b acceptance, codegen-pass dogfood 2026-05-01).
+Triggered when the project root's `spec.toml [project].profile == "rust-workspace"`. Walks every member crate in topological dep-order and emits a single workspace-level summary at the end. Per **G-001** (codegen-pass dogfood 2026-05-01).
 
 If the user invoked `/spec-gen` from inside a member crate of a workspace (member's `spec.toml [project].profile` is e.g. `library-api`, but a parent dir has a `spec.toml` declaring `[workspace]`), treat the invocation as single-package on that member. The workspace-level walk is only triggered when invoked at the workspace root itself.
 

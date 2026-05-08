@@ -1,6 +1,6 @@
 ---
 name: spec-drift
-description: This skill should be used when the user asks to "check drift", "run spec-drift", "see what's changed in inlined files", "are my inlined blocks up to date", "is the plugin newer than my project", "check for plugin updates", or "show drift report" — i.e. they want to know which inlined block/bridge files are out-of-sync with the plugin tree or hand-edited locally. Thin wrapper over `specdev-analyzer drift`; pure reporter (no edits). For schema/graph-check errors, use /spec-validate. For source-vs-spec drift on a module's `[[items]]` array, use /spec-sync-items.
+description: This skill should be used when the user asks "are my inlined blocks stale", "check drift", "run spec-drift", "see what's changed in inlined files", "are my inlined blocks up to date", "is the plugin newer than my project", "check for plugin updates", or "show drift report" — i.e. they want to know which inlined block/bridge files are out-of-sync with the plugin tree or hand-edited locally. Thin wrapper over `specdev-analyzer drift`; pure reporter (no edits). For schema/graph-check errors, use /spec-validate. For source-vs-spec drift on a module's `[[items]]` array, use /spec-sync-items.
 allowed-tools: Read, Bash, Glob, Grep
 ---
 

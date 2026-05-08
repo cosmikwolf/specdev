@@ -1,6 +1,6 @@
 ---
 name: spec-reverse
-description: This skill should be used when the user asks to "reverse-engineer specs", "generate specs from code", "document this existing codebase", "reverse <ModuleName>", or "spec-reverse --all". Extracts architecture and module TOML specs from an existing Rust codebase against a chosen profile (firmware-layered or library-api), using Phase 10's tree-sitter `extract-items` surface plus inlined block READMEs as authoring context.
+description: This skill should be used when the user asks to "reverse-engineer specs", "generate specs from code", "document this existing codebase", "reverse <ModuleName>", or "spec-reverse --all". One-shot migration tool — moves an existing Rust codebase into the spec-driven world; not a continuous source-vs-spec audit (use /spec-sync-items for that). Extracts architecture and module TOML specs against a chosen profile (firmware-layered or library-api), using the analyzer's tree-sitter `extract-items` surface plus inlined block READMEs as authoring context.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 argument-hint: [<ModuleName> | --all] [--into <a,b,...>]
 ---
@@ -9,7 +9,7 @@ argument-hint: [<ModuleName> | --all] [--into <a,b,...>]
 
 Reverse-engineer TOML specs from existing source. Never invent fields the code does not support. Every claim written must be traceable to a file and line.
 
-Per **D40** (2026-05-01), `/spec-reverse` is the **migration tool** for v1 — one-shot for moving an existing codebase into the spec-driven world. Continuous source-vs-spec drift detection (audit) is deferred to Phase 14.x; this skill does not replace audit.
+`/spec-reverse` is the **migration tool** for v1 — one-shot for moving an existing codebase into the spec-driven world. Continuous source-vs-spec drift detection (project-wide audit) is not in v1; this skill does not replace audit. For ongoing source-vs-spec drift on a module's `[[items]]`, use `/spec-sync-items`.
 
 If `specdev-analyzer` is not on PATH, tell the user to install it and stop.
 
@@ -104,5 +104,5 @@ From the mode table above, load the matching reference file and follow it end to
 
 - **Replace `/spec-init`.** Bootstrap first; this skill needs the inlined block schemas to author against.
 - **Inline blocks or bridges.** That's `/spec-inline` / `/spec-inline-bridge`. If the source uses a peripheral or runtime construct that no inlined block covers, stop and recommend the relevant inline.
-- **Continuous audit.** Per D40, source-vs-spec audit lands as a Phase 14.x amendment over Phase 14's items[] substrate. Until then, `/spec-reverse` is the migration tool, not the maintenance tool.
+- **Continuous audit.** Project-wide source-vs-spec audit is not in v1. `/spec-reverse` is the migration tool, not the maintenance tool. For per-module `[[items]]` drift, `/spec-sync-items` is the supported path.
 - **Edit existing specs.** That's `/spec-edit`. If `specs/modules/<Name>.toml` already exists, ask whether to compare/replace/cancel before overwriting.

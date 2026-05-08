@@ -29,7 +29,7 @@ The project is single-package (v1 specdev is single-package across the board).
 
 **Hardware ownership** — `StatusLed.hardware.pins` is unchanged by an action rename. No impact.
 
-**Bindings** (Phase 7+) — if any `bindings."embassy+stm32h5-rs"` table on this module references the action by name, flag it. In this scenario, no bindings exist. No impact.
+**Bindings** — if any `bindings."embassy+stm32h5-rs"` table on this module references the action by name, flag it. In this scenario, no bindings exist. No impact.
 
 Present to the user:
 
@@ -57,7 +57,7 @@ isr_safe = false
 description = "Turn the LED off."
 ```
 
-Do **not** edit source code from `/spec-edit`. Source regeneration is `/spec-gen`'s job — and per Phase 8, it's the user driving Claude through `/spec-gen`, not the analyzer rewriting `.rs` files.
+Do **not** edit source code from `/spec-edit`. Source regeneration is `/spec-gen`'s job — and it's the user driving Claude through `/spec-gen`, not the analyzer rewriting `.rs` files.
 
 Re-run `specdev-analyzer validate --no-color`. Expect a clean report.
 

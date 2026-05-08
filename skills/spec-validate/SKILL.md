@@ -1,6 +1,6 @@
 ---
 name: spec-validate
-description: This skill should be used when the user asks to "validate specs", "verify spec consistency", "check spec errors", "check spec.toml", "find schema errors", "check graph-check violations", "did I break anything", or "is my spec OK". Runs `specdev-analyzer validate` and translates findings into actionable feedback grouped by file. For source-vs-spec drift on a module's `[[items]]` array, use /spec-sync-items. For inlined-block drift vs the plugin tree, use /spec-drift.
+description: This skill should be used when the user asks "is my spec internally consistent", "validate specs", "verify spec consistency", "check spec errors", "check spec.toml", "find schema errors", "check graph-check violations", "did I break anything", or "is my spec OK". Runs `specdev-analyzer validate` and translates findings into actionable feedback grouped by file. For source-vs-spec drift on a module's `[[items]]` array, use /spec-sync-items. For inlined-block drift vs the plugin tree, use /spec-drift.
 allowed-tools: Read, Bash, Glob, Grep
 ---
 

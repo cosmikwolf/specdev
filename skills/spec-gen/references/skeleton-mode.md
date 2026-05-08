@@ -4,7 +4,7 @@ Entered from `/spec-gen` Step 1.5 when the resolved mode is `skeleton`. **Claude
 
 ## Mode resolution
 
-Phase 13 (doc 16 §4) introduces `[project].handoff_mode` and a strict/skeleton split. Mode is resolved before any prompt assembly:
+Skeleton mode introduces `[project].handoff_mode` and a strict/skeleton split. Mode is resolved before any prompt assembly:
 
 1. If `$ARGUMENTS` contains `--strict`, mode is `strict`.
 2. Else if `$ARGUMENTS` contains `--skeleton`, mode is `skeleton`.
