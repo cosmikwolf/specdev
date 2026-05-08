@@ -7,7 +7,7 @@ emission, and per-region scaffolding live here.
 
 The block targets [egui](https://github.com/emilk/egui) via
 [nih_plug_egui](https://github.com/robbert-vdh/nih-plug/tree/master/nih_plug_egui)
-— nih-plug's egui adapter. The block models **topology only** (D47):
+— nih-plug's egui adapter. The block models **topology only** (EGUI-TOPOLOGY-ONLY):
 panels and regions describe WHERE things go; parameter→widget bindings
 live in the `egui+nih-plug` bridge.
 
