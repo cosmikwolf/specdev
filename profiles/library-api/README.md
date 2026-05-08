@@ -63,7 +63,7 @@ as DisplayInner;` at the top.
 
 ## Graph checks shipped
 
-- `unique_module_names` — every Module has a unique name
+- `unique_qualified_names` — every entity has a unique qualified name (collisions across kinds are surfaced)
 - `modules_acyclic` — module dependency graph has no cycles
 - `feature_unique_names` — every cargo feature has a unique name
 - `feature_dependencies_resolve` — feature `depends_on` references resolve

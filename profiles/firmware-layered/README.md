@@ -43,7 +43,7 @@ flags rather than hardware layering.
 
 ## Graph checks shipped
 
-- `unique_module_names` — every Module has a unique name
+- `unique_qualified_names` — every entity has a unique qualified name (collisions across kinds are surfaced)
 - `modules_acyclic` — module dependency graph has no cycles
 - `layer_dependency` — no upward dependency in the layer ordering
 - `connection_endpoints_resolve` — every architecture connection
