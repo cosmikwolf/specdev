@@ -100,11 +100,30 @@ the same lib so the `Plugin` impl is reused.
 
 ## Skeleton mode
 
-Skeleton mode (`gen --skeleton`) emits `unimplemented!()` stubs.
-Because panicking on the audio thread would abort-crash the host, the
-plugin crate is **excluded** from skeleton mode in v1. The engine
-crate (when it uses `library-api`) gets skeleton mode normally;
-silence-and-log stubs for the plugin crate are a bounded follow-up.
+Skeleton mode (`gen --skeleton`) is supported on this profile via a
+silence-and-log stub variant for audio-thread methods. A skeleton-built
+plugin loads in a host (VST3 / CLAP / standalone) and processes silence
+for the lifetime of the session, emitting one diagnostic log line per
+audio-path method on first invocation. Non-audio-path code
+(`initialize`, `reset`, editor / state plumbing, hand-authored helpers
+that aren't on the audio thread) keeps `unimplemented!()` so the panic
+surfaces missing implementations during normal authoring.
+
+Two surfaces classify code as audio-path:
+
+- The audio-plugin codegen prose carries the hardcoded list of
+  audio-thread methods on the nih-plug `Plugin` trait (`process`,
+  `process_buffers`, etc.). These are silence-and-log automatically.
+- Hand-authored DSP-node helpers opt in by setting `is_audio_path = true`
+  on the items[] entry. Default is false; outside audio-path code,
+  the flag has no effect.
+
+Audio-path methods returning a non-`Default` type must opt out via
+`is_audio_path = false` (which restores `unimplemented!()`) or
+hand-author the body. See `codegen/rust/module.conventions.md` §
+"Skeleton mode (silence-and-log)" for the full emit template,
+`AtomicBool` once-only logging mechanism, and the
+`runtime.realtime_audit` interaction.
 
 ## Out-of-band context (escape hatch)
 
