@@ -9,7 +9,7 @@ Validation rule names and severities are **profile-specific** and live in each p
 - **`[validation.rules]`** — maps rule name → severity (`error`, `warning`, `info`). Example for firmware-layered:
   ```toml
   [validation.rules]
-  unique_module_names           = "error"
+  unique_qualified_names        = "error"
   modules_acyclic               = "error"
   layer_dependency              = "error"
   connection_endpoints_resolve  = "error"

@@ -49,7 +49,7 @@ Group findings in this order, each group with one sentence of context before the
 2. **Schema errors** — `SCHEMA`, `SCHEMA-ARCH`, `SCHEMA-REQ`. A TOML file violates its JSON Schema (unknown field, bad enum, missing required key, pattern mismatch).
 3. **Metaschema / aggregator** — `METASCHEMA-001..005`, `AGGREGATOR-005`. Inlined block/bridge schemas are misshapen or fail to compile into the aggregator. Usually a plugin-author bug surfaced after `inline`.
 4. **Kind resolution** — `DOMAIN-003`, `REDUCE_UNRESOLVED`. A reduction's `extends` chain or relation endpoint references a kind/name that doesn't exist in the materialized graph.
-5. **Graph checks** — rule names declared in `specs/specdev/domain.toml` `[validation.rules]` (e.g. for firmware-layered: `unique_module_names`, `modules_acyclic`, `layer_dependency`, `connection_endpoints_resolve`; for library-api: `feature_unique_names`, `feature_dependencies_resolve`, `module_feature_gates_resolve`, etc.). These come after the spec parses cleanly and depend on cross-file invariants.
+5. **Graph checks** — rule names declared in `specs/specdev/domain.toml` `[validation.rules]` (e.g. for firmware-layered: `unique_qualified_names`, `modules_acyclic`, `layer_dependency`, `connection_endpoints_resolve`; for library-api: `feature_unique_names`, `feature_dependencies_resolve`, `module_feature_gates_resolve`, etc.). These come after the spec parses cleanly and depend on cross-file invariants.
 6. **Warnings and info**.
 
 Do not paraphrase analyzer messages — the raw text is the most precise.
