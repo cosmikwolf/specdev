@@ -3,7 +3,7 @@ $id: "https://specdev.dev/profiles/audio-plugin/architecture.schema.yaml"
 title: "audio-plugin architecture spec (v1)"
 description: |
   Shape of `specs/architecture.toml` for an audio-plugin project. Three
-  required tables (per Phase 15-A spike §1.2):
+  required tables:
 
     [plugin]   — vendor / display / format identity. Drives
                  `nih_export_*!` macro selection (D45) and per-format

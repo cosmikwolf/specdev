@@ -55,10 +55,10 @@ flags rather than hardware layering.
 
 ## Extending
 
-Add blocks via `specdev inline <block>` once the relevant blocks ship
-(Phase 6+). Bridges via `specdev inline-bridge <a>+<b>` (Phase 7+).
-Project-local bridges live under `specs/specdev/reductions/bridges/local/`
-and are authored directly by the project, not inlined.
+Add blocks via `specdev inline <block>`. Bridges via
+`specdev inline-bridge <a>+<b>`. Project-local bridges live under
+`specs/specdev/reductions/bridges/local/` and are authored directly by
+the project, not inlined.
 
 To customize the layer ordering or add additional graph checks, edit the
 project's `specs/specdev/domain.toml` directly — once bootstrapped, that

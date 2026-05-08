@@ -119,11 +119,10 @@ bindings) belong in the schema-driven tables.
 
 ## Extending
 
-Add blocks via `specdev inline <block>` once they ship — Phase 15-C
-ships `nih-plug` (`[nih_plug]` table on the plugin shell module) and
-Phase 15-D ships `egui` (`[egui]` table for editor topology). Bridges
-via `specdev inline-bridge <a>+<b>` — Phase 15-E ships
-`egui+nih-plug` (parameter → widget bindings).
+Add blocks via `specdev inline <block>`. v1 ships `nih-plug`
+(`[nih_plug]` table on the plugin shell module) and `egui` (`[egui]`
+table for editor topology). Bridges via `specdev inline-bridge <a>+<b>`;
+v1 ships `egui+nih-plug` (parameter → widget bindings).
 
 > **Bridge co-residency rule (v1).** When you inline a bridge whose
 > two endpoint blocks both contribute tables on a module
@@ -141,7 +140,6 @@ bootstrapped, that file is project-owned.
 
 ## References
 
-- Phase 15-A spike: `specdev-next/000-audio-plugin-spike-2026-05-03.md`
 - nih-plug: https://github.com/robbert-vdh/nih-plug
 - VST3 SDK: https://steinbergmedia.github.io/vst3_dev_portal/
 - CLAP: https://github.com/free-audio/clap

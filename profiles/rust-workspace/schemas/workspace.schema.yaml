@@ -4,8 +4,9 @@ title: "rust-workspace workspace spec (v1)"
 description: >
   Schema for the `[workspace]` table on a `rust-workspace` project's
   `spec.toml`. Member list shape; presence of this table at the root is
-  the workspace marker. D36 enforcement: this schema rejects any
-  per-member internals (`additionalProperties: false`).
+  the workspace marker. Bidirectional-minimality enforcement: this
+  schema rejects any per-member internals
+  (`additionalProperties: false`).
 
 type: object
 additionalProperties: false

@@ -68,7 +68,7 @@ emission stanza:
 | `numeric_field` | `egui::DragValue::new(...).clamp_range(...)` wired through setter         |
 | `value_display` | `ui.label(format!("{}{}", value, unit))` — read-only                      |
 
-## Sharp-test rationale (doc 15 §3.1)
+## Sharp-test rationale
 
 - **Concreteness:** ✓ — names two specific blocks (egui + nih-plug)
   and a specific widget vocabulary (D50's 8 kinds).
@@ -147,8 +147,5 @@ engine-published metering surfaced in the editor.
 
 ## References
 
-- Phase 15-A spike: `specdev-next/000-audio-plugin-spike-2026-05-03.md`
-- D47: egui topology-only (parameter→widget bindings live in this bridge)
-- D50: widget_kind enum widening (8 kinds, NIH-EGUI-001..009)
 - nih-plug widgets: `nih_plug::widgets` module
 - egui: https://github.com/emilk/egui

@@ -6,10 +6,10 @@ description: >
   enum is a $defs entry; module/architecture/requirements schemas
   reference these via $ref.
 
-  Per Phase 15-A spike (D44–D49): the layer enum carries four tiers,
-  with `host_interface` reserved for nih-plug-provided types (no user
-  modules at this layer in v1). PluginFormat / PluginCategory are the
-  closed enums driving codegen-time per-format constant emission (D46).
+  The layer enum carries four tiers, with `host_interface` reserved
+  for nih-plug-provided types (no user modules at this layer in v1).
+  PluginFormat / PluginCategory are the closed enums driving
+  codegen-time per-format constant emission.
 
 $defs:
   LayerKind:
