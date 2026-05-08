@@ -14,7 +14,7 @@ name = "{{project_name}}"
 
 [validation]
 [validation.rules]
-unique_module_names           = "error"
+unique_qualified_names           = "error"
 modules_acyclic               = "error"
 layer_dependency              = "error"
 connection_endpoints_resolve  = "error"
@@ -26,7 +26,7 @@ requirements_have_satisfiers  = "warning"
 # Module names must be unique across the project.
 [[project.graph_checks]]
 kind = "unique"
-rule = "unique_module_names"
+rule = "unique_qualified_names"
 scope = "Module"
 field = "entities[].name"
 
