@@ -26,7 +26,7 @@ contexts add features per the embassy book. **Do NOT** add `embassy-stm32`
 or other peripheral-HAL crates from this block — that pairing is owned by
 the relevant bridge (e.g. `embassy+stm32h5-rs`).
 
-### Project-level integration (Phase 6.7+)
+### Project-level integration
 
 embassy is a runtime layer; it sits on top of `[platform]` (Cortex-M
 core/runtime crates) and `[runtime]` (panic handler, optional

@@ -40,7 +40,7 @@ are `pub`; helpers are bare. Do **not** emit `pub(crate)` on items
 inside a `crate`-visible module — the module's own visibility already
 constrains reach.
 
-## Item emission (Phase 14)
+## Item emission
 
 `module.items[]` carries the module's contractual surface entries — one
 per top-level Rust construct that has spec significance (typically

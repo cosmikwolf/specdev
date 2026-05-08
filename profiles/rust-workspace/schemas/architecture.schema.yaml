@@ -7,9 +7,9 @@ description: >
   `*.workspace = true`) and hoisted [[workspace_dependencies]]
   candidates (members opt in via `source = "workspace"`).
 
-  D36 enforcement: this schema MUST NOT carry any per-member fields
-  (modules, requirements, per-crate features). Per-member surface lives
-  in each member's own `specs/` tree.
+  Bidirectional-minimality enforcement: this schema MUST NOT carry any
+  per-member fields (modules, requirements, per-crate features).
+  Per-member surface lives in each member's own `specs/` tree.
 
 type: object
 additionalProperties: false

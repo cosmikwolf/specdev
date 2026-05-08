@@ -7,10 +7,10 @@ description: >
   regions — for plugin shells that ship a custom UI via
   [egui](https://github.com/emilk/egui).
 
-  v1 models **topology only** (D47): the block describes WHERE
+  v1 models **topology only**: the block describes WHERE
   controls live (panel layout, region positions, region purpose) but
   NOT WHICH widgets render WHICH parameters. Parameter→widget bindings
-  live in the `egui+nih-plug` bridge (Phase 15-E). Custom drawing
+  live in the `egui+nih-plug` bridge. Custom drawing
   (oscilloscopes, modulation visualizers, spectrum analyzers) is
   declared structurally via `purpose = "free_form"` regions and
   hand-authored Rust inside the codegen scaffold.
@@ -58,7 +58,7 @@ properties:
       regions:
         description: >
           Regions inside panels. Each carries a `purpose` that drives
-          the codegen scaffolding pattern (see Phase 15-D codegen
+          the codegen scaffolding pattern (see this block's codegen
           prose). Cross-cutting binding (parameter→widget) lives in
           the `egui+nih-plug` bridge, not here.
         type: array

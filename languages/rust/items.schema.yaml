@@ -16,9 +16,9 @@ description: >
   use` makes `satisfies` optional.
 
   This schema is meant to be `$ref`'d from each profile's
-  `module.schema.yaml` `items[]` field via the `{{language}}` placeholder
-  (Phase 14 work item — pre-Phase-14, the schema ships standalone for use
-  by the analyzer's `extract-items` subcommand).
+  `module.schema.yaml` `items[]` field via the `{{language}}` placeholder.
+  It also ships standalone for use by the analyzer's `extract-items`
+  subcommand.
 
 type: object
 required: [name, kind, description]

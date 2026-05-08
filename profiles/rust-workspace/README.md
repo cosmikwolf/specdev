@@ -41,8 +41,8 @@ specdev-analyzer bootstrap \
 ## Composition with member profiles
 
 The workspace profile carries no module / requirement / feature surface
-(D36 — bidirectional minimality). Each member is a complete spec on its
-own; extracting a member's `specs/specdev/` and bootstrapping it as a
+— bidirectional minimality. Each member is a complete spec on its own;
+extracting a member's `specs/specdev/` and bootstrapping it as a
 standalone project must produce a valid library (or firmware) crate.
 
 A member opts into workspace inheritance at two layers:
@@ -92,10 +92,10 @@ that get inlined when you later run `specdev inline <block>`.
 
 The workspace root and every member each get their own self-contained
 inlined tree — that's not duplication, it's the "project owns its
-content" invariant (D33). Each member must be extractable and runnable
-as a standalone project; sharing files across the workspace would
-violate that. If you have N members, expect N+1 inlined trees of this
-size. Subsequent `specdev inline` calls add files but won't multiply.
+content" invariant. Each member must be extractable and runnable as a
+standalone project; sharing files across the workspace would violate
+that. If you have N members, expect N+1 inlined trees of this size.
+Subsequent `specdev inline` calls add files but won't multiply.
 
 This is intentional and expected; the file count surprised the first
 docs-first adopter (zfm dogfood F-008, 2026-05-04).

@@ -23,7 +23,7 @@ stm32h5xx-pac = "0.16"
 ```
 
 The `stm32h5xx-hal` feature flag selects the specific MCU family
-member. **Phase 6.7 spec coupling:** read `[platform].mcu_part` from
+member. **Spec coupling:** read `[platform].mcu_part` from
 `architecture.toml` and use it as the HAL feature flag (lowercase, no
 punctuation: `stm32h563`, `stm32h573`, `stm32h503`, etc.). The
 `mcu_part` field is the single source of truth for which H5 variant
@@ -37,7 +37,7 @@ Conversely, if this block is inlined but `mcu_part` is unset, emit
 `// SPEC WARNING: stm32h5-rs block inlined but [platform].mcu_part is unset`
 and fall back to a sensible default (typically `stm32h563`). Both
 warnings surface as in-source comments — not analyzer findings — per
-the doc 15 §3.1 sharp-test discipline (manual review, not enforcement).
+the sharp-test discipline (manual review, not enforcement).
 
 `cortex-m`, `cortex-m-rt`, panic handlers, and logger crates do **not**
 come from this block — they're declared at the project level via

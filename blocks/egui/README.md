@@ -22,8 +22,8 @@ Don't use this block if:
 
 - Your editor is hand-rolled with no panel/region structure (a single
   `CentralPanel` with hand-coded layout). The block adds no value
-  there; an `[egui] enabled = true` flag would be lighter, but doc
-  15 §3.1 leg 2 says blocks must contribute concrete shapes.
+  there; an `[egui] enabled = true` flag would be lighter, but the
+  sharp-test rule says blocks must contribute concrete shapes.
 - You're targeting a different UI toolkit (iced, vizia, nih-plug-vizia,
   raw skia). Those would land as separate blocks; the topology
   vocabulary would likely differ enough to justify it.
@@ -32,7 +32,7 @@ Don't use this block if:
 
 The egui block models topology — WHERE controls live — but NOT WHICH
 widgets render WHICH parameters. That cross-cutting concern lives in
-the `egui+nih-plug` bridge (Phase 15-E). Three reasons:
+the `egui+nih-plug` bridge. Three reasons:
 
 1. **egui is a UI library, not a widget catalog.** Panel + region
    layout is the right abstraction for a block. Widget content is
@@ -103,7 +103,7 @@ scaffolding follows a `purpose`-driven pattern (parameter_controls
 leaves a placeholder for the bridge to fill; metering, preset_selector,
 free_form, label_block each have their own scaffold pattern).
 
-## Sharp-test rationale (doc 15 §3.1)
+## Sharp-test rationale
 
 - **Concreteness:** ✓ — names a specific UI toolkit (`egui` via
   `nih_plug_egui`). Doesn't try to abstract over "any UI library."

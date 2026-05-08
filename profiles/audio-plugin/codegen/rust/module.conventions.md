@@ -38,9 +38,9 @@ src/
     └── standalone.rs             # nih_export_standalone!(); only when format set includes standalone
 ```
 
-For multi-crate workspaces (the recommended layout per Phase 8.6 +
-Phase 15 spike §0): the engine lives in a sibling member crate using
-the `library-api` profile (`no_std`-eligible, no plugin concerns); the
+For multi-crate workspaces (the recommended layout): the engine lives
+in a sibling member crate using the `library-api` profile (`no_std`-
+eligible, no plugin concerns); the
 plugin crate uses this profile and depends on the engine via Cargo
 path/workspace dep. Cross-crate boundary is the engine ↔ plugin_shell
 edge — see profile README §"When to use this profile."
@@ -253,7 +253,7 @@ declared in `architecture.toml`'s `[[features]]`.
 Do **not** combine `feature_gates` with `#[cfg(target_*)]` predicates
 in the same `cfg` — emit them as separate `#[cfg(...)]` lines.
 
-## Item emission (Phase 14)
+## Item emission
 
 `module.items[]` carries the module's contractual surface entries — one
 per top-level Rust construct that has spec significance (typically
@@ -298,16 +298,16 @@ lives in a sibling crate.
 
 Module specs in this profile typically carry block-contributed tables:
 
-- `[nih_plug]` (Phase 15-C block) — parameters, audio ports, MIDI,
-  process declarative config. The block's
-  `codegen/rust/README.md` drives `#[derive(Params)]` emission, range
-  constructors, smoother attachment, and the export-macro selection.
-- `[egui]` (Phase 15-D block) — editor topology (panels, regions). The
-  block's prose drives `nih_plug_egui::create_egui_editor` skeleton
-  emission and per-region scaffolding.
-- `bindings."egui+nih-plug"` (Phase 15-E bridge) — parameter→widget
-  bindings. The bridge's prose drives per-binding widget emission
-  inside region loops.
+- `[nih_plug]` block — parameters, audio ports, MIDI, process
+  declarative config. The block's `codegen/rust/README.md` drives
+  `#[derive(Params)]` emission, range constructors, smoother
+  attachment, and the export-macro selection.
+- `[egui]` block — editor topology (panels, regions). The block's
+  prose drives `nih_plug_egui::create_egui_editor` skeleton emission
+  and per-region scaffolding.
+- `bindings."egui+nih-plug"` bridge — parameter→widget bindings. The
+  bridge's prose drives per-binding widget emission inside region
+  loops.
 
 Read the relevant block / bridge READMEs for those emission rules.
 This profile prose covers only the architecture-level shape (crate

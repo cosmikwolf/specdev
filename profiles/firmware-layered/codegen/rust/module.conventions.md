@@ -116,7 +116,7 @@ For trivial constants (single named values, small enums-as-numbers),
 keep them inline as `pub const NAME: T = ...;` — `build.rs` is for
 *tables*, not all constants.
 
-## Item emission (Phase 14)
+## Item emission
 
 `module.items[]` is an OPTIONAL surface in firmware-layered (firmware
 modules' contractual surface lives mostly in `actions[]`, `ports[]`,
@@ -282,14 +282,14 @@ uses shared state).
 Do **not** emit a global `Project` struct or context object. Each
 module is independent; cross-module wiring is per-block.
 
-## Project-wide infrastructure (Phase 6.7+)
+## Project-wide infrastructure
 
-The spec is the source of truth for every Cargo dependency. Phase 8's
-`gen` reads `architecture.toml`'s `[platform]`, `[runtime]`, `[logger]`,
-and `[[external_deps]]` sections (plus `spec.toml`'s `[project]`) and
-emits the complete Cargo project, not just module bodies. **Do not add
-deps to Cargo.toml that aren't declared in the spec; do not omit deps
-that are declared.**
+The spec is the source of truth for every Cargo dependency. `gen` reads
+`architecture.toml`'s `[platform]`, `[runtime]`, `[logger]`, and
+`[[external_deps]]` sections (plus `spec.toml`'s `[project]`) and emits
+the complete Cargo project, not just module bodies. **Do not add deps
+to Cargo.toml that aren't declared in the spec; do not omit deps that
+are declared.**
 
 ### `[platform]` drives target + ARM core scaffolding
 
