@@ -61,7 +61,7 @@ From an existing codebase:
 | `/spec-design`         | Author one module TOML interactively against the project's aggregated schema.      |
 | `/spec-edit`           | Modify an existing module with downstream impact analysis.                         |
 | `/spec-validate`       | Run `specdev-analyzer validate` and translate findings into actionable fixes.      |
-| `/spec-gen`            | Assemble a deterministic codegen prompt, emit Rust source, then emit Cargo.toml. Supports `--strict` and `--skeleton` (cargo-check-gated handoff scaffold; library-api projects only). |
+| `/spec-gen`            | Assemble a deterministic codegen prompt, emit Rust source, then emit Cargo.toml. Refuses on incomplete specs (no stub bodies). |
 | `/spec-reverse`        | One-shot migration: reverse-engineer module specs from an existing codebase. Single-module or `--all`. |
 | `/spec-inline`         | Inline a canonical block from `${CLAUDE_PLUGIN_ROOT}/blocks/<name>/` into `specs/specdev/inlined/blocks/<name>/`. |
 | `/spec-inline-bridge`  | Inline a canonical bridge between two already-inlined blocks. Bridge name is `<a>+<b>` with `a` and `b` lex-ordered. |

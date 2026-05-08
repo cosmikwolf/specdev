@@ -98,32 +98,24 @@ The standalone bin path is always `src/bin/standalone.rs`; codegen
 emits this file when standalone is in the format set. The bin links
 the same lib so the `Plugin` impl is reused.
 
-## Skeleton mode
+## Audio-thread method bodies
 
-Skeleton mode (`gen --skeleton`) is supported on this profile via a
-silence-and-log stub variant for audio-thread methods. A skeleton-built
-plugin loads in a host (VST3 / CLAP / standalone) and processes silence
-for the lifetime of the session, emitting one diagnostic log line per
-audio-path method on first invocation. Non-audio-path code
-(`initialize`, `reset`, editor / state plumbing, hand-authored helpers
-that aren't on the audio thread) keeps `unimplemented!()` so the panic
-surfaces missing implementations during normal authoring.
+Audio-thread methods on the plugin shell — `process`, `process_buffers`,
+and helpers invoked from inside them — emit a **silence-and-log** body
+in first-pass `gen` output: write zeros into the output buffer, fire
+one diagnostic `nih_log!` on first invocation, and return the normal
+process status. Non-audio-thread code (`initialize`, `reset`, editor /
+state plumbing, hand-authored helpers that don't run on the audio
+thread) emits `unimplemented!()` so the panic surfaces the missing
+implementation loudly during authoring.
 
-Two surfaces classify code as audio-path:
-
-- The audio-plugin codegen prose carries the hardcoded list of
-  audio-thread methods on the nih-plug `Plugin` trait (`process`,
-  `process_buffers`, etc.). These are silence-and-log automatically.
-- Hand-authored DSP-node helpers opt in by setting `is_audio_path = true`
-  on the items[] entry. Default is false; outside audio-path code,
-  the flag has no effect.
-
-Audio-path methods returning a non-`Default` type must opt out via
-`is_audio_path = false` (which restores `unimplemented!()`) or
-hand-author the body. See `codegen/rust/module.conventions.md` §
-"Skeleton mode (silence-and-log)" for the full emit template,
-`AtomicBool` once-only logging mechanism, and the
-`runtime.realtime_audit` interaction.
+The split is load-bearing: `unimplemented!()` on the audio thread
+aborts the host (the user's DAW). Silence-and-log on the audio thread
+keeps the host alive long enough to verify the bundle loads and the
+stub surface is wired up correctly. See
+`codegen/rust/module.conventions.md` § "Audio-thread method bodies"
+for the full emit template (with `AtomicBool` once-only logging) and
+the `runtime.realtime_audit` interaction.
 
 ## Out-of-band context (escape hatch)
 

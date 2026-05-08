@@ -81,11 +81,13 @@ properties:
       static, re-export, or macro contributing to the module's
       contractual surface. Sparseness rule (enforced by the language
       schema): every item except `kind = "re_export"` must carry
-      `satisfies` (≥1 requirement id). Consumed by skeleton-mode emit
-      (note: skeleton mode is library-api-only — audio-plugin modules
-      do not get `unimplemented!()` stubs because panicking on the
-      audio thread would abort-crash the host) and by the three-stage
-      agentic sync (`items diff` / `items propose` / `items apply`).
+      `satisfies` (≥1 requirement id). Consumed by `/spec-gen` for
+      symbol emission and by the three-stage agentic sync
+      (`items diff` / `items propose` / `items apply`). Audio-thread
+      methods on the plugin shell take a silence-and-log first-pass
+      body rather than `unimplemented!()` because panicking on the
+      audio thread would abort-crash the host; see the audio-plugin
+      codegen prose's "Audio-thread method bodies" section.
     type: array
     items:
       $ref: "inlined/languages/{{language}}/items.schema.yaml"
