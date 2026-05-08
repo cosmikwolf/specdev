@@ -5,7 +5,7 @@
 # preamble in shared/plugin-root-preamble.md). Run manually when you want a
 # rendered view of the resolved schema/domain/language paths a project will use.
 #
-# Delegates to `specdev-analyzer resolve`, which implements the full D13
+# Delegates to `specdev-analyzer resolve`, which implements the full
 # resolution chain:
 #   1. explicit paths in `spec.toml` [paths.overrides]
 #   2. `./.specdev/<kind>/<name>/`
