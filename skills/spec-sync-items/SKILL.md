@@ -1,6 +1,7 @@
 ---
 name: spec-sync-items
-description: This skill should be used when the user asks to "sync items", "reconcile spec items with source", "run items propose", "audit module items", "what's drifted between my spec and source", or wants to align a module's `[[items]]` array with what tree-sitter actually finds in the source file. Three stages: deterministic detect → Claude-advisory propose with rationale → human-approved apply. Refuses to skip stages. For schema/graph-check errors, use /spec-validate. For inlined-block-vs-plugin drift, use /spec-drift.
+argument-hint: <ModuleName>
+description: This skill should be used when the user asks "is my source out of sync with the spec items", "sync items", "reconcile spec items with source", "run items propose", "audit module items", "what's drifted between my spec and source", or wants to align a module's `[[items]]` array with what tree-sitter actually finds in the source file. Three stages: deterministic detect → Claude-advisory propose with rationale → human-approved apply. Refuses to skip stages. For schema/graph-check errors, use /spec-validate. For inlined-block-vs-plugin drift, use /spec-drift.
 allowed-tools: Read, Edit, Write, Bash, Glob, Grep
 ---
 
@@ -66,26 +67,7 @@ Default behavior when in doubt: stop and ask. Losing rationales silently is wors
 
 ## Step 3 — fill in recommendations (Claude-advisory pass)
 
-Read `specs/specdev/upstream/items-sync/<Module>.proposal.yaml` and walk each entry. For each `pending` entry, decide which of the four actions fits:
-
-- **`skip`** — leave both spec and source as-is. Pick this when the drift represents a deliberate gap. Common cases:
-  - `in_source_only` for a private helper that the spec deliberately doesn't enumerate (sparseness rule per D42 — items[] is a sparse subset, not a full mirror).
-  - `signature_drift` where the spec's `signature_hint` was a documentation aid that's drifted and the user prefers to drop the hint over chasing the source. (In that case, `update-spec` with the hint removed is also a valid choice — pick whichever the entry's prose suggests.)
-
-- **`add-to-spec`** — the source item is contractual and should be enumerated in the spec. Picks for `in_source_only` entries where the function/struct/etc. is part of the module's public surface AND traces to a requirement. Fill `proposed_spec` with the new [[items]] mapping (`kind`, `name`, `description`, `satisfies`, optional `signature_hint`). At minimum carry `satisfies` (D42 sparseness invariant — every item except `re_export` must satisfy ≥1 requirement).
-
-- **`remove-from-spec`** — the spec entry is stale; the source has moved on without it. Picks for `in_spec_only` entries where the function was renamed or deleted in source and the spec wasn't updated. No `proposed_spec` needed.
-
-- **`update-spec`** — the spec entry exists but its shape needs to change. Picks for `signature_drift` entries (most commonly) where the source signature is the right one and the spec hint is stale. Fill `proposed_spec` with the full new mapping (`update-spec` REPLACES the matched entry; partial merges are not supported — carry the full intended shape).
-
-For each entry, write:
-- `rationale` — one or two sentences naming WHY this action. Refer to specifics: which requirement, which signature mismatch, which sparseness call. Generic prose ("looks fine") is not useful audit material.
-- `action` — one of the four above.
-- `proposed_spec` — required for `add-to-spec` and `update-spec`; absent for `skip` and `remove-from-spec`.
-
-When you're done, also flip the top-level `status` from `needs-rationale` to `awaiting-approval`.
-
-**Do NOT set `approved`, `approver`, or `approved_at`.** That's the human's job.
+Read `specs/specdev/upstream/items-sync/<Module>.proposal.yaml`. Walk each `pending` entry and pick one of four actions per the taxonomy in `references/action-taxonomy.md` (`skip` / `add-to-spec` / `remove-from-spec` / `update-spec`). For each entry, write `rationale`, `action`, and (for `add-to-spec` / `update-spec`) `proposed_spec`.
 
 Save the file. Tell the user how many entries were resolved per action category, and ask them to review.
 
@@ -139,4 +121,8 @@ End with one line:
 ## On `[ITEM-309]` (target not found)
 
 If apply fires `ITEM-309` for a `remove-from-spec` or `update-spec` action, the spec moved between `propose` and `apply` (the user manually edited `[[items]]` in the meantime). Re-run `propose --clobber` and the new diff will reflect the current state.
+
+## Additional resources
+
+- `references/action-taxonomy.md` — the four `recommendation.action` values, when to pick each, and the `proposed_spec` shape required for `add-to-spec` and `update-spec`.
 

@@ -1,6 +1,6 @@
 ---
 name: spec-gen
-description: This skill should be used when the user asks to "generate code", "codegen", "run spec-gen", "generate <ModuleName>", "codegen all modules", "implement this spec", "build my source files from spec", "give me a skeleton scaffold", or names any module to materialize as source. Generates Rust source code AND Cargo.toml deterministically from validated specdev specs (blocks + bridges + profiles model). Two modes: `--strict` (full implementation; refuses on incomplete specs) and `--skeleton` (`unimplemented!()` bodies for cargo-check-gated handoff to a human).
+description: This skill should be used when the user asks to "generate code", "codegen", "run spec-gen", "generate <ModuleName>", "codegen all modules", "implement this spec", "build my source files from spec", or names any module to materialize as source. Generates Rust source code AND Cargo.toml deterministically from validated specdev specs (blocks + bridges + profiles model). Two modes: `--strict` (full implementation; refuses on incomplete specs) and `--skeleton` (`unimplemented!()` bodies for cargo-check-gated handoff to a human; library-api projects only in v1).
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 argument-hint: <ModuleName | --all> [--strict | --skeleton]
 ---
@@ -32,7 +32,7 @@ Read `spec.toml` from the project root.
 
 ## Step 1.5 — resolve handoff mode (strict vs skeleton)
 
-Phase 13 (doc 16 §4) splits `/spec-gen` into a strict/skeleton fork. Resolve mode **before** assembling any prompt by checking `$ARGUMENTS` for `--strict` / `--skeleton` and falling back to `spec.toml [project].handoff_mode` (`"skeleton"` → skeleton, `"implementation"` or absent → strict). The full resolution rules and the skeleton-mode procedure are in `references/skeleton-mode.md`.
+`/spec-gen` has a strict/skeleton fork. Resolve mode **before** assembling any prompt by checking `$ARGUMENTS` for `--strict` / `--skeleton` and falling back to `spec.toml [project].handoff_mode` (`"skeleton"` → skeleton, `"implementation"` or absent → strict). The full resolution rules and the skeleton-mode procedure are in `references/skeleton-mode.md`.
 
 - If mode is `skeleton`, follow `references/skeleton-mode.md` end-to-end and **do not** invoke any other step in this skill — the analyzer's `gen --skeleton` command emits source, Cargo.toml, and HANDOFF.md atomically.
 - If mode is `strict`, continue with Steps 2–9 below. The no-`todo!()` rule applies; if the spec is incomplete, stop and ask rather than improvise (the user can re-run with `--skeleton` for a navigable scaffold instead of a partial implementation).
@@ -140,7 +140,7 @@ One paragraph per module generated:
 - **Multi-package coordination outside `rust-workspace`.** If members are independent (no `[workspace]` in spec.toml), invoke `/spec-gen` per member from the member's directory.
 - **Cargo.toml editing.** The analyzer's `cargo-toml` subcommand is the only path to write Cargo.toml. If a dep is missing, edit the spec.
 - **Auto-fix build errors.** Report and stop; the user fixes (likely by editing the spec).
-- **Generate placeholders in `--strict` mode.** No `todo!()` / stubs — stop and ask if the spec is incomplete. The named exception is `--skeleton` mode (Phase 13, see Step 1.5): `unimplemented!()` bodies are *expected* there because `cargo check` is the load-bearing discipline rather than runtime correctness.
+- **Generate placeholders in `--strict` mode.** No `todo!()` / stubs — stop and ask if the spec is incomplete. The named exception is `--skeleton` mode (see Step 1.5): `unimplemented!()` bodies are *expected* there because `cargo check` is the load-bearing discipline rather than runtime correctness.
 
 ## Additional resources
 

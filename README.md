@@ -27,7 +27,7 @@ Pairs with the [`specdev-analyzer`](https://github.com/cosmikwolf/specdev-analyz
    claude --plugin-dir /path/to/specdev
    ```
 
-3. Verify the install: type `/` in Claude Code and confirm the specdev commands appear in the slash-command menu. The shipped surface is `/spec-init`, `/spec-bootstrap`, `/spec-design`, `/spec-edit`, `/spec-validate`, `/spec-gen`, `/spec-reverse`, `/spec-inline`, `/spec-inline-bridge`, `/spec-drift`, `/spec-sync-items`, `/fetch-datasheet`. If they do not appear, re-run the marketplace add or check `/plugin` for installation errors.
+3. Verify the install: type `/` in Claude Code and confirm the specdev commands appear in the slash-command menu. The shipped surface is `/spec-init`, `/spec-design`, `/spec-edit`, `/spec-validate`, `/spec-gen`, `/spec-reverse`, `/spec-inline`, `/spec-inline-bridge`, `/spec-drift`, `/spec-sync-items`. If they do not appear, re-run the marketplace add or check `/plugin` for installation errors.
 
 ## Quickstart
 
@@ -57,18 +57,16 @@ From an existing codebase:
 
 | Command                | Purpose                                                                            |
 | ---------------------- | ---------------------------------------------------------------------------------- |
-| `/spec-init`           | Interview, then `specdev-analyzer bootstrap` to scaffold `spec.toml` + `specs/specdev/`. |
-| `/spec-bootstrap`      | Non-interactive wrapper over `bootstrap` for callers passing explicit `--profile`/`--language`/`--name`. |
+| `/spec-init`           | Interview, then `specdev-analyzer bootstrap` to scaffold `spec.toml` + `specs/specdev/`. Pass `--non-interactive --profile <name> --language <lang> --name <project>` to skip the interview. |
 | `/spec-design`         | Author one module TOML interactively against the project's aggregated schema.      |
 | `/spec-edit`           | Modify an existing module with downstream impact analysis.                         |
 | `/spec-validate`       | Run `specdev-analyzer validate` and translate findings into actionable fixes.      |
-| `/spec-gen`            | Assemble a deterministic codegen prompt, emit Rust source, then emit Cargo.toml. Supports `--strict` and `--skeleton` (cargo-check-gated handoff scaffold). |
-| `/spec-reverse`        | Reverse-engineer a single module spec from existing source. (`--all` Phase 10-pending.) |
+| `/spec-gen`            | Assemble a deterministic codegen prompt, emit Rust source, then emit Cargo.toml. Supports `--strict` and `--skeleton` (cargo-check-gated handoff scaffold; library-api projects only). |
+| `/spec-reverse`        | One-shot migration: reverse-engineer module specs from an existing codebase. Single-module or `--all`. |
 | `/spec-inline`         | Inline a canonical block from `${CLAUDE_PLUGIN_ROOT}/blocks/<name>/` into `specs/specdev/inlined/blocks/<name>/`. |
 | `/spec-inline-bridge`  | Inline a canonical bridge between two already-inlined blocks. Bridge name is `<a>+<b>` with `a` and `b` lex-ordered. |
 | `/spec-drift`          | Read-only report on which inlined files diverge from the plugin tree or have been hand-edited. |
 | `/spec-sync-items`     | Three-stage sync (deterministic diff → AI-advisory rationale → human approval → spec mutation) reconciling a module's `[[items]]` with what tree-sitter finds in source. |
-| `/fetch-datasheet`     | Download, parse, and summarize a hardware datasheet PDF.                           |
 
 `/spec-inline` and `/spec-inline-bridge` are the user-facing block / bridge inlining surface; both are thin wrappers over `specdev-analyzer inline` / `inline-bridge`.
 
@@ -133,15 +131,15 @@ What this repo currently ships at HEAD (subject to change as new profiles / bloc
 
 ### Authoring your own profile / block / bridge
 
-Drop it under `blocks/<name>/` or `bridges/<a>+<b>/` or `profiles/<name>/` in the plugin tree (or any git repo / local path), then pull it into a project via `specdev-analyzer inline <block> --from <url|path>` or its `/spec-inline` wrapper. Plugin CI lints the layout via `specdev-analyzer plugin-lint`. See `15-blocks-and-bridges.md` and `18-authoring-recipes.md` (the authoritative composition design + mechanical recipe doc) in the planning workspace for the full model.
+Drop it under `blocks/<name>/` or `bridges/<a>+<b>/` or `profiles/<name>/` in the plugin tree (or any git repo / local path), then pull it into a project via `specdev-analyzer inline <block> --from <url|path>` or its `/spec-inline` wrapper. Plugin CI lints the layout via `specdev-analyzer plugin-lint`.
 
 User-contributed blocks and bridges are first-class: `--from <url|path>` works against any git repo or local checkout, lineage records the origin, and `/spec-drift` / `/spec-inline --merge` handle updates with 3-way merge against `specs/specdev/upstream/`.
 
-## Scope and status
+## Scope
 
-- **v1 is single-package** for `firmware-layered` and `library-api` profiles. The `rust-workspace` profile coordinates multi-member projects; per-member skills (`/spec-design`, `/spec-edit`, `/spec-gen`) run from the member's directory.
-- **Rust only.** A C-language stack lands in Phase 9.
-- **`/spec-reverse --all`** is Phase 10-pending. Single-module reverse is the supported workflow today; it is a person-in-the-loop authoring flow against the inlined-block schemas, not an automated extractor.
+- **v1 is single-package** for `firmware-layered`, `library-api`, and `audio-plugin` profiles. The `rust-workspace` profile coordinates multi-member projects; per-member skills (`/spec-design`, `/spec-edit`, `/spec-gen`) run from the member's directory.
+- **Rust only.** C-language support is on the roadmap.
+- **`/spec-reverse`** is a one-shot migration tool — moves an existing codebase into the spec-driven world. It is a person-in-the-loop authoring flow against the inlined-block schemas, not a continuous source-vs-spec audit. For ongoing source-vs-spec drift on a module's `[[items]]`, use `/spec-sync-items`.
 
 ## License
 

@@ -1,6 +1,6 @@
 ---
 name: spec-design
-description: This skill should be used when the user asks to "design a module", "add a module spec", "author a driver spec", "design <ModuleName>", or needs to write a single module TOML under specs/modules/. Authors one module TOML per invocation, then validates it. Use for modules that do not yet exist; to modify an existing module, use /spec-edit.
+description: This skill should be used when the user asks to "design a module", "add a module spec", "author a driver spec", "design <ModuleName>", or needs to write a single module TOML under specs/modules/. Authors one module TOML per invocation, then validates it. **New modules only — refuses if `specs/modules/<ModuleName>.toml` already exists.** To modify an existing module, use /spec-edit.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 argument-hint: <one-line module description>
 ---

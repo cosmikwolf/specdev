@@ -11,7 +11,7 @@ Edit exactly one existing module TOML per invocation. First positional arg is th
 
 If `$ARGUMENTS` is empty, ask the user which module to edit and what to change. Never guess.
 
-In v1 specdev is single-package — module names are unqualified. Multi-package qualification lands in Phase 8.5 (library) and Phase 12 (firmware).
+In v1 specdev is single-package — module names are unqualified. Multi-package qualification is on the roadmap.
 
 If `specdev-analyzer` is not on PATH, tell the user to install it and stop.
 
@@ -71,10 +71,10 @@ Summarize the module grouped by topic, not raw TOML:
 - **Hardware** (firmware-layered) — `pins`, `peripherals`, `clocks`.
 - **Errors** — one line per variant.
 - **Metadata** (firmware-layered) — `MemoryModel`, `ConcurrencyModel`, `ErrorHandling`, `Ownership`.
-- **Bindings** — any `bindings.<a>+<b>` entries (Phase 7+).
+- **Bindings** — any `bindings.<a>+<b>` entries.
 - **External deps** — module-scoped crate deps.
 - **Visibility / feature_gates** (library-api). Re-exports live as `[[items]]` with `kind = "re_export"`.
-- **items[]** (Phase 14) — public-API surface entries; re-exports use `kind = "re_export"`.
+- **items[]** — public-API surface entries; re-exports use `kind = "re_export"`.
 - **satisfies** — requirement ids if present.
 
 ## Step 4 — interview, if needed

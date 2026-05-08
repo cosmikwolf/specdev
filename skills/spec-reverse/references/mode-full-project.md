@@ -7,7 +7,7 @@ Entered from the main SKILL.md when `$ARGUMENTS` is `--all`. Runs an end-to-end 
 Before any module reversal, detect how the source is organized and propose a list of spec modules. Goal: one spec module per coherent unit (one layer, one peripheral concern) while preserving the visual grouping users expect from the project's source-tree structure.
 
 1. **Detect project shape.** Check these in order and stop at the first match:
-   - **Cargo workspace** — root `Cargo.toml` has `[workspace] members = [...]`. Each member is a candidate spec root (each member has its own `specs/specdev/`; per-member-independent reverse, as Phase 8.5 / 8.6 establishes).
+   - **Cargo workspace** — root `Cargo.toml` has `[workspace] members = [...]`. Each member is a candidate spec root (each member has its own `specs/specdev/`; reverse runs per-member-independently).
    - **Single Cargo crate** — root `Cargo.toml` has `[package]`. Treat the crate as one spec root.
    - **CMake multi-subproject** — root `CMakeLists.txt` contains one or more `add_subdirectory(...)` calls. Each subdirectory is a candidate spec root.
    - **Flat / unknown** — no recognized shape. Treat the whole project as one implicit spec root.
@@ -42,7 +42,7 @@ Run in order, pausing for confirmation between passes:
 3. **Per-module reverse loop** — for each confirmed `(module_name, source_path)` tuple, run the procedure from `mode-single-module.md`. Sequential walk preferred (cleaner audit trail; no `validate` race). For projects with many modules where wall-clock matters, the user may opt into parallel fan-out via the `module-reverser` subagent — see `module-reverser-subagent.md` for the contract. Subagents are read-only; the main thread writes confirmed files in one batch after all subagents return.
 4. **Validate everything** — run `specdev-analyzer validate --no-color` from the project root (or each workspace member root). Surface graph-check failures and missing cross-references. For unfamiliar rule names, read the project's `specs/specdev/domain.toml` `[[project.graph_checks]]` blocks for the rule's `kind` and meaning.
 
-Audit (continuous source-vs-spec drift detection) is **out of scope** for `/spec-reverse` per D40 (2026-05-01). v1 ships one-way spec→source codegen + `/spec-reverse` as a migration tool; continuous audit lands in Phase 14.x once the items[] substrate exists.
+Project-wide source-vs-spec audit is **out of scope** for `/spec-reverse`. v1 ships one-way spec→source codegen + `/spec-reverse` as a migration tool; continuous audit is not in v1. Per-module `[[items]]` drift is handled by `/spec-sync-items`.
 
 ## Summary report
 
