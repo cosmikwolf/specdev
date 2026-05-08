@@ -69,7 +69,7 @@ Optional `[[features]]` declares Cargo features (parity with
 
 ## Graph checks shipped
 
-- `unique_module_names` — every Module has a unique name.
+- `unique_qualified_names` — every entity has a unique qualified name (collisions across kinds are surfaced).
 - `modules_acyclic` — module dependency graph has no cycles.
 - `layer_dependency` — no upward dependency in the layer ordering
   (`host_interface` → `plugin_shell` → `engine` → `dsp_node`).

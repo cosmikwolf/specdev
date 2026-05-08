@@ -147,6 +147,59 @@ When a module's body uses items from a sibling, emit `use crate::<sibling>::<Ite
 at the top of the module file. Do **not** emit `use super::*;` — explicit
 imports document dependency intent.
 
+## External crate dependencies
+
+`module.external_deps[]` declares Cargo dependencies the module needs.
+The union across every module in the library determines the full
+dependency set Phase 8's `gen` writes to `Cargo.toml`. Each entry is a
+[`CrateReference`](https://specdev.dev/schema/meta/v1/crate_reference.schema.yaml) —
+`crate` + `version` are required; `source`, `features`,
+`default_features`, and `optional` are optional.
+
+`source` is a **tagged union** — pick one shape per entry:
+
+```toml
+# Plain crates.io dep — `source` omitted (the default).
+[[external_deps]]
+crate   = "serde"
+version = "1"
+features = ["derive"]
+
+# Path dep on a sibling workspace member.
+# Shape is `source = { path = "..." }`, NOT `source = "path", path = "..."`.
+[[external_deps]]
+crate   = "ym2414b-core"
+version = "0.1"
+source  = { path = "../ym2414b-core" }
+features = ["std"]
+
+# Workspace inheritance — render `<dep>.workspace = true`.
+# Permitted alongside `optional = true`; package-field workspace
+# inheritance is per-field via `architecture.toml`'s
+# `[workspace_package]`.
+[[external_deps]]
+crate   = "tracing"
+version = "0.1"
+source  = "workspace"
+
+# Git dep with a pinned revision (use `tag` or `branch` instead of
+# `rev` if the upstream tags releases or you intentionally track a
+# moving branch).
+[[external_deps]]
+crate   = "experimental-codec"
+version = "0.0.0"
+source  = { git = "https://github.com/example/experimental-codec", rev = "abc1234" }
+```
+
+Cargo features the module turns ON for an existing feature-gated dep
+flow through `feature_gates` + the architecture's `[[features]]`
+table — not through `external_deps`. Use `external_deps` for crates
+the module needs unconditionally (or that the module's own feature
+gate brings in).
+
+`source = "crates-io"` is also accepted as an explicit "default
+registry" marker; it is equivalent to omitting `source`.
+
 ## API contract surface
 
 For modules with `visibility = "pub"`, the public-API surface is what
