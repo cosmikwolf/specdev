@@ -311,31 +311,30 @@ Read the relevant block / bridge READMEs for those emission rules.
 This profile prose covers only the architecture-level shape (crate
 type, layer ordering, format/category constants, realtime discipline).
 
-## Skeleton mode (silence-and-log)
+## Audio-thread method bodies
 
-`gen --skeleton` is supported on this profile via a silence-and-log
-stub variant for audio-thread methods. A skeleton-built audio plugin
-loads in a host (VST3 / CLAP / standalone) and processes silence for
-the lifetime of the session, emitting one diagnostic log line per
-audio-path method on its first invocation. Non-audio-path code
-(`initialize`, `reset`, editor / state plumbing, hand-authored helpers
-that aren't on the audio thread) keeps `unimplemented!()` — these are
-called on the main thread and an early panic surfaces missing
-implementations during development without risking a host crash.
+Audio-thread methods on the plugin shell — `process`, `process_buffers`,
+and any closure body invoked on the audio thread — emit a
+**silence-and-log** body in the first-pass `gen` output: write zeros
+into the output buffer, fire one diagnostic `nih_log!` on first
+invocation, and return the normal process status. Non-audio-thread
+code (`initialize`, `reset`, editor / state plumbing, hand-authored
+helpers that don't run on the audio thread) emits `unimplemented!()`
+so the panic surfaces the missing implementation loudly during
+authoring.
 
-The split is the load-bearing invariant: `unimplemented!()` on the
-audio thread aborts the host. Silence-and-log on the audio thread
+The split is load-bearing: `unimplemented!()` on the audio thread
+aborts the host (the user's DAW). Silence-and-log on the audio thread
 keeps the host alive long enough to verify the bundle loads and the
-stub surface is wired up correctly.
+stub surface is wired up correctly. Everywhere else, `unimplemented!()`
+is the fastest gap-finder available — let the panic surface the gap.
 
-### Audio-path classification
+### Audio-thread classification
 
-Two surfaces compose. Neither is sufficient alone.
-
-**Auto-classified by trait method.** The following nih-plug `Plugin`
-trait methods are audio-thread by definition; emit silence-and-log
-bodies for any of them that show up in the plugin shell module's
-emitted impl block:
+The following nih-plug `Plugin` trait methods are audio-thread by
+definition. When `gen` produces an `impl Plugin` block on the plugin
+shell module, the bodies of these methods take the silence-and-log
+template:
 
 - `process`
 - `process_buffers`
@@ -349,29 +348,20 @@ methods that nih-plug adds in future revisions extend this list when
 the framework dependency bumps. AU support, when authored, supplies
 its own audio-path method list in a sibling section here.
 
-**Author opt-in via `is_audio_path`.** Hand-authored DSP-node helpers
-(filter step functions, oscillator render fns, voice render entry
-points) are not reachable from the trait list. Author-classify them
-by setting `is_audio_path = true` on the items[] entry. Skeleton
-emission then writes a silence-and-log body for that item exactly the
-same way it does for trait methods.
-
-```toml
-[[items]]
-kind = "fn"
-name = "render_block"
-description = "Render one block of samples into the output buffer."
-satisfies = ["REQ-DSP-1"]
-is_audio_path = true
-```
-
-Items without `is_audio_path` (the default) emit `unimplemented!()`,
-which is the right call for non-audio-path code: the panic surfaces
-the gap loudly during normal authoring iteration.
+**Hand-authored DSP-node helpers** (filter step functions, oscillator
+render fns, voice render entry points) aren't trait methods, so they
+aren't reachable from the list above. The LLM driving `gen` should
+classify them as audio-thread by reading their semantics — anything
+called from inside `process` / `process_buffers` is audio-thread, and
+that body should also take the silence-and-log template. Helpers that
+the LLM cannot confidently classify default to `unimplemented!()`;
+authors then either rerun `gen` with explicit prose ("the
+`render_block` helper runs on the audio thread") or hand-edit the
+emitted body.
 
 ### Silence-and-log emit template
 
-For each audio-path method, the body is:
+For each audio-thread method, the body is:
 
 ```rust
 fn process(
@@ -388,7 +378,7 @@ fn process(
             .swap(true, std::sync::atomic::Ordering::Acquire)
             == false
         {
-            nih_log!("[skeleton] process() reached — silence-and-log stub");
+            nih_log!("[stub] process() reached — silence-and-log stub");
         }
     }
     for channel_samples in buffer.iter_samples() {
@@ -405,7 +395,7 @@ The mechanical pieces:
 1. **Log surface is `nih_log!`** — the plugin crate already depends on
    nih-plug, so `nih_log!` carries no added Cargo surface. Do not
    reach for `log::info!`, `println!`, or `eprintln!` — those would
-   force every skeleton to drag in `env_logger` or emit nothing.
+   force every plugin to drag in `env_logger` or emit nothing.
 
 2. **Once-only via `AtomicBool::swap`** — per-call logging would flood
    the host log within a buffer's worth of frames at any meaningful
@@ -420,11 +410,12 @@ The mechanical pieces:
    silence rather than uninitialized data.
 
 4. **Non-buffer return values default to `Default::default()`**.
-   Audio-path methods returning non-`()` types (e.g. a status enum,
+   Audio-thread methods returning non-`()` types (e.g. a status enum,
    a `bool`, a numeric tail length) return their `Default` value as
-   the universal stub. Authors whose audio-path methods return a
-   non-`Default` type must opt out via `is_audio_path = false` (which
-   restores `unimplemented!()`) or hand-author the body.
+   the universal stub. Audio-thread methods returning a non-`Default`
+   type need a hand-authored body — the LLM should emit a `todo!()`
+   in that case so the gap is loud at compile time rather than at
+   audio-thread invocation time.
 
 5. **`runtime.realtime_audit = true` gates the once-only log on
    `cfg!(debug_assertions)`.** A user who has opted into the
@@ -445,23 +436,21 @@ The mechanical pieces:
 
 ### `unimplemented!()` retention list
 
-The following methods / surfaces always emit `unimplemented!()` in
-skeleton mode, regardless of trait membership or `is_audio_path`:
+The following methods / surfaces always emit `unimplemented!()`,
+regardless of trait membership:
 
 - `initialize` — runs on the main thread before audio starts. Panic
   here surfaces the gap loudly in the host's plugin-load dialog.
 - `reset` — runs on the main thread between transport stops/starts.
   Same reasoning.
-- `editor` — returns `Option<Box<dyn Editor>>`; skeleton returns
-  `None` rather than panic-on-call (an editor stub that panics would
-  crash the host on UI open). Codegen emits `Some(Box::new(no_op_editor))`
-  only when the egui block is on the module; otherwise the body is
-  `None`.
+- `editor` — returns `Option<Box<dyn Editor>>`; emit `None` rather
+  than panic-on-call (an editor stub that panics would crash the
+  host on UI open). Emit `Some(Box::new(no_op_editor))` only when
+  the egui block is on the module; otherwise the body is `None`.
 - `extra_state` / `load_state` — preset / state plumbing on the main
   thread. `unimplemented!()` surfaces the gap when the host attempts
   preset save/restore.
-- Any items[] entry with `is_audio_path = false` (or absent — that's
-  the default).
+- Any non-audio-thread fn item.
 
 The mechanical rule: only audio-thread code gets silence-and-log.
 Everything else takes `unimplemented!()` and lets the panic surface
@@ -469,19 +458,19 @@ the missing implementation during development. The audio thread is
 the one place a panic is strictly unrecoverable; everywhere else a
 panic is the fastest gap-finder available.
 
-### What skeleton mode does NOT do
+### What the silence-and-log template does NOT do
 
 - **Metering / state-publishing writes.** Real plugins publish meter
   values, scope frames, and other audio-thread state to the editor
   via `AtomicCell` writes or lock-free ring buffers. Silence-and-log
   writes nothing back to the editor. The consumer side (the editor)
-  is also a stub at this stage, so there's no observable benefit to
-  emitting them; this is a bounded follow-up that lands when a real
-  plugin needs metering-aware skeleton stubs.
+  is also a stub at first-pass gen, so there's no observable benefit
+  to emitting them; the LLM should hand-author meter writes when the
+  editor is wired up.
 - **MIDI emission.** `process_buffers`'s `context.send_event(...)`
-  surface is silent in skeleton mode. Plugins whose primary value is
-  generated MIDI (sequencers, arps) will need to hand-author the
-  emission or wait for the metering follow-up.
-- **AU format support.** Standalone / VST3 / CLAP only in v1; AU
-  ships its own audio-thread surface that this section will extend
-  when AU support lands.
+  surface is silent under the template. Plugins whose primary value
+  is generated MIDI (sequencers, arps) need the LLM to hand-author
+  the emission.
+- **AU format support.** Standalone / VST3 / CLAP only; AU ships its
+  own audio-thread surface that this section will extend when AU
+  support lands.

@@ -71,9 +71,9 @@ properties:
       static, re-export, or macro contributing to the module's
       contractual surface. Sparseness rule (enforced by the language
       schema): every item except `kind = "re_export"` must carry
-      `satisfies` (≥1 requirement id). Consumed by skeleton-mode emit
-      and by the three-stage agentic sync (`items diff` / `items propose`
-      / `items apply`).
+      `satisfies` (≥1 requirement id). Consumed by `/spec-gen` for
+      symbol emission and by the three-stage agentic sync
+      (`items diff` / `items propose` / `items apply`).
     type: array
     items:
       $ref: "inlined/languages/{{language}}/items.schema.yaml"

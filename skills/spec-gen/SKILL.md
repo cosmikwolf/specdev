@@ -1,8 +1,8 @@
 ---
 name: spec-gen
-description: This skill should be used when the user asks to "generate code", "codegen", "run spec-gen", "generate <ModuleName>", "codegen all modules", "implement this spec", "build my source files from spec", or names any module to materialize as source. Generates Rust source code AND Cargo.toml deterministically from validated specdev specs (blocks + bridges + profiles model). Two modes: `--strict` (full implementation; refuses on incomplete specs) and `--skeleton` (`unimplemented!()` bodies for cargo-check-gated handoff to a human; library-api projects only in v1).
+description: This skill should be used when the user asks to "generate code", "codegen", "run spec-gen", "generate <ModuleName>", "codegen all modules", "implement this spec", "build my source files from spec", or names any module to materialize as source. Generates Rust source code AND Cargo.toml deterministically from validated specdev specs (blocks + bridges + profiles model). Refuses on incomplete specs — no `todo!()` / stub bodies; if the spec is missing information needed to implement a function, the skill stops and asks rather than improvising.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
-argument-hint: <ModuleName | --all> [--strict | --skeleton]
+argument-hint: <ModuleName | --all>
 ---
 
 # /spec-gen — Code generation (blocks + bridges + profiles)
@@ -28,14 +28,7 @@ Skip if `SPECDEV_PLUGIN_ROOT` is already set or every invocation passes `--plugi
 Read `spec.toml` from the project root.
 
 - If `[project].profile == "rust-workspace"`, this is a **workspace root**. Follow `references/workspace-mode.md` end-to-end — the single-package flow below does not apply.
-- Otherwise, this is a **single-package project** (firmware-layered, library-api, audio-plugin, or any user-authored single-crate profile). Continue with Step 1.5 (mode resolution) before Step 2.
-
-## Step 1.5 — resolve handoff mode (strict vs skeleton)
-
-`/spec-gen` has a strict/skeleton fork. Resolve mode **before** assembling any prompt by checking `$ARGUMENTS` for `--strict` / `--skeleton` and falling back to `spec.toml [project].handoff_mode` (`"skeleton"` → skeleton, `"implementation"` or absent → strict). The full resolution rules and the skeleton-mode procedure are in `references/skeleton-mode.md`.
-
-- If mode is `skeleton`, follow `references/skeleton-mode.md` end-to-end and **do not** invoke any other step in this skill — the analyzer's `gen --skeleton` command emits source, Cargo.toml, and HANDOFF.md atomically.
-- If mode is `strict`, continue with Steps 2–9 below. The no-`todo!()` rule applies; if the spec is incomplete, stop and ask rather than improvise (the user can re-run with `--skeleton` for a navigable scaffold instead of a partial implementation).
+- Otherwise, this is a **single-package project** (firmware-layered, library-api, audio-plugin, or any user-authored single-crate profile). Continue with Step 2.
 
 ## Step 2 — gate on validation
 
@@ -140,10 +133,9 @@ One paragraph per module generated:
 - **Multi-package coordination outside `rust-workspace`.** If members are independent (no `[workspace]` in spec.toml), invoke `/spec-gen` per member from the member's directory.
 - **Cargo.toml editing.** The analyzer's `cargo-toml` subcommand is the only path to write Cargo.toml. If a dep is missing, edit the spec.
 - **Auto-fix build errors.** Report and stop; the user fixes (likely by editing the spec).
-- **Generate placeholders in `--strict` mode.** No `todo!()` / stubs — stop and ask if the spec is incomplete. The named exception is `--skeleton` mode (see Step 1.5): `unimplemented!()` bodies are *expected* there because `cargo check` is the load-bearing discipline rather than runtime correctness.
+- **Generate placeholder bodies.** No `todo!()` / stubs — stop and ask if the spec is incomplete. The audio-plugin profile's audio-thread methods are the one structured exception, and the silence-and-log emit template for those methods lives in the audio-plugin codegen prose (`codegen/rust/module.conventions.md` § "Audio-thread method bodies"); the prompt assembled in Step 4 already includes it for audio-plugin modules.
 
 ## Additional resources
 
 - `references/workspace-mode.md` — full procedure when `[project].profile == "rust-workspace"` (W1–W6: workspace manifest read, validation gate, member dep graph, per-member walk, workspace-root Cargo.toml emit, summary report).
-- `references/skeleton-mode.md` — Step 1.5 mode-resolution rules and the skeleton-mode procedure (analyzer-emitted `unimplemented!()` scaffolds + HANDOFF.md, library-api only in v1).
 - `references/firmware-layered-postprocess.md` — `memory.x` emission rules for `firmware-layered` projects (placeholder when `mcu_part` is unset, preserve hand-authored versions, MCU-block-driven layout).
