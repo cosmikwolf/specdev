@@ -39,8 +39,8 @@ relations:
     from_spec: "specs/modules/*.toml"
     for_each: 'bindings."egui+nih-plug".parameter_widgets[]'
     endpoints:
-      from: "${parent.name}.${.region}"
-      to:   "${parent.name}.${.parameter}"
+      from: "${root.name}.${.region}"
+      to:   "${root.name}.${.parameter}"
     attrs:
       widget_kind: ".widget_kind"
       range_hint:  ".range_hint"

@@ -21,7 +21,7 @@ entities:
     extends: Module
     from: "specs/modules/*.toml"
     for_each: "nih_plug.parameters[]"
-    name: "${parent.name}.${.id}"
+    name: "${root.name}.${.id}"
     attrs:
       id:   ".id"
       kind: ".kind"
@@ -30,7 +30,7 @@ entities:
     extends: Module
     from: "specs/modules/*.toml"
     for_each: "nih_plug.audio_ports[]"
-    name: "${parent.name}.${.name}"
+    name: "${root.name}.${.name}"
     attrs:
       direction:     ".direction"
       channel_count: ".channel_count"
@@ -40,7 +40,7 @@ entities:
     extends: Module
     from: "specs/modules/*.toml"
     for_each: "nih_plug.midi"
-    name: "${parent.name}.midi"
+    name: "${root.name}.midi"
     attrs:
       input:       ".input"
       output:      ".output"
