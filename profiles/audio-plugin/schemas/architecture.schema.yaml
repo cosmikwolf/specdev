@@ -186,6 +186,18 @@ properties:
     items:
       $ref: "https://specdev.dev/schema/meta/v1/crate_reference.schema.yaml#/$defs/CrateReference"
 
+  project_decisions:
+    description: >
+      Decision ids that shape the project as a whole (workspace shape,
+      build order, MSRV policy, public API conventions). Distinct from
+      module-scope `guided_by`: project_decisions describes commitments
+      that span the architecture itself rather than any one module's
+      implementation. Validated by graph check
+      `architecture_project_decisions_resolves`.
+    type: array
+    items: { $ref: "enums.schema.yaml#/$defs/RequirementId" }
+    uniqueItems: true
+
 $defs:
   AuxBus:
     type: object

@@ -48,3 +48,15 @@ properties:
     type: array
     items:
       $ref: "https://specdev.dev/schema/meta/v1/crate_reference.schema.yaml#/$defs/CrateReference"
+  project_decisions:
+    description: >
+      Decision ids that shape the workspace as a whole (member layout,
+      hoisted dependency policy, MSRV policy, release strategy).
+      Workspace-tier decisions implicitly apply to every module in
+      every member crate — child crates do not name workspace
+      decisions in their own `decided_by` / `guided_by`, keeping each
+      member crate self-contained. Validated by graph check
+      `architecture_project_decisions_resolves`.
+    type: array
+    items: { $ref: "enums.schema.yaml#/$defs/RequirementId" }
+    uniqueItems: true
