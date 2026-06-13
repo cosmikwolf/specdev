@@ -45,6 +45,12 @@ specdev-analyzer cargo-toml --output Cargo.toml
 
 Run from the workspace root. The analyzer detects `[workspace]` and renders workspace-root mode (`[workspace]` + `[workspace.package]` + `[workspace.dependencies]`).
 
+Then record it (the per-member walk already records member files via single-package Step 6.5; the workspace-root Cargo.toml needs its own record against the workspace root's `specs/specdev/`):
+
+```sh
+specdev-analyzer gen-record Cargo.toml
+```
+
 ## W6 — workspace-level summary
 
 Emit ONE report at the end with one line per member:
