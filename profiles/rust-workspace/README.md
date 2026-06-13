@@ -60,6 +60,76 @@ from the workspace while keeping its own `version`, or inherit a
 registry crate from `[workspace.dependencies]` while keeping a
 local-only dep inline.
 
+## Triad model: requirements, decisions, open questions
+
+Alongside `requirements.toml`, the profile carries two sibling
+artifacts; together the three form the spec's triad:
+
+1. **`requirements.toml` — the WHAT.** Intent and constraints the
+   workspace must satisfy.
+2. **`decisions.toml` — the HOW & WHY.** Each entry pins one
+   implementation choice with `status = "accepted"` or
+   `"superseded"`. Supersession keeps both bodies: the accepted
+   successor lists `supersedes = ["DEC-M"]`, the superseded entry
+   stays as reasoning trail. A decision may resolve questions via
+   `closes_questions = [...]` (or the question-side `closed_by` /
+   `default_via` — author one direction, not both).
+3. **`open_questions.toml` — the KNOWN UNKNOWNS.** Each entry is
+   `open`, `default_committed` (a decision commits a working
+   default plus a one-line `verify` falsification plan), or
+   `closed`.
+
+Cross-references are typed: a requirement names the decisions that
+pin its implementation via `decided_by = [...]`; decisions that
+shape the workspace as a whole (member layout, MSRV policy, hoisted
+dependency policy) go in `architecture.toml`'s
+`project_decisions = [...]`. The workspace profile is the
+coordinator tier — it has no module surface of its own, so there is
+no `module.guided_by` here; that field lives in each member's spec.
+
+### The codegen gate
+
+An open question with `status = "open"` hard-blocks code generation:
+`gen` aborts for any module reachable through the question's
+`affects` list. `default_committed` passes the gate — the codegen
+prompt inlines the committed placeholder plus its `verify` text.
+`closed` passes — the prompt inlines the resolved answer through the
+decision named in `closed_by`. No CLI flag bypasses the gate; the
+in-spec escape is downgrading an open question to
+`default_committed` with a working default. Use `/spec-question` for
+that flow and `/spec-decide` to record decisions.
+
+### Workspace scope is one-way
+
+Workspace-level decisions implicitly apply to every member crate —
+e.g. pinning the MSRV, or choosing `thiserror` for public error
+types across all members. Member-crate specs reference only their
+own crate-local decision ids, never workspace ids; that keeps each
+member self-contained (extract a member's tree, bootstrap it
+standalone, and its spec still validates).
+
+Workspace open questions reach down the same way: at this tier
+`affects` is optional, and a workspace question with no `affects`
+implicitly affects every module in every member crate — an open
+question about, say, where to split a crate boundary blocks `gen`
+across the whole workspace until it is resolved or defaulted. Scope
+a workspace question narrower by listing specific member requirement
+ids in `affects`.
+
+Workspace-tier decisions are auto-included in member-crate codegen
+prompt walks (a decision's `text` and `consequences` are inlined),
+so workspace decisions directly shape the code generated in members.
+
+### Validation
+
+`validate` checks the triad graph: supersession chains must be
+acyclic and orphan-free (every superseded entry is pointed at by
+exactly one accepted successor's `supersedes[]`), and every
+`decided_by` / `project_decisions` / `closes_questions` /
+`closed_by` / `default_via` reference must resolve. Gate-blocking
+open questions surface as `validate` warnings before `gen` refuses
+on them.
+
 ## Layout under `specdev/profiles/rust-workspace/`
 
 ```

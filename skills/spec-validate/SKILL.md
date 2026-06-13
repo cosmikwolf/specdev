@@ -28,7 +28,7 @@ Run from the project root:
 specdev-analyzer validate --no-color
 ```
 
-Capture stdout and the exit code. Validate runs in this order: layout discovery → schema validation (spec.toml + architecture.toml + requirements.toml + module TOMLs against the aggregated module schema) → kind resolution → reduction → graph checks declared in `specs/specdev/domain.toml`.
+Capture stdout and the exit code. Validate runs in this order: layout discovery → schema validation (spec.toml + architecture.toml + requirements.toml + decisions.toml + open_questions.toml + module TOMLs against the aggregated module schema) → kind resolution → reduction → graph checks declared in `specs/specdev/domain.toml` (including the triad checks: supersession-chain consistency, decision/question reference resolution, and the `codegen_unblocked` warning for modules gated by an open question).
 
 Exit codes:
 - `0` — clean. Go to Step 4.
@@ -50,7 +50,7 @@ Group findings in this order, each group with one sentence of context before the
 3. **Metaschema / aggregator** — `METASCHEMA-001..005`, `AGGREGATOR-005`. Inlined block/bridge schemas are misshapen or fail to compile into the aggregator. Usually a plugin-author bug surfaced after `inline`.
 4. **Kind resolution** — `DOMAIN-003`, `REDUCE_UNRESOLVED`. A reduction's `extends` chain or relation endpoint references a kind/name that doesn't exist in the materialized graph.
 5. **Graph checks** — rule names declared in `specs/specdev/domain.toml` `[validation.rules]` (e.g. for firmware-layered: `unique_qualified_names`, `modules_acyclic`, `layer_dependency`, `connection_endpoints_resolve`; for library-api: `feature_unique_names`, `feature_dependencies_resolve`, `module_feature_gates_resolve`, etc.). These come after the spec parses cleanly and depend on cross-file invariants.
-6. **Warnings and info**.
+6. **Warnings and info** — including `codegen_unblocked`: a module is reachable from an open question (`status = "open"` in `specs/open_questions.toml`) and `/spec-gen` will refuse it. This is a warning at validate time and a hard refusal at gen time; the fix lives in `/spec-question` (close the question, or commit a provisional default), not in this skill.
 
 Do not paraphrase analyzer messages — the raw text is the most precise.
 
@@ -66,6 +66,7 @@ For graph-check rule names, the **project's** `specs/specdev/domain.toml` is aut
 - `*_endpoints_resolve` / `*_resolves` violations — the reference (port, requirement id, feature name, re-export target) points at something that doesn't exist; fix the reference or declare the target.
 - `SCHEMA-ARCH` referencing `[platform]` / `[runtime]` / `[logger]` — the firmware-layered architecture template requires these tables; `/spec-init` may have been skipped or fields were deleted.
 - `SCHEMA` on a module — an unknown field usually means a block hasn't been inlined yet (e.g., `peripherals = [...]` requires `specdev-analyzer inline stm32h5-rs`); a bad enum means the value is outside the schema's allowed set.
+- Triad findings — unresolved `decided_by` / `guided_by` / `closed_by` references mean the named decision or question doesn't exist (fix the ID or author the entry via `/spec-decide` / `/spec-question`); supersession-chain violations mean a `supersedes` link targets a missing or non-superseded entry; `codegen_unblocked` warnings route to `/spec-question`, not to spec edits.
 
 Do not invent rule names or codes. If a code is unfamiliar, point the user at `specs/specdev/domain.toml` for the rule definition, or at the analyzer's `--help` for the code prefix's family.
 
@@ -84,6 +85,8 @@ After the user applies fixes, re-invoke `/spec-validate` to confirm.
 End with one line:
 - Clean: "All checks passed. `<N>` modules validated."
 - Dirty: "`<E>` errors, `<W>` warnings. Rerun after fixes."
+
+The analyzer's summary line reports what it loaded (modules / requirements / sources / graph checks, plus decisions / open questions counts when the project authors them — with how many questions are still open). Echo it: the open-question count is the user's heads-up that `/spec-gen` will refuse affected modules.
 
 ## Additional resources
 

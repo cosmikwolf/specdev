@@ -27,7 +27,7 @@ Pairs with the [`specdev-analyzer`](https://github.com/cosmikwolf/specdev-analyz
    claude --plugin-dir /path/to/specdev
    ```
 
-3. Verify the install: type `/` in Claude Code and confirm the specdev commands appear in the slash-command menu. The shipped surface is `/spec-init`, `/spec-design`, `/spec-edit`, `/spec-validate`, `/spec-gen`, `/spec-reverse`, `/spec-inline`, `/spec-inline-bridge`, `/spec-drift`, `/spec-sync-items`. If they do not appear, re-run the marketplace add or check `/plugin` for installation errors.
+3. Verify the install: type `/` in Claude Code and confirm the specdev commands appear in the slash-command menu. The shipped surface is `/spec-init`, `/spec-design`, `/spec-edit`, `/spec-decide`, `/spec-question`, `/spec-validate`, `/spec-gen`, `/spec-reverse`, `/spec-inline`, `/spec-inline-bridge`, `/spec-drift`, `/spec-sync-items`. If they do not appear, re-run the marketplace add or check `/plugin` for installation errors.
 
 ## Quickstart
 
@@ -60,6 +60,8 @@ From an existing codebase:
 | `/spec-init`           | Interview, then `specdev-analyzer bootstrap` to scaffold `spec.toml` + `specs/specdev/`. Pass `--non-interactive --profile <name> --language <lang> --name <project>` to skip the interview. |
 | `/spec-design`         | Author one module TOML interactively against the project's aggregated schema.      |
 | `/spec-edit`           | Modify an existing module with downstream impact analysis.                         |
+| `/spec-decide`         | Record a decision in `decisions.toml`, or supersede an existing one (the chain is kept). |
+| `/spec-question`       | Raise an open question in `open_questions.toml`, downgrade it to a committed default, or close it. |
 | `/spec-validate`       | Run `specdev-analyzer validate` and translate findings into actionable fixes.      |
 | `/spec-gen`            | Assemble a deterministic codegen prompt, emit Rust source, then emit Cargo.toml. Refuses on incomplete specs (no stub bodies). |
 | `/spec-reverse`        | One-shot migration: reverse-engineer module specs from an existing codebase. Single-module or `--all`. |
@@ -81,6 +83,8 @@ my-project/
 └── specs/
     ├── architecture.toml                # cross-module wiring (profile-shaped)
     ├── requirements.toml                # requirements referenced by modules
+    ├── decisions.toml                   # accepted/superseded decisions with rationale
+    ├── open_questions.toml              # known unknowns; open questions gate codegen
     ├── modules/*.toml                   # one module per file
     └── specdev/                         # machinery: schemas, reductions, codegen, lineage
         ├── schemas/
@@ -104,6 +108,22 @@ my-project/
 ```
 
 `specs/specdev/` is committed to git. It is part of the project, not a hidden cache. Once the project is bootstrapped, no runtime path reaches into the plugin — the analyzer operates entirely from `specs/specdev/`.
+
+## Decisions and open questions
+
+Specs carry rationale, not just structure. Alongside `requirements.toml`, every project carries two sibling artifacts — together the three form the spec triad:
+
+- **`decisions.toml`** records the how-and-why: each decision is `accepted` or `superseded`, and superseding a decision links it into a chain so the history of *why* survives.
+- **`open_questions.toml`** records known unknowns: each question is `open`, `default_committed` (a provisional default committed to unblock work), or `closed`.
+
+Both feed code generation directly:
+
+- **The codegen gate.** An `open` question blocks code generation for every module it affects — resolve it (`closed`), or commit a provisional default (`default_committed`) to unblock, in which case the placeholder and a verify-this note are carried into the generated code's prompt. `/spec-validate` warns about open questions; `/spec-gen` refuses.
+- **Rationale in prompts.** Decision rationale is inlined into the assembled codegen prompt, so recorded decisions shape the generated code itself, not just the spec.
+
+Two commands manage the triad: `/spec-decide` records or supersedes a decision; `/spec-question` raises an open question, downgrades it to a committed default, or closes it.
+
+See your profile's README for the full triad model in profile-specific terms.
 
 ## Profiles, blocks, and bridges
 
