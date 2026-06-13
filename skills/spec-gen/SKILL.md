@@ -89,6 +89,8 @@ For each file written:
 
 Do not modify files outside the auto-generated regions. If hand-written code already exists in the target file, preserve it and warn in the report.
 
+When the target file already exists from a prior generation run, read it before emitting and **minimize the diff**: preserve code that is still spec-equivalent verbatim, and change only what the spec change actually requires. Do not reorder, rename, or rephrase code the spec doesn't force to change — gratuitous churn makes the gen-lineage record (Step 6.5) and the user's VCS history useless for spotting real changes.
+
 ## Step 6 — emit Cargo.toml
 
 ```sh
@@ -100,6 +102,21 @@ The analyzer renders Cargo.toml deterministically from `spec.toml [project]` + `
 If stderr has `warning:` lines (typically version conflicts when two modules declare the same crate at different versions), surface them in the report. The user reconciles by editing the spec, not the generated Cargo.toml.
 
 **Do not edit the generated Cargo.toml by hand.** If you need a dep that isn't there, add it to the spec — `[[external_deps]]` in `architecture.toml` for project-wide infra, or `external_deps[]` in a module file for module-scoped deps — and re-run this step.
+
+## Step 6.5 — record generation lineage
+
+Record every file this run emitted, so later runs can detect hand-edits:
+
+```sh
+specdev-analyzer gen-record --module <Name> <source files written in Step 5>
+specdev-analyzer gen-record Cargo.toml
+```
+
+`gen-record` writes a SHA-256 per file into `specs/specdev/gen-lineage.toml`. The flow from spec to code is one-way; a generated file that later gets hand-edited is where that flow silently breaks, and the hash record is what makes the break visible — `/spec-drift` runs `specdev-analyzer report gen-drift` and flags any recorded file whose bytes have diverged (`edited`) or that has disappeared (`missing`).
+
+Re-running gen and re-recording replaces the entries; there is nothing else to manage. Do not hand-edit `gen-lineage.toml`.
+
+Do **not** record `memory.x` — firmware post-processing (Step 7) may preserve a hand-authored version, and recording it would flag legitimate hand-authorship as drift.
 
 ## Step 7 — firmware-layered post-processing (memory.x)
 
@@ -130,6 +147,7 @@ One paragraph per module generated:
 - Any prose rule that required a choice and the choice made (e.g., "embassy bridge `handoff = "shared"` chose `Mutex<CriticalSectionRawMutex, ...>`").
 - Build result (pass/fail; first error if fail).
 - Any `cargo-toml` warnings (version conflicts, missing typed picks).
+- Confirmation that emitted files were recorded in `gen-lineage.toml` (Step 6.5).
 - Suggested follow-ups: `/spec-gen <OtherModule>`, wire this module into `main.rs`, regenerate after editing the spec, etc.
 
 ---
