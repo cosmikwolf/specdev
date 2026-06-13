@@ -40,6 +40,8 @@ specdev-analyzer validate --no-color
 
 If exit code is non-zero, stop. Tell the user to run `/spec-validate` and fix findings before generating. Do not generate from invalid specs.
 
+Validate may also emit `codegen_unblocked` **warnings** — open questions in `specs/open_questions.toml` that gate generation for the modules they affect. Warnings don't fail validate; the hard refusal happens at Step 4. If the warning names a module you're about to generate, surface it now so the user can resolve it (`/spec-question`) before the per-module walk begins.
+
 ## Step 3 — resolve targets
 
 - If `$ARGUMENTS` is `--all`: every `.toml` file under `specs/modules/`.
@@ -52,16 +54,20 @@ Discover module list via `ls specs/modules/*.toml`. (Workspace mode handles cros
 For each target module `<Name>`:
 
 ```sh
-specdev-analyzer prompt --module <Name>
+specdev-analyzer gen --module <Name>
 ```
 
-The output is a deterministic, lex-ordered concatenation of:
+`gen` enforces the **codegen gate** before assembling: if the module is reachable from an open question (`status = "open"` in `specs/open_questions.toml`), it aborts non-zero with a refusal naming the question, the module, and the exit options. Present the refusal verbatim and stop for that module — do not fall back to `prompt --module` to sidestep the gate. The user resolves via `/spec-question` (close the question, or commit a provisional default to downgrade it to `default_committed`); then re-run this step.
+
+When the gate passes, the output is a deterministic, lex-ordered concatenation of:
 
 1. Profile module conventions (`specs/specdev/codegen/<lang>/module.conventions.md`).
 2. Per relevant block (lex-sorted): `codegen/<lang>/blocks/<name>/README.md`.
 3. Per relevant bridge (lex-sorted): `codegen/<lang>/bridges/<name>/README.md`.
 4. Architecture (`specs/architecture.toml`), TOML-fenced.
 5. Module spec, TOML-fenced.
+
+When the project authors decisions / open questions, the prompt additionally inlines the decision rationale reachable along the module → requirement → `decided_by` walk, and the placeholder + verify text of any `default_committed` question affecting the module — generated code reflects recorded decisions, and committed defaults arrive flagged for verification.
 
 Read the prompt. It tells you:
 - What file path(s) to emit (the profile prose says where).

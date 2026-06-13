@@ -67,6 +67,68 @@ Three required tables in `specs/architecture.toml`:
 Optional `[[features]]` declares Cargo features (parity with
 `library-api`); modules reference these via `feature_gates[]`.
 
+## Triad model
+
+Requirements never travel alone. Three sibling artifacts under
+`specs/` carry the project's intent, choices, and unknowns:
+
+| File                  | Role                                                            |
+|-----------------------|-----------------------------------------------------------------|
+| `requirements.toml`   | the WHAT — intent and constraints, traced to sources            |
+| `decisions.toml`      | the HOW & WHY — implementation choices pinned over alternatives |
+| `open_questions.toml` | the KNOWN UNKNOWNS — things the project hasn't answered yet     |
+
+A decision (`DEC-001`, "Voice allocation steals the quietest
+releasing voice") carries a `status` of `accepted` or `superseded`.
+Supersession keeps both bodies as a reasoning trail: the successor
+lists `supersedes = ["DEC-003"]`, the old entry flips to `superseded`,
+and codegen prompt walks follow only `accepted` decisions. A decision
+can also resolve open questions via `closes_questions[]` /
+`defaults_for[]` — author ONE direction per cross-reference
+(convention: prefer the question-side `closed_by` / `default_via`
+pointers; see the comment in `decisions.toml.template`).
+
+Typed references wire decisions into the rest of the spec:
+
+- `requirement.decided_by[]` — pins the *how* of a requirement
+- `module.guided_by[]` — informs a module without pinning a requirement
+- `architecture.project_decisions[]` — shapes the project as a whole
+
+An open question (`OQ-001`, "PolyBLEP or 4x oversampling for
+oscillator anti-aliasing?") lists the requirement ids it `affects` and
+moves through three statuses:
+
+- `open` — no committed answer. **Hard-blocks codegen**: `gen` aborts
+  for any module whose `satisfies[]` reaches this question through its
+  `affects[]` — an unanswered anti-aliasing question stops codegen for
+  the oscillator `dsp_node`, not for the editor. No CLI flag bypasses
+  the gate.
+- `default_committed` — a decision committed a working default
+  (`default_via`), with a one-line `verify` falsification plan (say,
+  "5 ms parameter smoothing; sweep the filter cutoff at full
+  modulation depth and listen for zipper noise"). Codegen proceeds;
+  the placeholder and `verify` text are inlined into the prompt for
+  affected modules.
+- `closed` — a decision resolved it (`closed_by`). Codegen proceeds;
+  the prompt inlines the resolved answer. The entry persists as audit
+  trail.
+
+The in-spec escape from the gate is downgrading a question to
+`default_committed` — committing a provisional default through a
+decision. Use `/spec-question` for that flow and `/spec-decide` to
+record decisions.
+
+Decisions aren't passive documentation: along the module → requirement
+→ `decided_by` walk, each accepted decision's rationale text is
+inlined into the codegen prompt, so a recorded choice (say,
+quietest-voice stealing over oldest-note) directly shapes the
+generated engine code.
+
+Validation backs all of this. `validate` checks that supersession
+chains are acyclic and consistent (every superseded entry is named by
+exactly one accepted successor), that every cross-reference resolves,
+and it warns about gate-blocking open questions before `gen` refuses.
+
 ## Graph checks shipped
 
 - `unique_qualified_names` — every entity has a unique qualified name (collisions across kinds are surfaced).
