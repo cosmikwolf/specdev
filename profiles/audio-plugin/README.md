@@ -146,6 +146,43 @@ and it warns about gate-blocking open questions before `gen` refuses.
 - `module_satisfies_resolves` — Module.satisfies references exist.
 - `requirements_have_satisfiers` — orphan-check on `nature = "module"`
   requirements.
+- `parameters_have_bindings` — orphan-check: every nih-plug parameter
+  must be wired to at least one engine write via `[[parameter_bindings]]`
+  (warning). See "Parameter binding model" below.
+
+## Parameter binding model
+
+A `[[parameter_bindings]]` table maps each nih-plug parameter to an
+engine-side write, so the analyzer emits a deterministic
+`apply_param_changes` dispatcher instead of leaving the 100+-parameter
+mapping for codegen to invent (the drift the second zfm dogfood
+surfaced). It's the third leg of the plugin-shell ↔ engine bridge: the
+`egui+nih-plug` bridge wires parameters → widgets; this wires
+parameters → engine writes.
+
+The table is **co-resident with `[nih_plug]` on the plugin_shell
+module** — the shell owns the parameter surface, and the engine stays
+framework-agnostic (it exposes plain setters/fields and never hears of
+nih-plug). Each row names a source parameter, a target write, and an
+optional value transform:
+
+```toml
+[[parameter_bindings]]
+parameter       = "master_volume"   # resolves to [nih_plug.parameters].id
+target_kind     = "method"          # method | field | custom
+target          = "ChipEngine::set_master_volume"
+target_args     = ["value"]         # `value` = the transformed param value
+value_transform = { kind = "db_to_amp" }
+```
+
+Six value transforms ship: `identity` (default), `clamp { min, max }`,
+`scale { factor }`, `enum_to_u8`, `db_to_amp`, and a `custom { fn }`
+escape hatch. A single parameter may carry **multiple rows**
+(multi-target); codegen emits all matching arms in declaration order.
+Reference resolution (`parameter` → a real parameter) is enforced at
+reduce time; the orphan check guards the reverse direction. See
+`codegen/rust/module.conventions.md` § "Parameter binding model" for the
+full emit rules.
 
 ## Cargo.toml emission
 
