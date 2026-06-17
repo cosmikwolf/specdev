@@ -275,7 +275,7 @@ Rust-callable public surface to re-export to). They DO apply on the
 engine crate (which uses the library-api profile) when it re-exports
 DSP primitives across module boundaries.
 
-See "Skeleton mode (silence-and-log)" below for how skeleton emission
+See "Audio-thread method bodies" below for how first-pass emission
 populates audio-thread method bodies — `unimplemented!()` would
 abort-crash the host on the first buffer, so the audio-thread surface
 gets a different stub variant.
@@ -310,6 +310,131 @@ Module specs in this profile typically carry block-contributed tables:
 Read the relevant block / bridge READMEs for those emission rules.
 This profile prose covers only the architecture-level shape (crate
 type, layer ordering, format/category constants, realtime discipline).
+
+## Parameter binding model
+
+`module.parameter_bindings[]` declares how each nih-plug parameter
+translates into an engine-side write when the host changes it. The
+table is **co-resident with `[nih_plug]` on the plugin_shell module**
+(the shell owns the parameter surface; the engine stays framework-
+agnostic and exposes only plain setters/fields). Codegen turns the
+table into a single deterministic `apply_param_changes` dispatcher.
+
+This is the third leg of the plugin-shell ↔ engine bridge: the
+`egui+nih-plug` bridge wires parameters → widgets; `parameter_bindings`
+wires parameters → engine writes.
+
+### Where the dispatcher emits
+
+Emit one method on the plugin shell:
+
+```rust
+fn apply_param_changes(&mut self) {
+    // one match arm per [[parameter_bindings]] row, in declaration order
+}
+```
+
+Call it from `process()` before the DSP sub-blocks run, so automation
+stays sample-accurate to nih-plug's smoother output. The dispatcher
+reads each parameter's current (smoothed) value off `self.params` and
+performs the declared write. Because the parameter struct lives on the
+shell and the engine handle (`self.engine` / `self.chip` / the field
+holding the DSP state) is also on the shell, every target resolves
+against `self`.
+
+The dispatcher is **table-driven and total**: emit exactly one arm per
+row, in the order the rows appear in the TOML. Do not reorder, dedupe,
+or editorialize — two consecutive `gen` runs must produce a
+byte-identical body. The table is the single source of truth for the
+mapping; if a parameter's write changes, the spec changes, not the
+generated code.
+
+### Per-row emission
+
+Each row reads the parameter value, applies the `value_transform`, then
+performs the write keyed on `target_kind`:
+
+```rust
+// [[parameter_bindings]]
+// parameter = "master_volume"
+// target_kind = "method"
+// target = "ChipEngine::set_master_volume"
+// target_args = ["value"]
+// value_transform = { kind = "db_to_amp" }
+{
+    let value = db_to_amp(self.params.master_volume.value());
+    ChipEngine::set_master_volume(&mut self.engine, value);
+}
+```
+
+`target_kind` controls the write shape:
+
+| `target_kind` | Emission                                                            |
+|---------------|---------------------------------------------------------------------|
+| `method`      | `<target>(<target_args…>)`. `target` is a method path; the receiver is `&mut self.engine` (or the engine field) when `target` is a `Type::method` path. The literal token `value` in `target_args` is the transformed value. A `method` row with no `target_args` defaults to `[value]`. |
+| `field`       | `<target> = value;`. `target` is a dotted path on `self` (`self.bypassed`, `self.voice.lfo1.pmd`). No `target_args`. |
+| `custom`      | `self.<target>(value);`. `target` names a hand-authored fn on the module; its `description` tells you (and the author) what it must do. Use for context-dependent or multi-field writes the declarative forms can't express. |
+
+The `target` and `target_args` tokens are emitted **verbatim** — the
+spec does not type-check them; the Rust compiler does. Read the
+parameter value with `self.params.<id>.value()` (nih-plug's smoothed
+accessor); bind it to a local `value`, apply the transform, then write.
+
+### Value transforms (D59)
+
+Six named transforms plus a `custom` escape hatch. Each rewrites the
+`value` local before the write:
+
+| `value_transform`                   | Emitted `value` expression                          |
+|-------------------------------------|------------------------------------------------------|
+| `{ kind = "identity" }` (default)   | `self.params.<id>.value()` (unchanged)               |
+| `{ kind = "clamp", min, max }`      | `self.params.<id>.value().clamp(<min>, <max>)`       |
+| `{ kind = "scale", factor }`        | `self.params.<id>.value() * <factor>`                |
+| `{ kind = "enum_to_u8" }`           | `self.params.<id>.value() as u8`                     |
+| `{ kind = "db_to_amp" }`            | `db_to_amp(self.params.<id>.value())`                |
+| `{ kind = "custom", fn = "<name>" }`| `<name>(self.params.<id>.value())`                   |
+
+Omitting `value_transform` is `identity`. `db_to_amp` is the one named
+transform whose math isn't trivially inline — emit a single free fn
+once per crate and reuse it:
+
+```rust
+#[inline]
+fn db_to_amp(db: f32) -> f32 {
+    10f32.powf(db / 20.0)
+}
+```
+
+`custom` transforms reference a hand-authored pure fn `fn(value) -> _`
+named by `fn`; emit the call, not the body — the author writes the body.
+A `custom` *transform* reshapes the value before a declarative write; a
+`custom` *target_kind* performs the whole write itself. They compose:
+a `custom` target ignores `value_transform` semantics beyond passing the
+(optionally transformed) value into the named fn.
+
+### Worked example
+
+```rust
+fn apply_param_changes(&mut self) {
+    {
+        let value = db_to_amp(self.params.master_volume.value());
+        ChipEngine::set_master_volume(&mut self.engine, value);
+    }
+    {
+        let value = self.params.out_assign.value() as u8;
+        ChipEngine::set_out_assign(&mut self.engine, value);
+    }
+    {
+        let value = self.params.bypass.value();
+        self.bypassed = value;
+    }
+}
+```
+
+That body is a pure projection of the `[[parameter_bindings]]` table —
+nothing in it is invented. Adding a parameter without adding its
+binding row trips the `parameters_have_bindings` warning at validate
+time, so the dispatcher never silently drops a parameter.
 
 ## Audio-thread method bodies
 
