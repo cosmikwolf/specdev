@@ -280,6 +280,21 @@ populates audio-thread method bodies — `unimplemented!()` would
 abort-crash the host on the first buffer, so the audio-thread surface
 gets a different stub variant.
 
+### Test items
+
+An `[[items]]` entry with `test = true` is a test (D60): a `kind = "fn"`
+item using `verifies = [...]` (against `nature = "test"` requirements)
+instead of `satisfies`, with a `test_kind` driving emit location — `unit`
+→ `#[cfg(test)] mod tests` in the module file; `integration` →
+`tests/<name>.rs`; `doc` → a `///` example; `bench` / `fuzz` reserve the
+slot but emit nothing in v1 (validate warns). `test_requirements_have_verifiers`
+warns when a `nature = "test"` requirement has no verifier. Write a working
+body from the prompt's "Test items (verification context)" section; emit
+`todo!("verifies <ids>")` only when the criteria are insufficient.
+Test-harness crates use an `external_deps` entry with `test_only = true`
+→ `[dev-dependencies]`. Most plugin test surface lives on the engine
+(`library-api`) crate — see that profile's prose for the full table.
+
 ## Cross-module dependencies
 
 `module.depends_on[]` does not directly emit code. Rust's module system
