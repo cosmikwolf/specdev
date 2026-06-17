@@ -79,6 +79,91 @@ or `pub struct` lacks an items[] entry, codegen emits it but does NOT
 trace it to a requirement; an in-source-only public item is permitted
 (non-spec-significant API surface) but uncommon.
 
+## Test items
+
+An `[[items]]` entry with `test = true` is a **test** (D60). It is a
+`kind = "fn"` item that uses `verifies = [...]` (pointing at
+`nature = "test"` requirements) in place of `satisfies`, and carries a
+`test_kind` that drives where the test is emitted. The
+`test_requirements_have_verifiers` graph check warns at validate time
+when a `nature = "test"` requirement has no verifying test item — so the
+test surface stays traceable the same way production code does.
+
+```toml
+[[items]]
+name        = "roundtrip_serde"
+kind        = "fn"
+test        = true
+test_kind   = "integration"
+verifies    = ["REQ-TEST-001"]
+description = "Round-trips a Value through serde_json and asserts equality."
+```
+
+### Emit location per `test_kind` (D61)
+
+| `test_kind`   | Emit location                                                  |
+|---------------|----------------------------------------------------------------|
+| `unit`        | Inside `#[cfg(test)] mod tests { … }` in the declaring module's source file. Each test is a `#[test] fn <name>() { … }`. |
+| `integration` | A `tests/<name>.rs` file at the crate root. The whole file is the integration test; emit `#[test] fn <name>() { … }` (plus any `use <crate>::…;` it needs against the crate's public API). |
+| `doc`         | A `///` doc-comment example on the item named by `name` if such an item exists, otherwise on the module. Emit a fenced ` ```rust ` block whose body exercises the API and ends in an `assert!`/`assert_eq!`. |
+| `bench`       | **No emission in v1** (enum slot reserved). Validate warns. |
+| `fuzz`        | **No emission in v1** (enum slot reserved). Validate warns. |
+
+The `verifies` ids resolve to `nature = "test"` requirements; the
+codegen prompt's "Test items (verification context)" section inlines
+each requirement's text, its `verified_by` hints, and any `decided_by`
+decision's `verification` criteria. Use that context to write the test
+body.
+
+### Body emission
+
+- **Write a working test** when the verification context carries enough
+  to do so — the requirement text plus its verification hints / decision
+  criteria are the spec for the test. This is the normal case; treat it
+  like any other `gen` body (the same refuse-on-incomplete discipline
+  applies).
+- **Emit `todo!("verifies <ids>")`** — with the `verifies` ids joined
+  into the message — only when the spec genuinely lacks the information
+  to write the test. `cargo test` then compiles and the test fails loudly
+  with a message pointing at the requirement(s) it owes. This is the test
+  analogue of the standard `unimplemented!()`/`todo!()` gap marker — there
+  is no separate "skeleton mode" (the skeleton feature was retired); test
+  items emit as part of normal `gen` output.
+
+Example (unit, co-located):
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn roundtrip_serde() {
+        // verifies REQ-TEST-001: round-trip serde equality
+        let v = Value::sample();
+        let json = serde_json::to_string(&v).unwrap();
+        assert_eq!(serde_json::from_str::<Value>(&json).unwrap(), v);
+    }
+}
+```
+
+Example (integration, `tests/golden_render.rs`, criteria insufficient):
+
+```rust
+#[test]
+fn golden_render() {
+    todo!("verifies REQ-TEST-602")
+}
+```
+
+### Test-only dependencies
+
+A test that needs a harness crate (`approx`, `proptest`, `criterion`)
+declares it as a module `external_deps` entry with `test_only = true`;
+codegen routes it to `[dev-dependencies]` rather than `[dependencies]`
+(see "Cargo.toml integration"). Do not add test harness crates to the
+regular dependency set.
+
 ## Re-exports (via items[])
 
 Re-exports are authored as `[[items]]` entries with `kind = "re_export"`.
