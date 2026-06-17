@@ -15,15 +15,29 @@ differ.
 
 ## Crate dependencies
 
-This block contributes two crates: `stm32h5xx-hal` and `stm32h5xx-pac`.
+This block contributes **no crates today** (`deps.yaml` is empty). The
+non-embassy STM32H5 HAL this prose targets (`stm32h5xx-hal`) has no
+usable crates.io release yet — only a 0.0.0 placeholder. The emission
+patterns in this document are forward-looking against that crate's API
+and activate when it ships:
 
 ```toml
-stm32h5xx-hal = { version = "0.3", features = ["<mcu_part>"] }
-stm32h5xx-pac = "0.16"
+# Future, once stm32h5xx-hal publishes a usable release:
+stm32h5xx-hal = { version = "<released>", features = ["<mcu_part>"] }
+stm32h5xx-pac = "<released>"
 ```
 
-The `stm32h5xx-hal` feature flag selects the specific MCU family
-member. **Spec coupling:** read `[platform].mcu_part` from
+Until then, the production path for STM32H5 peripherals is
+`embassy-stm32` — owned by the `embassy+stm32h5-rs` **bridge**, never
+by this block. When that bridge is inlined, its type mappings replace
+this document's `stm32h5xx-hal` patterns for every task-owned
+peripheral (bridge prose wins over block prose for cross-block wiring).
+A module using this block WITHOUT the embassy bridge currently has no
+buildable peripheral-handle emission; the spec topology (peripherals,
+pins, interrupts) still validates and drives codegen structure.
+
+The `stm32h5xx-hal` feature flag (once released) selects the specific
+MCU family member. **Spec coupling:** read `[platform].mcu_part` from
 `architecture.toml` and use it as the HAL feature flag (lowercase, no
 punctuation: `stm32h563`, `stm32h573`, `stm32h503`, etc.). The
 `mcu_part` field is the single source of truth for which H5 variant
