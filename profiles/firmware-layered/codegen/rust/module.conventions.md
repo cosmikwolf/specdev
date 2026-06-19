@@ -142,6 +142,14 @@ firmware-layered, items[] is most useful for:
 - `kind = "impl"` trait impls that satisfy a contractual interface
   required by upper-layer code.
 
+An item is identified by its **fully-qualified path**, prose-first, never
+a signature. A method is a function: if you do author a public inherent
+method, it is a `kind = "fn"` item named `<Type>::<method>` (generics
+normalized out of the prefix) — the inherent `impl` block itself is not an
+item. A trait impl stays one `kind = "impl"` item (`<Trait> for <Type>`);
+its method bodies are codegen-derived, not separate items. (Most firmware
+methods come from `actions[]` below, not items[].)
+
 When firmware module specs are content-rich in actions/ports/state
 machines, items[] often stays empty — that's correct. items[] is a
 **supplemental** traceability surface for firmware-layered, not a

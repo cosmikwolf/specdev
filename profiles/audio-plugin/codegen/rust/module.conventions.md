@@ -255,20 +255,26 @@ in the same `cfg` — emit them as separate `#[cfg(...)]` lines.
 
 ## Item emission
 
-`module.items[]` carries the module's contractual surface entries — one
-per top-level Rust construct that has spec significance (typically
-because it satisfies a requirement). The shape is **prose-first**: each
-item carries a `description` of what it does, NOT a signature mirror
-of how it's typed. The optional `signature_hint` field exists as an
-escape hatch for cases where prose alone is insufficient (FFI
-declarations, macro contracts, generics-heavy trait impls); avoid it
-for ordinary functions and types.
+`module.items[]` carries the module's contractual surface. An item is a
+**public, contractual code symbol, identified by its fully-qualified path,
+described in prose — never by signature.** A method is a function: a
+public inherent method is a `kind = "fn"` item named `<Type>::<method>`
+(`Engine::process`), the same as a free function; the inherent `impl`
+block itself is not an item, and generics are normalized out of the prefix
+(`Engine::process`, not `Engine<S>::process`). A trait impl stays one
+`kind = "impl"` item (`<Trait> for <Type>`) whose method bodies are
+codegen-derived from the trait. Private members are not items. The shape
+is **prose-first**: `description` says what the item does, NOT how it's
+typed; the optional `signature_hint` is a rare escape (FFI, macro
+contracts), never for ordinary functions or methods.
 
 Sparseness rule: every item except `kind = "re_export"` must carry
-`satisfies` (≥1 requirement id). Plugin shell modules typically have
-items[] entries for the plugin struct, the parameter struct, and any
+`satisfies` (≥1 requirement id) — per item, though many methods may share
+one coarse requirement. Plugin shell modules typically have items[]
+entries for the plugin struct, the parameter struct, and any
 exposed-by-bridge widgets; engine and dsp_node modules carry items[]
-for their public DSP entry points.
+for their public DSP entry points (e.g. `Engine::process`,
+`Engine::apply_param_changes`).
 
 `re_export` items rarely apply on the plugin crate (the cdylib has no
 Rust-callable public surface to re-export to). They DO apply on the
