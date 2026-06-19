@@ -1,6 +1,6 @@
 # `items propose` action taxonomy
 
-For each `pending` entry in `specs/specdev/upstream/items-sync/<Module>.proposal.yaml`, pick exactly one of four actions. Then write `rationale` (one or two sentences naming WHY — refer to the specific requirement, signature mismatch, or sparseness call) and, where required, `proposed_spec`.
+For each `pending` entry in `specs/specdev/upstream/items-sync/<Module>.proposal.yaml`, pick exactly one of five actions. Then write `rationale` (one or two sentences naming WHY — refer to the specific requirement, signature mismatch, or sparseness call) and, where required, `proposed_spec` or `rename_to`.
 
 ## `skip` — leave both spec and source as-is
 
@@ -29,11 +29,30 @@ proposed_spec:
   signature_hint: "fn foo(x: u32) -> Result<()>"   # optional
 ```
 
-## `remove-from-spec` — the spec entry is stale; source has moved on
+## `remove-from-spec` — the spec entry is stale; source deleted it
 
-Pick when the function was renamed or deleted in source and the spec wasn't updated.
+Pick when the item was **deleted** in source and the spec wasn't updated — the requirement it satisfied is genuinely gone.
+
+If the item was **renamed** rather than deleted, use `rename` instead (below) — `remove-from-spec` followed by `add-to-spec` would drop the `satisfies`/`verifies` trace and force you to re-author it by hand.
 
 `proposed_spec` — absent.
+
+## `rename` — the item was renamed in source; carry its trace across
+
+Pick when a top-level item was renamed in source: the old name shows up as `in_spec_only` and the new name as a separate `in_source_only` entry. A rename rewrites only the spec item's `name`, preserving its `satisfies`, `verifies`, `description`, and kind-discriminated extras — the whole point is keeping the requirement/verification trace that remove + add would lose.
+
+Set the action on the **`in_spec_only` entry** (the one carrying the old name and the trace):
+
+```yaml
+recommendation:
+  action: rename
+  rename_to: apply_refill      # the new name now in source
+  rationale: "Renamed refill -> apply_refill in code; preserving the REQ-007 trace."
+```
+
+Then mark the paired **`in_source_only` entry** (the new name) `skip` — it's accounted for by the rename, and the next `items diff` will pair the renamed spec item with the source symbol (no durable skip needed).
+
+`proposed_spec` — absent; use `rename_to` instead.
 
 ## `update-spec` — the spec entry exists but its shape needs to change
 

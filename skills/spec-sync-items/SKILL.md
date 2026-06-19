@@ -67,7 +67,7 @@ Default behavior when in doubt: stop and ask. Losing rationales silently is wors
 
 ## Step 3 — fill in recommendations (Claude-advisory pass)
 
-Read `specs/specdev/upstream/items-sync/<Module>.proposal.yaml`. Walk each `pending` entry and pick one of four actions per the taxonomy in `references/action-taxonomy.md` (`skip` / `add-to-spec` / `remove-from-spec` / `update-spec`). For each entry, write `rationale`, `action`, and (for `add-to-spec` / `update-spec`) `proposed_spec`.
+Read `specs/specdev/upstream/items-sync/<Module>.proposal.yaml`. Walk each `pending` entry and pick one of five actions per the taxonomy in `references/action-taxonomy.md` (`skip` / `add-to-spec` / `remove-from-spec` / `update-spec` / `rename`). For each entry, write `rationale`, `action`, and (for `add-to-spec` / `update-spec`) `proposed_spec` or (for `rename`) `rename_to`. A symbol renamed in source is a `rename` on the `in_spec_only` old-name entry + a `skip` on the paired `in_source_only` new-name entry — never remove + add, which drops the `satisfies`/`verifies` trace.
 
 Save the file. Tell the user how many entries were resolved per action category, and ask them to review.
 
@@ -95,7 +95,7 @@ specdev-analyzer items apply --module <Module>
 
 Exit codes:
 
-- **0** — clean apply. The analyzer rewrites `specs/modules/<Module>.toml` (via `toml_edit` so non-`[[items]]` content round-trips), writes the audit log to `specs/specdev/upstream/items-sync/<Module>.applied.yaml` with `status: applied` + `applied_at`, and removes the `.proposal.yaml`. The CLI prints a one-block summary (`added`/`removed`/`updated`/`skipped` per entry id).
+- **0** — clean apply. The analyzer rewrites `specs/modules/<Module>.toml` (via `toml_edit` so non-`[[items]]` content round-trips), writes the audit log to `specs/specdev/upstream/items-sync/<Module>.applied.yaml` with `status: applied` + `applied_at`, and removes the `.proposal.yaml`. The CLI prints a one-block summary (`added`/`removed`/`updated`/`renamed`/`skipped` per entry id).
 - **1** — gate failure (`ITEM-301` schema mismatch, `ITEM-302` not approved, `ITEM-303` missing approver, `ITEM-304` missing `approved_at`, `ITEM-305` an entry still on `pending`, `ITEM-306` add/update without `proposed_spec`, `ITEM-309` target item not found in spec, etc.). Surface stderr verbatim and stop. The spec is unchanged on a gate failure.
 - **2** — environmental error (missing layout, proposal file missing). Surface and stop.
 
@@ -105,7 +105,7 @@ After a clean apply, suggest the user run `/spec-validate` to confirm the new it
 
 End with one line:
 
-- Clean: "Synced `<Module>`: `<a>` added, `<r>` removed, `<u>` updated, `<s>` skipped. Audit: `specs/specdev/upstream/items-sync/<Module>.applied.yaml`."
+- Clean: "Synced `<Module>`: `<a>` added, `<r>` removed, `<u>` updated, `<n>` renamed, `<s>` skipped. Audit: `specs/specdev/upstream/items-sync/<Module>.applied.yaml`."
 - Gated: name the gate (`ITEM-302` etc.) and the next step.
 
 ---
@@ -120,9 +120,9 @@ End with one line:
 
 ## On `[ITEM-309]` (target not found)
 
-If apply fires `ITEM-309` for a `remove-from-spec` or `update-spec` action, the spec moved between `propose` and `apply` (the user manually edited `[[items]]` in the meantime). Re-run `propose --clobber` and the new diff will reflect the current state.
+If apply fires `ITEM-309` for a `remove-from-spec`, `update-spec`, or `rename` action, the spec moved between `propose` and `apply` (the user manually edited `[[items]]` in the meantime). Re-run `propose --clobber` and the new diff will reflect the current state. A `rename` with no `rename_to` fires `ITEM-315` — add the new name to the recommendation.
 
 ## Additional resources
 
-- `references/action-taxonomy.md` — the four `recommendation.action` values, when to pick each, and the `proposed_spec` shape required for `add-to-spec` and `update-spec`.
+- `references/action-taxonomy.md` — the five `recommendation.action` values, when to pick each, the `proposed_spec` shape required for `add-to-spec` and `update-spec`, and the `rename_to` field for `rename`.
 
