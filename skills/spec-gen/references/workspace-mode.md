@@ -30,7 +30,7 @@ Topologically sort. If a cycle is found, stop with an error pointing at the cycl
 For each member in topological order:
 
 1. `cd <workspace>/<member.path>`.
-2. Run Steps 2–8 of single-package mode against that member directory. Each member has its own `specs/specdev/`, its own profile (typically `library-api` or `firmware-layered` or `audio-plugin`), and its own `Cargo.toml` output. Use `--project <member-dir>` if invoking the analyzer from elsewhere.
+2. Run Steps 2–8 of single-package mode against that member directory. Each member has its own `specs/specdev/`, its own profile (typically `library-api` or `firmware-layered` or `audio-plugin`), and its own `Cargo.toml` output. Use `--project <member-dir>` if invoking the analyzer from elsewhere. The Step 4 preamble is **per member** — assemble it once for that member's module set (`gen --preamble --project <member-dir>`), then loop `gen --module <Name> --tail` over the member's modules. There is no workspace-level shared preamble; each member's `specs/specdev/` prose is independent.
 3. Capture per-member status: validate result, prompt assembly status, source emit count, cargo-toml result, cargo check outcome.
 
 If any member fails validate, do NOT skip downstream members — record the failure and continue. The point of the workspace walk is to surface every member's status in one report. (Exception: stop the walk if member_a fails to emit and member_b structurally depends on member_a's emitted source — `cargo check` on member_b will fail to find symbols. Record the cascade clearly.)

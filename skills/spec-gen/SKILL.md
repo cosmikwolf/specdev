@@ -49,27 +49,46 @@ Validate may also emit `codegen_unblocked` **warnings** — open questions in `s
 
 Discover module list via `ls specs/modules/*.toml`. (Workspace mode handles cross-member coordination; see "Workspace mode" below.)
 
-## Step 4 — assemble the prompt for each target
+## Step 4 — assemble the prompt: shared preamble once, then per-module tails
 
-For each target module `<Name>`:
+The codegen prompt is split into a **project-invariant preamble** (read once, applies to every module in this run) and a **per-module tail**. Follow this single path for both single-module and `--all` invocations — do not re-assemble the preamble per module.
+
+**Step 4a — assemble the shared preamble once.** Pass one `--module <Name>` per target so the preamble carries exactly the blocks/bridges your targets use (for `--all`, omit `--module` to union over every module):
 
 ```sh
-specdev-analyzer gen --module <Name>
+# single target:
+specdev-analyzer gen --preamble --module <Name>
+# --all:
+specdev-analyzer gen --preamble
 ```
 
-`gen` enforces the **codegen gate** before assembling: if the module is reachable from an open question (`status = "open"` in `specs/open_questions.toml`), it aborts non-zero with a refusal naming the question, the module, and the exit options. Present the refusal verbatim and stop for that module — do not fall back to `prompt --module` to sidestep the gate. The user resolves via `/spec-question` (close the question, or commit a provisional default to downgrade it to `default_committed`); then re-run this step.
-
-When the gate passes, the output is a deterministic, lex-ordered concatenation of:
+This is gate-free shared prose, a deterministic lex-ordered concatenation of:
 
 1. Profile module conventions (`specs/specdev/codegen/<lang>/module.conventions.md`).
 2. Per relevant block (lex-sorted): `codegen/<lang>/blocks/<name>/README.md`.
 3. Per relevant bridge (lex-sorted): `codegen/<lang>/bridges/<name>/README.md`.
 4. Architecture (`specs/architecture.toml`), TOML-fenced.
-5. Module spec, TOML-fenced.
 
-When the project authors decisions / open questions, the prompt additionally inlines the decision rationale reachable along the module → requirement → `decided_by` walk, and the placeholder + verify text of any `default_committed` question affecting the module — generated code reflects recorded decisions, and committed defaults arrive flagged for verification.
+Read the preamble once. It is the contract for **every** module you generate this run — keep it in mind across the per-module loop; do not re-fetch it per module.
 
-Read the prompt. It tells you:
+**Step 4b — assemble the per-module tail.** For each target module `<Name>`:
+
+```sh
+specdev-analyzer gen --module <Name> --tail
+```
+
+`--tail` enforces the **codegen gate** before assembling: if the module is reachable from an open question (`status = "open"` in `specs/open_questions.toml`), it aborts non-zero with a refusal naming the question, the module, and the exit options. Present the refusal verbatim and stop for that module — do not fall back to `prompt --module` or the whole-prompt `gen --module` to sidestep the gate. The user resolves via `/spec-question` (close the question, or commit a provisional default to downgrade it to `default_committed`); then re-run this step.
+
+When the gate passes, the tail is a deterministic concatenation of:
+
+5. The decision/open-question context in scope (see below).
+6. Project context (`module.context_files`), if any.
+7. Test-item verification context, if the module declares test items.
+8. Module spec, TOML-fenced.
+
+When the project authors decisions / open questions, the tail inlines the decision rationale reachable along the module → requirement → `decided_by` walk, and the placeholder + verify text of any `default_committed` question affecting the module — generated code reflects recorded decisions, and committed defaults arrive flagged for verification.
+
+Read preamble + tail together. They tell you:
 - What file path(s) to emit (the profile prose says where).
 - How to map fields to types/methods (block + bridge prose).
 - What infrastructure picks (panic handler, logger backend, MCU part) Cargo.toml will reflect.
