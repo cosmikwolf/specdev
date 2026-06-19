@@ -15,14 +15,17 @@
 ;;   per items[] design: modules are first-class spec entities; extern
 ;;   crate is an architecture-level concern.
 ;;
-;; Top-level only: every pattern is anchored under `(source_file ...)` so
-;; only direct children of the file are extracted. Items nested inside an
-;; `impl`/`trait` body (associated fns/consts/types) or a nested `mod`
-;; block are deliberately NOT items — the impl/trait is the item, and its
-;; methods are codegen-derived from the impl's prose. An unanchored
-;; pattern matches at any depth, which would surface every method as a
-;; phantom top-level `fn` and make any module with an impl report drift
-;; against a spec that (correctly) does not list methods.
+;; Scope (D70): most patterns are anchored under `(source_file ...)` so
+;; only direct children of the file are extracted; nested `mod` blocks and
+;; function-body locals are never items. The deliberate exception is
+;; inherent `impl` bodies — a method is a function, so a PUBLIC associated
+;; fn/const/type is an item named `<Type>::<member>`. The inherent impl
+;; block itself produces NO item. A TRAIT impl (`impl Trait for Type`)
+;; stays ONE item: the conformance is the contract; its method bodies are
+;; codegen-derived from the trait, not separate items. The `trait:` field
+;; (present → trait impl) vs `!trait` (absent → inherent impl) partitions
+;; the two cases; visibility is captured and filtered to `pub` in the
+;; extractor (private associated members are not contract surface).
 
 ;; ──────────────────────────────────────────────────────────────────
 ;; fn
@@ -52,11 +55,45 @@
   (trait_item
     name: (type_identifier) @trait.name) @trait.def)
 
-;; impl
+;; impl — TRAIT impls only: one item per `impl Trait for Type` (the
+;; conformance is the contract; D70). The `trait:` field must be present,
+;; so inherent impls do NOT match this pattern.
 (source_file
   (impl_item
-    trait: (_)? @impl.trait
+    trait: (_) @impl.trait
     type: (_) @impl.type) @impl.def)
+
+;; inherent impl associated items (D70): `impl Type { pub fn m }` produces
+;; no impl item — each PUBLIC associated fn/const/type is an item named
+;; `<Type>::<member>`. `!trait` restricts these to inherent impls;
+;; `inherent.host` carries the `<Type>` for the qualified-name prefix.
+;; Visibility is captured (`*.vis`) and filtered to `pub` in the extractor.
+(source_file
+  (impl_item
+    !trait
+    type: (_) @inherent.host
+    body: (declaration_list
+      (function_item
+        (visibility_modifier)? @inherent_fn.vis
+        name: (identifier) @inherent_fn.name) @inherent_fn.def)))
+
+(source_file
+  (impl_item
+    !trait
+    type: (_) @inherent.host
+    body: (declaration_list
+      (const_item
+        (visibility_modifier)? @inherent_const.vis
+        name: (identifier) @inherent_const.name) @inherent_const.def)))
+
+(source_file
+  (impl_item
+    !trait
+    type: (_) @inherent.host
+    body: (declaration_list
+      (type_item
+        (visibility_modifier)? @inherent_type.vis
+        name: (type_identifier) @inherent_type.name) @inherent_type.def)))
 
 ;; type alias
 (source_file

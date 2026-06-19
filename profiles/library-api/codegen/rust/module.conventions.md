@@ -42,42 +42,90 @@ constrains reach.
 
 ## Item emission
 
-`module.items[]` carries the module's contractual surface entries — one
-per top-level Rust construct that has spec significance (typically
-because it satisfies a requirement or is a contractual public re-export).
-The shape is **prose-first**: each item carries a `description` of what
-it does, NOT a signature mirror of how it's typed. The optional
-`signature_hint` field exists as an escape hatch for cases where prose
-alone is insufficient (FFI declarations, macro contracts, generics-heavy
-trait impls); avoid it for ordinary functions and types.
+`module.items[]` carries the module's contractual surface. The rule is one
+line:
+
+> An item is a **public, contractual code symbol, identified by its
+> fully-qualified path, described in prose — never by signature.** Nesting
+> determines the *path*, not whether something is an item.
+
+A method is a function. A public function reached through `RateLimiter::`
+is an item for the same reason a free `render` function is — it is public
+contract that satisfies a requirement. So:
+
+- `pub fn render` → item `render`
+- inherent `impl RateLimiter { pub fn try_consume }` → item
+  `RateLimiter::try_consume` (`kind = "fn"`)
+- `pub const` / `pub type` in an inherent impl → `RateLimiter::CAPACITY` /
+  `RateLimiter::Output`
+- `pub struct RateLimiter` → item `RateLimiter`
+
+The shape is **prose-first**: each item carries a `description` of what it
+does, NOT a signature mirror of how it's typed. Never name parameters,
+return types, struct fields, or generics — that is the source's job; the
+spec describes the *contract*, the source describes the *implementation*.
+The optional `signature_hint` field is a rare escape hatch for cases where
+prose alone is insufficient (FFI declarations, macro contracts); avoid it
+for ordinary functions and methods — reaching for it routinely turns the
+spec back into a copy of the code.
+
+**Inherent impls dissolve into their methods.** Do not author an item for
+the `impl Type { … }` block itself — author one item per public member,
+qualified by the type. Generics are normalized out of the prefix: write
+`RateLimiter::new`, never `RateLimiter<C>::new`.
+
+**Trait impls are one item; their method bodies are codegen-derived.** A
+`impl Display for RateLimiter` is authored (when the conformance is
+contractual) as a single `kind = "impl"` item named `Display for
+RateLimiter`. Its `fmt` body is dictated by the trait, not your API, so it
+is **not** a separate item — codegen writes it from the trait + the impl's
+prose.
+
+**Private / helper members are not items** — same as private free
+functions. Only `pub` surface is contract.
 
 Sparseness rule: every item except `kind = "re_export"` must carry
-`satisfies` (≥1 requirement id). The schema enforces this — items
-without traceability fail validation. `re_export` items are exempt
-because `pub use` is inherently contractual.
+`satisfies` (≥1 requirement id). The schema enforces this — items without
+traceability fail validation. `re_export` items are exempt because `pub
+use` is inherently contractual. This applies per public method too, but
+it is *per item, not per requirement*: many methods may share one coarse
+requirement (a limiter's whole public surface can `satisfies =
+["REQ-API-001"]`). Reach for requirement granularity, not signatures, when
+the load feels heavy.
 
-Example:
+Example — a type and its public inherent methods:
 
 ```toml
 [[items]]
-name = "render"
-kind = "fn"
-description = "Composites a frame from the layout tree onto the back buffer."
+name = "RateLimiter"
+kind = "struct"
+description = "Token-bucket limiter keyed by a monotonic clock."
 satisfies = ["REQ-API-001"]
 
 [[items]]
-name = "Style"
-kind = "struct"
-description = "Append-only collection of style overrides keyed by node id."
-satisfies = ["REQ-API-014"]
+name = "RateLimiter::new"
+kind = "fn"
+description = "Construct a limiter with the given capacity and refill rate."
+satisfies = ["REQ-API-001"]
+
+[[items]]
+name = "RateLimiter::try_consume"
+kind = "fn"
+description = "Attempt to take n tokens; report whether the budget allowed it."
+satisfies = ["REQ-API-002"]
+
+[[items]]
+name = "Display for RateLimiter"
+kind = "impl"
+description = "Human-readable one-line summary of remaining budget."
+satisfies = ["REQ-API-009"]
 ```
 
-Notice neither item names its parameters, return type, or struct fields
-— that's source-level concern, captured in code. The spec describes the
-*contract*; the source describes the *implementation*. When a `pub fn`
-or `pub struct` lacks an items[] entry, codegen emits it but does NOT
-trace it to a requirement; an in-source-only public item is permitted
-(non-spec-significant API surface) but uncommon.
+Notice no item names parameters, return types, or generics. A `pub`
+symbol left out of `items[]` still compiles but shows as `in_source_only`
+in `/spec-sync-items` — a correct signal that you have public surface the
+spec doesn't account for. Reach a clean reconcile by either authoring the
+member (with a `satisfies`) or making it private.
 
 ## Test items
 
