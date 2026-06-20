@@ -28,9 +28,13 @@
 ;; extractor (private associated members are not contract surface).
 
 ;; ──────────────────────────────────────────────────────────────────
-;; fn
+;; fn — top-level free functions. Visibility is captured (`@fn.vis`) and
+;; filtered to `pub` in the extractor: a non-`pub` free fn is a
+;; module-private helper, not public contract surface, and must not
+;; surface as `in_source_only` drift (mirrors the inherent-method rule).
 (source_file
   (function_item
+    (visibility_modifier)? @fn.vis
     name: (identifier) @fn.name
     parameters: (parameters) @fn.params
     return_type: (_)? @fn.return_type) @fn.def)
