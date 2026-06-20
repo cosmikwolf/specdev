@@ -1,7 +1,7 @@
 ---
 name: spec-design
 description: This skill should be used when the user asks to "design a module", "add a module spec", "author a driver spec", "design <ModuleName>", or needs to write a single module TOML under specs/modules/. Authors one module TOML per invocation, then validates it. **New modules only — refuses if `specs/modules/<ModuleName>.toml` already exists.** To modify an existing module, use /spec-edit.
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Task
 argument-hint: <one-line module description>
 ---
 
@@ -32,21 +32,11 @@ If `specs/specdev/` is absent at the project root, stop and tell the user to run
 
 Read `spec.toml` to learn the project's `[project].profile` and `[project].language`. The profile shapes which fields the module schema accepts.
 
-## Step 1 — read the authoritative guides
+Check `specs/requirements.toml`. Every non-`re_export` item the module owns must `satisfies` a requirement, so the subagent (Step 2) needs requirement ids to already exist. If the file is absent or has no requirement covering what this module does, tell the user up front — they author requirements in `specs/requirements.toml` (and `/spec-question` / `/spec-decide` capture the reasoning behind them). Do not let the draft invent requirement ids.
 
-Run the analyzer's context cone for the proposed module name. The cone tells the skill which files to read; you read only those, instead of the whole `specs/modules/` tree:
+## Step 1 — interview
 
-```sh
-specdev-analyzer context --module <ProposedName> --output /tmp/specdev-ctx-$$.yaml
-```
-
-For a module that does not yet exist, the cone returns `status: module-not-found`; `files.schema`, `files.block_readmes`, `files.bridge_readmes`, `files.profile_readme`, `files.module_conventions`, and `files.architecture` are still populated (they don't depend on M). `related_modules` is empty in this path; `excluded_module_count` carries the total existing-module count for orientation.
-
-Then read every file path listed under `files:` and (when the module exists) under `related_files:`. The schemas establish the contract; the READMEs are the authoring view (distinct from the codegen prose `/spec-gen` consumes). The architecture file carries project-wide picks. `${CLAUDE_PLUGIN_ROOT}/profiles/<profile>/codegen/<language>/module.conventions.md` is *codegen* prose — read but do not over-apply; it informs which spec choices have semantic weight downstream.
-
-When the module already exists or a sibling-shape inference is needed, the cone's `related_files` gives the bounded sibling set to read (lex-sorted, project-relative). The cone is one hop deep — if a sibling references something farther out, re-invoke `context --module <Sibling>` for that next-hop view.
-
-## Step 2 — interview
+The deep read (schema, profile prose, inlined-block READMEs, sibling modules) is delegated to the `module-designer` subagent in Step 2 — do **not** read those here. The main thread owns the interview, which is interactive and benefits from full conversation context; the subagent is one-shot.
 
 Ask the user for fields not reasonably inferable from `$ARGUMENTS`. The canonical interview shape is whatever the profile's `module.schema.yaml` declares as required + the inlined-block fields the project intends to use — that schema is the binding contract.
 
@@ -54,18 +44,33 @@ For shipped profiles, illustrative interview-question lists are in `references/i
 
 Two questions are universal — ask them on every module regardless of profile (F-013, F-015 from the zfm audio-plugin dogfood):
 
-- **`items[]` — what symbols does this module own?** Walk the user through the structural items they want emitted: `fn` / `struct` / `enum` / `trait` / `re_export` / etc., each with a short `description` and (when known) a `satisfies = [...]` list naming the requirements it covers. Modules with empty `items[]` give `/spec-gen` nothing to anchor on and offer no traceability surface to `/spec-sync-items`. If the user is genuinely architecting and doesn't know the items yet, record that as a `# TODO: items[]` comment instead of leaving the array silently absent.
+- **`items[]` — what symbols does this module own?** Walk the user through the structural items they want emitted: `fn` / `struct` / `enum` / `trait` / `re_export` / etc., each with a short `description` and (when known) a `satisfies = [...]` list naming the requirements it covers. For a type with public methods, get the **type name and its public member names** — that pair is what lets the subagent scaffold the per-method items (one `<Type>::<member>` `kind = "fn"` item each, sharing a coarse requirement) so the user writes descriptions, not boilerplate. You do not need full signatures; method names plus intent are enough (the item model is prose-first per `references/toml-authoring-rules.md`). Modules with empty `items[]` give `/spec-gen` nothing to anchor on and offer no traceability surface to `/spec-sync-items`. If the user is genuinely architecting and doesn't know the items yet, record that as a `# TODO: items[]` comment instead of leaving the array silently absent.
 - **`module.context_files = [...]` — does this module need out-of-band prose at codegen time?** When the module is deep-domain (DSP math, hardware sequencing, protocol details, MIDI quirks), point the user at any project-prose files (`docs/dsp-notes.md`, `docs/yamaha-fm-arch.md`) the codegen agent should inline alongside the spec. The analyzer reads each path's contents into the assembled prompt at `prompt --module` time. Skip this if the module is mechanical (config types, glue code) — empty `context_files` is the right answer for shallow modules.
 
 Triad awareness (when the project authors `specs/decisions.toml` / `specs/open_questions.toml`): check whether any accepted decision should guide this module's design — if so, set `guided_by = ["DEC-..."]` so the rationale is inlined at codegen time. Check `specs/open_questions.toml` for open questions whose `affects` will reach this module: an open question hard-blocks `/spec-gen` for it, so tell the user up front. If the interview itself surfaces a genuine unknown, do not improvise a quiet answer in the spec — point the user at `/spec-question` to record it (or `/spec-decide` if the conversation settles a choice worth keeping).
 
 Batch all relevant questions in one message. Show defaults so a fluent user can accept them all.
 
-## Step 3 — write the TOML
+## Step 2 — dispatch the `module-designer` subagent, then write
 
-Write `specs/modules/<ModuleName>.toml` following the priority-ordered authoring rules in `references/toml-authoring-rules.md`: schema-as-contract, required fields by profile, required metadata for firmware-layered, inline-table preference, naming conventions, layer discipline, one-module-per-file, and the comment policy carve-outs.
+Dispatch the `module-designer` subagent to draft the Candidate TOML. It runs the analyzer's context cone itself and reads the schema, profile prose, inlined-block READMEs, and sibling modules in an *isolated* context — keeping that 5–15-file read out of this conversation. Do **not** run `specdev-analyzer context` here and paste the cone into the prompt; pre-fetching defeats the reason the subagent exists.
 
-## Step 4 — validate
+Pass the input contract from `agents/module-designer.md`:
+
+- `module_name` — the PascalCase name.
+- `project_root` — absolute project root.
+- `profile`, `language` — from `spec.toml` (Step 0).
+- `description` — the one-line `$ARGUMENTS`.
+- `interview_answers` — the answers gathered in Step 1, inline or as YAML. Include the type + public-member names so the subagent can scaffold per-method items.
+- `package` — only for multi-package projects.
+
+The subagent returns three sections: `## Candidate TOML`, `## Evidence`, `## Notes`. The cone is best-effort — on a brand-new module it returns `module-not-found` with an empty sibling set, which is expected, not a failure. If the subagent returns a **blocking error** instead (missing requirement ids, malformed project schema, unresolvable cone), relay it to the user and stop — those are real problems to fix in the spec, not draft around.
+
+Review the Candidate against the Evidence and Notes. Surface anything the Notes flag (per-method descriptions to refine, requirements to author, downstream follow-ups). On the user's confirmation, write the Candidate TOML verbatim to `specs/modules/<ModuleName>.toml` (under `specs/modules/<package>/` for multi-package). The authoring rules in `references/toml-authoring-rules.md` are the subagent's contract; the main thread's job here is the comment-policy carve-out (the Candidate carries only the `#:schema` directive) and the file write.
+
+If the user raises a structural issue ("actually this should be two modules"), stop, write a short plan, and wait for confirmation before re-dispatching.
+
+## Step 3 — validate
 
 Run from the project root:
 
@@ -79,9 +84,9 @@ Show the output. If errors:
 2. Fix the modeling problem. Do not delete fields to silence the checker.
 3. Re-validate until clean.
 
-If the user raises a structural issue ("actually this should be two modules"), stop, write a short plan, and wait for confirmation before rewriting.
+If validation surfaces a structural issue ("actually this should be two modules"), stop, write a short plan, and wait for confirmation before re-dispatching the subagent.
 
-## Step 5 — optional: extract and show
+## Step 4 — optional: extract and show
 
 Once validate is clean, run:
 
@@ -91,7 +96,7 @@ specdev-analyzer extract --output /tmp/specdev-extract-<pid>
 
 Read the module's YAML and show the user the first ~30 lines. This previews what `/spec-gen` will consume and surfaces any data-shape surprises early.
 
-## Step 6 — report
+## Step 5 — report
 
 One paragraph:
 - Module name and path written.
@@ -101,8 +106,9 @@ One paragraph:
 
 ## Additional resources
 
+- `${CLAUDE_PLUGIN_ROOT}/agents/module-designer.md` — the subagent dispatched in Step 2. Single source of truth for its input/output contract (`module_name` / `project_root` / `profile` / `language` / `description` / `interview_answers` / optional `existing_toml` / `package` / `source_hint`; three-section `## Candidate TOML` / `## Evidence` / `## Notes` output). Also dispatched by `/spec-edit`.
 - `references/interview-shapes.md` — illustrative interview shapes per shipped profile (firmware-layered, library-api) and the rust-workspace routing rule.
-- `references/toml-authoring-rules.md` — priority-ordered authoring rules shared with `/spec-edit`: schema-as-contract, required fields, naming conventions, layer discipline, comment policy.
+- `references/toml-authoring-rules.md` — priority-ordered authoring rules shared with `/spec-edit` and the `module-designer` subagent: schema-as-contract, required fields, the D70 per-method item model, naming conventions, layer discipline, comment policy.
 
 ## What this skill does NOT do
 
