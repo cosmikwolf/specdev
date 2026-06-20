@@ -108,7 +108,7 @@ One paragraph:
 
 - `${CLAUDE_PLUGIN_ROOT}/agents/module-designer.md` — the subagent dispatched in Step 2. Single source of truth for its input/output contract (`module_name` / `project_root` / `profile` / `language` / `description` / `interview_answers` / optional `existing_toml` / `package` / `source_hint`; three-section `## Candidate TOML` / `## Evidence` / `## Notes` output). Also dispatched by `/spec-edit`.
 - `references/interview-shapes.md` — illustrative interview shapes per shipped profile (firmware-layered, library-api) and the rust-workspace routing rule.
-- `references/toml-authoring-rules.md` — priority-ordered authoring rules shared with `/spec-edit` and the `module-designer` subagent: schema-as-contract, required fields, the D70 per-method item model, naming conventions, layer discipline, comment policy.
+- `references/toml-authoring-rules.md` — priority-ordered authoring rules shared with `/spec-edit` and the `module-designer` subagent: schema-as-contract, required fields, the per-method item model, naming conventions, layer discipline, comment policy.
 
 ## What this skill does NOT do
 
