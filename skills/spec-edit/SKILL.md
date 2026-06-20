@@ -1,7 +1,7 @@
 ---
 name: spec-edit
 description: This skill should be used when the user asks to "edit <ModuleName>", "update this module spec", "rename this action", "change the pins for <module>", "remove a field", "refactor a module spec", or needs to modify an existing module TOML with downstream impact analysis. Edits one existing module spec per invocation, analyzes impact across the project, then validates. Use for modules that already exist; to author a new module, use /spec-design.
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Task
 argument-hint: <ModuleName> [change description]
 ---
 
@@ -89,9 +89,14 @@ If any issue surfaces, present findings grouped by change type and **wait for co
 
 ## Step 6 — edit
 
-Apply the change using `Edit`, following the priority-ordered TOML authoring rules in `${CLAUDE_PLUGIN_ROOT}/skills/spec-design/references/toml-authoring-rules.md` (schema-as-contract, required fields, inline-table preference, naming conventions, layer discipline, one-module-per-file, comment policy). The "When editing existing TOML" section at the bottom is the spec-edit-specific carve-out: preserve existing indentation/key order where not semantically changed; strip disallowed comments as part of the edit; leave `# LOW:` markers from `/spec-reverse` alone until the user has confirmed each one.
+Two paths, by change size:
 
-Show a focused diff of the change. For non-trivial edits, wait for user confirmation before running validate.
+- **Trivial edits** (a single-field change, a rename, removing one entry): apply directly with `Edit`. You already have the file open from Step 3; dispatching a subagent would cost more than it saves.
+- **Substantive redrafts** (adding or reshaping `[[items]]`, restructuring metadata, multi-field changes, anything touching the per-method item surface): dispatch the `module-designer` subagent with `existing_toml` set to the target file's project-relative path. The subagent re-reads the schema, profile prose, and siblings in an *isolated* context and returns the **full redrafted TOML** (its `/spec-edit` mode applies only the requested change and keeps everything else byte-stable in intent). This keeps edits on the same D70 per-method, prose-first drafting discipline as `/spec-design` without re-implementing the read path here. Pass `module_name`, `project_root`, `profile`, `language`, the change description as `description`, the Step 4 answers as `interview_answers`, `existing_toml`, and `package` (multi-package only). On a blocking error from the subagent (missing requirement ids, malformed schema), relay it and stop.
+
+Either path follows the priority-ordered TOML authoring rules in `${CLAUDE_PLUGIN_ROOT}/skills/spec-design/references/toml-authoring-rules.md` (schema-as-contract, required fields, the D70 per-method item model, inline-table preference, naming conventions, layer discipline, one-module-per-file, comment policy). The "When editing existing TOML" section at the bottom is the spec-edit-specific carve-out: preserve existing indentation/key order where not semantically changed; an item-surface change adds/removes whole `<Type>::<member>` items rather than expanding one into a signature; strip disallowed comments as part of the edit; leave `# LOW:` markers from `/spec-reverse` alone until the user has confirmed each one.
+
+Show a focused diff of the change (for the subagent path, diff its redrafted Candidate against the original — it should show only the intended change). For non-trivial edits, wait for user confirmation before running validate.
 
 ## Step 7 — validate
 
@@ -117,5 +122,6 @@ One paragraph:
 
 ## Additional resources
 
+- `${CLAUDE_PLUGIN_ROOT}/agents/module-designer.md` — the subagent dispatched for substantive redrafts in Step 6 (with `existing_toml` set). Single source of truth for its input/output contract; shared with `/spec-design`.
 - `references/impact-analysis-matrix.md` — change-type → downstream-check mapping used in Step 5 (action rename, port rename, layer change, `depends_on` change, hardware reassignment, concurrency-model change, binding edit, visibility change, feature-gate edit).
 - `examples/edit-rename-action.md` — worked walkthrough of a rename-action edit with downstream impact analysis.
