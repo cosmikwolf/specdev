@@ -161,6 +161,25 @@ User-contributed blocks and bridges are first-class: `--from <url|path>` works a
 - **Rust only.** C-language support is on the roadmap.
 - **`/spec-reverse`** is a one-shot migration tool — moves an existing codebase into the spec-driven world. It is a person-in-the-loop authoring flow against the inlined-block schemas, not a continuous source-vs-spec audit. For ongoing source-vs-spec drift on a module's `[[items]]`, use `/spec-sync-items`.
 
+## Permissions (optional hardening)
+
+The skills and their drafting subagents call one external program: `specdev-analyzer`. Everything else they do is reading and writing files in your project. If you want the analyzer's calls to run without a permission prompt each time — and any *other* shell command they might attempt to surface to you instead — add a single allow rule to your `.claude/settings.json`:
+
+```json
+{
+  "permissions": {
+    "allow": ["Bash(specdev-analyzer *)"]
+  }
+}
+```
+
+Use `allow` with **no** matching `deny`. Two things to know about Claude Code's permission model:
+
+- **`deny` always wins over `allow`.** A rule pair like `allow: ["Bash(specdev-analyzer *)"]` + `deny: ["Bash(*)"]` does **not** mean "allow only the analyzer" — the broad `deny` matches first and blocks the analyzer too. To allow only the analyzer, list just the `allow` rule; every other command then falls through to your normal prompt-on-use behavior.
+- **Syntax is a space, not a colon:** `Bash(specdev-analyzer *)` (the trailing `* ` after a space matches "the binary with any arguments"). Process wrappers like `timeout`/`time` are handled automatically; pipes and env-var prefixes are not.
+
+This is optional. Without it, analyzer calls follow your session's default permission behavior — nothing breaks, you may just be prompted.
+
 ## License
 
 MIT.
