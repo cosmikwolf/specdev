@@ -19,7 +19,7 @@ When two rules conflict, the earlier rule wins.
 7. **One module per file.** Each TOML holds exactly one module.
 8. **Comment policy** — follow `${CLAUDE_PLUGIN_ROOT}/shared/comment-policy.md`. `/spec-design` and `/spec-edit` work from explicit user intent, not inference, so neither emits `# LOW:` markers — those are unique to `/spec-reverse` and are stripped once the user confirms each inferred field.
 
-## The item surface (`items[]`) — D70 per-method model
+## The item surface (`items[]`) — per-method model
 
 `module.items[]` carries the module's contractual public surface. The
 per-profile codegen prose is the authority for emission detail

@@ -94,7 +94,7 @@ firmware-layered, inline-table preference, naming, layer discipline,
 one-module-per-file, comment policy). When two rules conflict, the earlier one
 wins.
 
-### The item surface (D70 — read this before drafting `[[items]]`)
+### The item surface — read this before drafting `[[items]]`
 
 `module.items[]` is the module's contractual public surface. **An item is a
 public, contractual code symbol, identified by its fully-qualified path,
@@ -252,11 +252,12 @@ and requirement breakage to the user (resolve-and-stop, not draft-around).
   fields. `/spec-design` and `/spec-edit` work from explicit user intent, so
   there are no `# LOW:` markers (those are `module-reverser`'s alone).
 
-## Contract reference (22-G)
+## Contract reference
 
 This file is the single source of truth for the `module-designer` input/output
 contract. `/spec-design` and `/spec-edit` dispatch against the Input contract
-above; Phases 23 (codegen fan-out) and 24 (reverser promotion) reuse the
-three-section output shape (`## Candidate TOML` / `## Evidence` / `## Notes`),
-which is intentionally identical to `module-reverser`'s minus the LOW-confidence
-carve-out. Do not fork the contract into a separate doc — extend it here.
+above; future codegen and reverse-engineering skills that build on this subagent
+reuse the three-section output shape (`## Candidate TOML` / `## Evidence` /
+`## Notes`), which is intentionally identical to `module-reverser`'s minus the
+LOW-confidence carve-out. Do not fork the contract into a separate doc — extend
+it here.
