@@ -288,7 +288,7 @@ gets a different stub variant.
 
 ### Test items
 
-An `[[items]]` entry with `test = true` is a test (D60): a `kind = "fn"`
+An `[[items]]` entry with `test = true` is a test: a `kind = "fn"`
 item using `verifies = [...]` (against `nature = "test"` requirements)
 instead of `satisfies`, with a `test_kind` driving emit location — `unit`
 → `#[cfg(test)] mod tests` in the module file; `integration` →
@@ -401,7 +401,7 @@ spec does not type-check them; the Rust compiler does. Read the
 parameter value with `self.params.<id>.value()` (nih-plug's smoothed
 accessor); bind it to a local `value`, apply the transform, then write.
 
-### Value transforms (D59)
+### Value transforms
 
 Six named transforms plus a `custom` escape hatch. Each rewrites the
 `value` local before the write:

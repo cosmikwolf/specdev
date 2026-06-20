@@ -76,7 +76,7 @@ properties:
     additionalProperties: true
   parameter_bindings:
     description: >
-      Parameter → engine-write bindings (D58/D59). Co-resident with
+      Parameter → engine-write bindings. Co-resident with
       `[nih_plug]` on the plugin_shell module: each row maps one
       nih-plug parameter to an engine method/field/custom write, driving
       deterministic `apply_param_changes` emission. Unlike the open

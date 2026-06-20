@@ -1,6 +1,6 @@
 ---
 name: spec-question
-description: This skill should be used in three situations. (A) NEW open question — when the user asks to "log an open question", "record an OQ", "we don't know yet", "TODO: figure out X", "this is unresolved", "open question about Y", "OQ-NNN", "we need to decide later". Authors one new entry under `specs/open_questions.toml` then validates; refuses if an OQ with the proposed id already exists. (B) DOWNGRADE / commit a default — when the user says "commit a default for OQ-NNN", "I need to unblock OQ-NNN", "unblock codegen on OQ-NNN", "gen refused on OQ-NNN", "I need to commit a working assumption", or pastes a `Refusing to generate code for module ... open question ... is unresolved` refusal. The skill walks them through flipping `status = "open"` to `status = "default_committed"` — the only in-spec escape from the codegen gate (D63 §6). (C) CLOSE — when the user says "close OQ-NNN", "OQ-NNN is resolved", "mark OQ-NNN closed", "OQ-NNN is moot now". The skill flips `status` to `closed` against an existing accepted Decision.
+description: This skill should be used in three situations. (A) NEW open question — when the user asks to "log an open question", "record an OQ", "we don't know yet", "TODO: figure out X", "this is unresolved", "open question about Y", "OQ-NNN", "we need to decide later". Authors one new entry under `specs/open_questions.toml` then validates; refuses if an OQ with the proposed id already exists. (B) DOWNGRADE / commit a default — when the user says "commit a default for OQ-NNN", "I need to unblock OQ-NNN", "unblock codegen on OQ-NNN", "gen refused on OQ-NNN", "I need to commit a working assumption", or pastes a `Refusing to generate code for module ... open question ... is unresolved` refusal. The skill walks them through flipping `status = "open"` to `status = "default_committed"` — the only in-spec escape from the codegen gate. (C) CLOSE — when the user says "close OQ-NNN", "OQ-NNN is resolved", "mark OQ-NNN closed", "OQ-NNN is moot now". The skill flips `status` to `closed` against an existing accepted Decision.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 argument-hint: <one-line title for the question>
 ---
@@ -9,13 +9,13 @@ argument-hint: <one-line title for the question>
 
 Record one open question per invocation. User input: `$ARGUMENTS` (a one-line title — what's unresolved). If `$ARGUMENTS` is empty, ask first.
 
-An open question is a *known unknown* — something the project hasn't yet pinned down, but where a working assumption lets implementation proceed. The codegen gate (per D63 §6) refuses to generate code for any module reachable through an OQ with `status = "open"`. The three exits, in order of preference:
+An open question is a *known unknown* — something the project hasn't yet pinned down, but where a working assumption lets implementation proceed. The codegen gate refuses to generate code for any module reachable through an OQ with `status = "open"`. The three exits, in order of preference:
 
 1. **Resolve via a decision:** record a status=accepted Decision that answers the question (`/spec-decide`), list the OQ id in that decision's `closes_questions[]`, then flip the OQ's status to `closed` and populate `closed_by`.
 2. **Commit a default:** flip the OQ's status from `open` to `default_committed`, set `default_via = "DEC-..."` referencing an accepted decision that committed the working assumption, and provide a `verify = "..."` placeholder explaining how the assumption will be falsified later.
 3. **Mark the question moot:** record a status=accepted Decision that lists the OQ in `closes_questions`, then flip the OQ's status to `closed`.
 
-The `default_committed` exit is the in-spec escape: it leaves an audit trail (which decision committed which default) and forces verify-text authoring (a falsification hook that travels with the project). A CLI `--allow-open-questions` flag would erase that trail — D63 §3 explicitly rules it out.
+The `default_committed` exit is the in-spec escape: it leaves an audit trail (which decision committed which default) and forces verify-text authoring (a falsification hook that travels with the project). A CLI `--allow-open-questions` flag would erase that trail, so it is deliberately not offered.
 
 If `specdev-analyzer` is not on PATH, tell the user to install it and stop.
 
@@ -172,4 +172,4 @@ One paragraph:
 - **Edit an existing OQ's body text or affects list.** If `id` already exists and the user wants to rephrase the question, edit `specs/open_questions.toml` directly. The skill only handles status transitions (paths B and C) on existing entries; everything else is a creation flow.
 - **Flip a Decision's status.** Closing an OQ via path C does NOT mark the closing Decision as `accepted` if it isn't already. Author that decision via `/spec-decide` first.
 - **Author the Decision that closes / defaults a question.** Use `/spec-decide` for the Decision; then loop back here to flip the OQ status.
-- **Bypass the gate.** No CLI flag exists; the in-spec escape is path B. If the user wants codegen to proceed without committing a default and without resolving the question, the answer is "you can't" — the gate is load-bearing per D63 §6.
+- **Bypass the gate.** No CLI flag exists; the in-spec escape is path B. If the user wants codegen to proceed without committing a default and without resolving the question, the answer is "you can't" — the gate is load-bearing.
