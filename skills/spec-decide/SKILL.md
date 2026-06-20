@@ -11,7 +11,7 @@ Record one decision per invocation. User input: `$ARGUMENTS` (a one-line title โ
 
 A decision pins an implementation choice over the alternatives that were considered. It carries the *how* and *why* alongside the requirements (the *what*) and modules (where the *what* is satisfied). Decisions cross-reference the rest of the spec via `requirement.decided_by[]` (added later via `/spec-edit`), `module.guided_by[]` (similarly), `architecture.project_decisions[]`, and the decision's own `closes_questions[]` / `defaults_for[]` / `supersedes[]` arrays.
 
-The codegen prompt walk inlines `accepted` decisions into every reachable module's prompt (D63 ยง1). Authoring a decision here is how you make that text show up at codegen time.
+The codegen prompt walk inlines `accepted` decisions into every reachable module's prompt. Authoring a decision here is how you make that text show up at codegen time.
 
 If `specdev-analyzer` is not on PATH, tell the user to install it and stop.
 

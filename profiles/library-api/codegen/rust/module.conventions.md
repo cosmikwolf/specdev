@@ -129,7 +129,7 @@ member (with a `satisfies`) or making it private.
 
 ## Test items
 
-An `[[items]]` entry with `test = true` is a **test** (D60). It is a
+An `[[items]]` entry with `test = true` is a **test**. It is a
 `kind = "fn"` item that uses `verifies = [...]` (pointing at
 `nature = "test"` requirements) in place of `satisfies`, and carries a
 `test_kind` that drives where the test is emitted. The
@@ -147,7 +147,7 @@ verifies    = ["REQ-TEST-001"]
 description = "Round-trips a Value through serde_json and asserts equality."
 ```
 
-### Emit location per `test_kind` (D61)
+### Emit location per `test_kind`
 
 | `test_kind`   | Emit location                                                  |
 |---------------|----------------------------------------------------------------|
@@ -284,7 +284,7 @@ imports document dependency intent.
 
 `module.external_deps[]` declares Cargo dependencies the module needs.
 The union across every module in the library determines the full
-dependency set Phase 8's `gen` writes to `Cargo.toml`. Each entry is a
+dependency set the `gen` step writes to `Cargo.toml`. Each entry is a
 [`CrateReference`](https://specdev.dev/schema/meta/v1/crate_reference.schema.yaml) —
 `crate` + `version` are required; `source`, `features`,
 `default_features`, and `optional` are optional.
