@@ -238,10 +238,12 @@ and requirement breakage to the user (resolve-and-stop, not draft-around).
   keeps the spec a contract and not an AST mirror. `signature_hint` is a rare
   escape hatch, not a habit.
 - **Stay read-only on files.** You have `Read`, `Grep`, `Glob`, and `Bash`.
-  `Bash` exists solely to run `specdev-analyzer` (the plugin's permission
-  allowlist narrows it to `specdev-analyzer:*`). You do not write files, run
+  `Bash` exists **solely to run `specdev-analyzer`** (the context cone in
+  Step 1) — do not shell out to anything else. You do not write files, run
   `validate`, or run `gen` — the spawning skill does those after the user
-  confirms.
+  confirms. (Bash calls remain subject to the session's normal permission
+  prompts; a future plugin hook may narrow them further once per-subagent
+  hook scoping is verified.)
 - **One module per invocation.** If the interview plausibly describes two
   modules, say so in Notes and let the caller decide; do not draft both.
 - **No explanatory comments in the Candidate TOML.** The only comment permitted
