@@ -2,12 +2,12 @@
 name: spec-gen
 description: This skill should be used when the user asks to "generate code", "codegen", "run spec-gen", "generate <ModuleName>", "codegen all modules", "implement this spec", "build my source files from spec", or names any module to materialize as source. Generates Rust source code AND Cargo.toml deterministically from validated specdev specs (blocks + bridges + profiles model). Refuses on incomplete specs — no `todo!()` / stub bodies; if the spec is missing information needed to implement a function, the skill stops and asks rather than improvising.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
-argument-hint: <ModuleName | --all>
+argument-hint: <ModuleName | --all [--force]>
 ---
 
 # /spec-gen — Code generation (blocks + bridges + profiles)
 
-Generate source code for one named module, or for every module when invoked with `--all`. User input: `$ARGUMENTS`.
+Generate source code for one named module, or for every module when invoked with `--all`. `--all` regenerates only the modules whose inputs changed or whose output is stale/missing (Step 3.5); add `--force` to regenerate every module regardless. User input: `$ARGUMENTS`.
 
 The spec is the source of truth for **every Cargo dependency**. Cargo.toml is OUTPUT, not input — emitted deterministically from `architecture.toml` + module-level `external_deps[]`. Source files (`.rs`) are emitted by following the assembled codegen prompt; Cargo.toml is emitted by the analyzer (no Claude judgment involved).
 
@@ -49,16 +49,38 @@ Validate may also emit `codegen_unblocked` **warnings** — open questions in `s
 
 Discover module list via `ls specs/modules/*.toml`. (Workspace mode handles cross-member coordination; see "Workspace mode" below.)
 
+## Step 3.5 — incremental plan (`--all` only)
+
+A single-module invocation always regenerates that module — **skip this step**. For `--all`, don't re-author modules whose generation inputs are unchanged and whose output is still clean; regenerating them only churns the files against the minimize-diff intent (Step 5).
+
+If `$ARGUMENTS` includes `--force`, **skip the plan** — every module is a target; go to Step 4. (Use `--force` when an upstream codegen-prose change hasn't been re-inlined into `specs/specdev/codegen/`: the project's inputs are then correctly unchanged, so the plan would skip, but you want a blanket regenerate. Re-inlining stale plugin prose is `/spec-drift`'s job; `--force` is the override.)
+
+Otherwise run:
+
+```sh
+specdev-analyzer report gen-plan
+```
+
+It emits one deterministic verdict per module under `specs/modules/` — no judgment from you:
+
+- `unchanged` — output clean and inputs match the last gen. **Skip.**
+- `edited` — a generated output file was hand-edited (carries the `files`). **Skip** — regenerating would clobber the edit. Surface it and tell the user to reconcile via `/spec-drift`.
+- `stale` — output clean but the spec or assembled prompt changed since the last gen. **Regenerate.**
+- `missing` — a recorded output file is gone. **Regenerate.**
+- `new` — never generated. **Regenerate.**
+
+Your **regenerate set** is every module whose category is `new`, `stale`, or `missing`. The rest are skipped (carry the `unchanged` and `edited` counts into the Step 9 report). If the regenerate set is empty, skip Steps 4–8 and go straight to Step 9 to report what was skipped.
+
 ## Step 4 — assemble the prompt: shared preamble once, then per-module tails
 
 The codegen prompt is split into a **project-invariant preamble** (read once, applies to every module in this run) and a **per-module tail**. Follow this single path for both single-module and `--all` invocations — do not re-assemble the preamble per module.
 
-**Step 4a — assemble the shared preamble once.** Pass one `--module <Name>` per target so the preamble carries exactly the blocks/bridges your targets use (for `--all`, omit `--module` to union over every module):
+**Step 4a — assemble the shared preamble once.** Pass one `--module <Name>` per module in your **target set** — the regenerate set from Step 3.5 for an incremental `--all`, every module for `--force`, or the single named module — so the preamble carries exactly the blocks/bridges those targets use:
 
 ```sh
-# single target:
+# single target (or one --module per module in the target set):
 specdev-analyzer gen --preamble --module <Name>
-# --all:
+# every module (only when the target set is the full module list, e.g. --force):
 specdev-analyzer gen --preamble
 ```
 
@@ -71,7 +93,7 @@ This is gate-free shared prose, a deterministic lex-ordered concatenation of:
 
 Read the preamble once. It is the contract for **every** module you generate this run — keep it in mind across the per-module loop; do not re-fetch it per module.
 
-**Step 4b — assemble the per-module tail.** For each target module `<Name>`:
+**Step 4b — assemble the per-module tail.** For each module `<Name>` in the target set (Step 3.5's regenerate set, or every module under `--force` / a single named module):
 
 ```sh
 specdev-analyzer gen --module <Name> --tail
@@ -133,6 +155,8 @@ specdev-analyzer gen-record Cargo.toml
 
 `gen-record` writes a SHA-256 per file into `specs/specdev/gen-lineage.toml`. The flow from spec to code is one-way; a generated file that later gets hand-edited is where that flow silently breaks, and the hash record is what makes the break visible — `/spec-drift` runs `specdev-analyzer report gen-drift` and flags any recorded file whose bytes have diverged (`edited`) or that has disappeared (`missing`).
 
+For a module record (`--module <Name>`), `gen-record` also captures the SHA-256 of that module's whole assembled prompt — the *input* hash that the next `--all` compares in Step 3.5 to decide skip-vs-regenerate. Nothing extra to pass; recording the emitted files is what makes the module skippable next time. (Project-level records like `Cargo.toml` carry no input hash.)
+
 Re-running gen and re-recording replaces the entries; there is nothing else to manage. Do not hand-edit `gen-lineage.toml`.
 
 Do **not** record `memory.x` — firmware post-processing (Step 7) may preserve a hand-authored version, and recording it would flag legitimate hand-authorship as drift.
@@ -161,7 +185,9 @@ If the target isn't installed (`rustup target add ...` missing), surface the ins
 
 ## Step 9 — report
 
-One paragraph per module generated:
+For an incremental `--all`, open with a one-line summary of the plan from Step 3.5: `N unchanged (skipped), M regenerated, K edited (skipped — reconcile via /spec-drift)`, naming the `edited` modules and their files so the user can act on them. A `--force` or single-module run has no plan summary.
+
+Then one paragraph per module **generated** (skipped modules need no paragraph):
 - Source file(s) written, with paths relative to project root.
 - Any prose rule that required a choice and the choice made (e.g., "embassy bridge `handoff = "shared"` chose `Mutex<CriticalSectionRawMutex, ...>`").
 - Build result (pass/fail; first error if fail).
