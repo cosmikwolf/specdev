@@ -30,7 +30,7 @@ User input: `$ARGUMENTS`. Expected: `<bridge-name> [--merge]`.
 
 Pre-flight: both blocks named in the bridge **must already be inlined** in the project. The analyzer surfaces a clear error if not, but a friendly heads-up here saves the user a round-trip:
 
-- Split `<bridge-name>` on `+` to get `<a>` and `<b>`. Check that both `specs/specdev/inlined/blocks/<a>/` and `specs/specdev/inlined/blocks/<b>/` exist. If either is missing, instruct: "Inline the missing block first: `/spec-inline <block>`."
+- Split `<bridge-name>` on `+` to get `<a>` and `<b>`. Check that both `specs/specdev/upstream/blocks/<a>/` and `specs/specdev/upstream/blocks/<b>/` exist — that per-block snapshot directory is written on every inline and is the reliable "is this block inlined" marker. (There is **no** single `specs/specdev/inlined/blocks/<x>/` directory: a block's inlined content is split across `schemas/inlined/blocks/<x>.schema.yaml`, `reductions/blocks/<x>.yaml`, `codegen/<lang>/blocks/<x>/`, and `upstream/blocks/<x>/`.) If either is missing, instruct: "Inline the missing block first: `/spec-inline <block>`."
 
 If the bridge name violates lex-ordering (e.g. user types `b+a` when `a < b`), reject with the corrected `<a>+<b>` form and stop. Do not silently rewrite — the user might have typed the wrong block.
 
