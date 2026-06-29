@@ -7,7 +7,7 @@ argument-hint: <block-name> [--merge]
 
 # /spec-inline — Thin wrapper over `specdev-analyzer inline`
 
-Inline a canonical block from the plugin tree (`${CLAUDE_PLUGIN_ROOT}/blocks/<block>/`) into the project's `specs/specdev/inlined/blocks/<block>/`. The analyzer is the source of truth for what a block contributes (schema, reduction, codegen prose); this skill runs the command, surfaces output, and reports.
+Inline a canonical block from the plugin tree (`${CLAUDE_PLUGIN_ROOT}/blocks/<block>/`) into the project's `specs/specdev/` tree. A block's inlined content is **split across** four locations (there is no single `inlined/blocks/<block>/` directory): `schemas/inlined/blocks/<block>.schema.yaml`, `reductions/blocks/<block>.yaml`, `codegen/<lang>/blocks/<block>/`, and an `upstream/blocks/<block>/` snapshot (used by `--merge`). The analyzer is the source of truth for what a block contributes (schema, reduction, codegen prose); this skill runs the command, surfaces output, and reports.
 
 If `specdev-analyzer` is not on PATH, tell the user to install it (`cargo install --git https://github.com/cosmikwolf/specdev-analyzer`) and stop.
 
@@ -43,7 +43,7 @@ Capture stdout, stderr, and exit code.
 Exit codes:
 - `0` — clean. Go to Step 3.
 - non-zero — surface stderr verbatim. Common error families:
-  - `INLINE-001` — block already inlined; rerun with `--merge` to update, or remove `specs/specdev/inlined/blocks/<block>/` if the user wants a fresh inline (rare; use `--merge` instead).
+  - `INLINE-001` — block already inlined; rerun with `--merge` to update (recommended). A fresh inline would require removing the block's inlined files across `specs/specdev/` (schema, reduction, codegen, `upstream/` snapshot) — rare; prefer `--merge`.
   - `INLINE-002` — block name not found under the plugin's `blocks/` tree. Verify spelling; list available blocks with `ls "${CLAUDE_PLUGIN_ROOT}/blocks/"`.
   - `INLINE-003` — file collision in the destination tree (a hand-authored file at the same path as a block-emitted file). Surface the path; let the user resolve.
   - `MERGE-001..003`, `MERGE-FILESET` — `--merge` conflict or fileset evolution. Show verbatim; the conflict markers are left in place for retry.
@@ -65,7 +65,7 @@ A clean inline should leave the project validating. If new findings appear, they
 Report:
 
 - Block inlined (and whether `--merge` was used).
-- Files written / changed (count or short list under `specs/specdev/inlined/blocks/<block>/`).
+- Files written / changed (count or short list under `specs/specdev/` — schema, reduction, codegen prose, `upstream/` snapshot).
 - New `lineage.toml` entry confirmed (or merged with existing).
 - Validate result.
 - If a paired bridge exists in the plugin tree for this block + an already-inlined block, suggest the corresponding `/spec-inline-bridge <a>+<b>` (lex-ordered). Discover paired bridges with `ls "${CLAUDE_PLUGIN_ROOT}/bridges/" | grep <block-name>` — surface only bridges where the *other* endpoint is already inlined in the project. Otherwise no follow-up suggestion.
