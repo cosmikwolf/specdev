@@ -1,0 +1,22 @@
+# Phase 31-B — compile the codegen reference crates so a wrong type/arg/binding
+# in any block/bridge codegen prose fails CI (not a downstream dogfood).
+# Mirrors specdev-analyzer's CI conventions; adjust if you use a different CI.
+name: reference-crates
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          # Reference crates are no_std embedded libs; cross-compile to the
+          # firmware target. embassy task macros are exercised on nightly
+          # (matches the firmware dogfood toolchain).
+          targets: thumbv8m.main-none-eabihf
+      - name: Build reference crates
+        run: bash .github/scripts/build-reference-crates.sh
