@@ -1,0 +1,18 @@
+# CI-only reference crate for the embassy+stm32h5-rs bridge codegen prose.
+# Type-checks the worked examples in ../../codegen/rust/README.md against the
+# pinned embassy-stm32 API. NOT inlined into user projects (this dir is a
+# sibling to codegen/, which inline never copies from). See specdev-next Phase 31.
+[package]
+name = "embassy-stm32h5-rs-reference"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[lib]
+
+[dependencies]
+# Versions/features mirror what the bridge + embassy block contribute at codegen.
+embassy-stm32 = { version = "0.6", features = ["stm32h563zi", "rt", "time-driver-any", "exti"] }
+embassy-executor = { version = "0.10", features = ["executor-thread", "platform-cortex-m"] }
+embassy-sync = "0.8"
+embassy-time = "0.5"
