@@ -1,0 +1,4 @@
+# Reference-crate coverage manifest. Plugin-author / CI-only; never inlined.
+reference_cases:
+  - editor
+  - panels
