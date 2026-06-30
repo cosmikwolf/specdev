@@ -1,0 +1,16 @@
+# Reference-crate coverage manifest.
+#
+# Plugin-author / CI-only — NEVER inlined into user projects (it lives under
+# `reference/`, which the inline step does not copy). Declares the discrete
+# widget kinds this bridge ships a COMPILED reference example for.
+#
+# Only the widget kinds whose documented emission type-checks against the pinned
+# `nih_plug_egui` are listed. The README type table documents five more
+# (knob, toggle, dropdown, radio_group, value_display) whose documented calls
+# reference APIs absent from this pin (`egui_extras::Knob`, `ParamButton`,
+# `ParamComboBox`, `Enum::variants()`-as-values, `Param::unit_string()`); those
+# are prose-correctness gaps to fix, tracked separately, not shipped here.
+reference_cases:
+  - slider
+  - button
+  - numeric_field
