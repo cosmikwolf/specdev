@@ -1,7 +1,7 @@
 # egui — Rust codegen conventions
 
 These conventions describe how an `egui` block table on a module spec
-maps to Rust source. They layer on top of the audio-plugin profile's
+maps to Rust source. They layer on top of the project's profile's
 `module.conventions.md`; concerns specific to the editor frame, panel
 emission, and per-region scaffolding live here.
 
@@ -69,7 +69,7 @@ fn editor() -> Option<Box<dyn Editor>> {
 
 The `editor()` method is implemented on the plugin (`impl Plugin for
 MyPlugin { fn editor(...) -> ... }`) — not in this module's body. The
-audio-plugin profile's prose covers the `impl Plugin` skeleton; this
+project's profile's prose covers the `impl Plugin` skeleton; this
 block's prose fills in the editor closure body.
 
 When `[egui].default_size` is omitted, codegen falls back to
@@ -185,7 +185,7 @@ ui.vertical(|ui| {
 });
 ```
 
-The audio-plugin profile prose covers the audio-thread side
+The project's profile prose covers the audio-thread side
 (allocate `Arc<AtomicF32>` in `initialize()`, write in `process()`).
 
 ### `preset_selector`
@@ -281,7 +281,7 @@ editor reads them with `.load(Relaxed)`. Codegen prose for `metering`
 regions documents this pattern; emission of the audio-thread side
 lives in the user's `process()` body.
 
-## Interaction with audio-plugin + nih-plug conventions
+## Interaction with the project profile + nih-plug conventions
 
 This block describes WHERE controls go. Two siblings fill in WHAT
 goes there:
@@ -296,8 +296,8 @@ goes there:
   regions (the placeholder this block leaves open).
 
 This block is silent on widget rendering, on parameter struct shape,
-on plugin-trait constants, on Cargo.toml shape (the audio-plugin
-profile prose owns crate-type emission). Read those documents for
+on plugin-trait constants, on Cargo.toml shape (the project's profile
+prose owns crate-type emission). Read those documents for
 those concerns.
 
 **Do NOT** emit parameter-widget calls in this block's prose — that's

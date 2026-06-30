@@ -2,7 +2,7 @@
 
 These conventions describe how `[bindings."egui+nih-plug".parameter_widgets]`
 on a module spec maps to Rust source. They layer on top of the
-audio-plugin profile + nih-plug block + egui block prose; concerns
+project's profile + nih-plug block + egui block prose; concerns
 specific to parameter↔widget binding emission live here.
 
 The bridge fills in the parameter-widget calls inside
@@ -306,7 +306,7 @@ The bridge's emission must:
 
 Three concerns this bridge is silent on (handled elsewhere):
 
-- **Crate-type emission.** The audio-plugin profile's prose owns
+- **Crate-type emission.** The project's profile's prose owns
   Cargo.toml shape (cdylib + optional standalone bin). This
   bridge contributes no Cargo.toml content.
 - **Plugin trait skeleton.** The nih-plug block's prose owns the

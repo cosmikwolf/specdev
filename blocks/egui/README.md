@@ -10,13 +10,14 @@ ship a custom UI.
 
 Inline `egui` when your project:
 
-- Ships an audio plugin whose shell module uses egui as the UI
-  toolkit. (Pair with the `nih-plug` block + `egui+nih-plug` bridge
-  for the full plugin-shell + parameter-widget surface.)
 - Has a deterministic editor structure — known panels, known regions
   inside them, known purposes (parameter controls, metering, preset
   selector). egui suits both immediate-mode UIs and dashboard-style
   editors.
+- Ships that editor as a plugin UI. The block targets egui via
+  `nih_plug_egui` today, so its current home is an audio-plugin shell
+  module. (Pair with the `nih-plug` block + `egui+nih-plug` bridge for
+  the full plugin-shell + parameter-widget surface.)
 
 Don't use this block if:
 

@@ -1,7 +1,7 @@
 # nih-plug — Rust codegen conventions
 
 These conventions describe how a `nih-plug` block table on a module
-spec maps to Rust source. They layer on top of the audio-plugin
+spec maps to Rust source. They layer on top of the project's
 profile's `module.conventions.md`; concerns specific to the nih-plug
 framework (parameter-derive, range constructors, smoothers, export
 macros, process-callback shape) live here.
@@ -275,7 +275,7 @@ VST3 SDK code that bloats the binary.
 ## process() body shape
 
 The `process()` callback runs on the host's audio thread under the
-realtime contract spelled out in the audio-plugin profile prose
+realtime contract spelled out in the project's profile prose
 (no alloc, no lock, no log on the hot path). This block adds two
 nih-plug-specific patterns:
 
@@ -356,9 +356,9 @@ implementing `extra_state`/`load_state` manually; out of scope for
 v1 codegen prose. When a project needs custom state, add the impl
 manually in the plugin shell module.
 
-## Interaction with audio-plugin profile conventions
+## Interaction with the project profile conventions
 
-The audio-plugin profile's `module.conventions.md` covers crate-shape
+The project's profile's `module.conventions.md` covers crate-shape
 (cdylib + standalone bin), per-format constants (VST3_CATEGORIES /
 CLAP_FEATURES table per `[plugin].category`), and realtime path
 discipline. This block extends those:
