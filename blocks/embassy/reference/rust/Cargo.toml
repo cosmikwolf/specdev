@@ -1,0 +1,16 @@
+# CI-only reference crate for the embassy block codegen prose.
+# Type-checks the task + channel emission examples in ../../codegen/rust/README.md
+# against the pinned embassy-executor/sync/time API. A no_std cross-target lib:
+# it type-checks without linking an executor/runner. NOT inlined.
+[package]
+name = "embassy-reference"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[lib]
+
+[dependencies]
+embassy-executor = { version = "0.10", features = ["executor-thread", "platform-cortex-m"] }
+embassy-sync = "0.8"
+embassy-time = "0.5"
