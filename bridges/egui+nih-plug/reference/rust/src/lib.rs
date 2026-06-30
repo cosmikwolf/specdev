@@ -11,13 +11,18 @@
 //! every widget construction without linking the GUI backend or running a
 //! plugin, so no `impl Plugin`, editor shell, or export macros are needed.
 //!
-//! Covers the widget kinds whose documented emission type-checks against the
-//! pinned `nih_plug_egui` (`slider`, `button`, `numeric_field`). The remaining
-//! kinds documented in the README type table reference APIs absent from this
-//! pin and are tracked as prose-correctness gaps, not shipped here.
+//! Covers all 8 widget kinds (WIDGET-KIND-V1). Three map to APIs that exist
+//! directly (`slider`/`button`/`numeric_field`); five were corrected to the
+//! pinned `nih_plug_egui` reality (no `ParamButton`/`ParamComboBox`/`Knob`;
+//! `Enum::variants()` yields names; `Param::unit()` not `unit_string()`).
 
 pub mod params;
 
 pub mod button;
+pub mod dropdown;
+pub mod knob;
 pub mod numeric_field;
+pub mod radio_group;
 pub mod slider;
+pub mod toggle;
+pub mod value_display;

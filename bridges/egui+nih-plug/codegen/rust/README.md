@@ -15,15 +15,14 @@ source block knows about the other.
 
 This bridge contributes no new crates. It composes against:
 
-- `nih_plug` (from the `nih-plug` block) — provides
-  `widgets::ParamSlider`, `widgets::ParamButton`, `Setter`, parameter
-  types.
-- `nih_plug_egui` (from the `egui` block) — provides the editor
-  closure context (`ctx`, `setter`, `state`).
-- `egui_extras` (project-level dep) — provides knob primitives. Add
-  this to the project's `architecture.toml` `[[external_deps]]` when
-  the binding set uses `widget_kind = "knob"`. The bridge's prose
-  references it but does NOT pull it in (project decision).
+- `nih_plug` (from the `nih-plug` block) — provides `ParamSetter`,
+  parameter types (`FloatParam`/`IntParam`/`BoolParam`/`EnumParam`), and
+  the `Enum` trait (`variants()` / `from_index()` / `to_index()`).
+- `nih_plug_egui` (from the `egui` block) — provides the editor closure
+  context (`ctx`, `setter`, `state`) and `widgets::ParamSlider` (the only
+  parameter widget it ships: there is **no** `ParamButton` or
+  `ParamComboBox`, so `toggle`/`dropdown` use plain egui widgets + the
+  setter — see those kinds below).
 
 ## Editor closure plumbing
 
@@ -72,18 +71,17 @@ different label placement.
 
 ```rust
 ui.label(<param.name>);
-ui.add(
-    egui_extras::widgets::Knob::new(&mut self.params.<param.id>, setter)
-        .with_range(/* derived from FloatRange */)
-);
+// No rotary knob primitive exists in the pinned stack: emit a ParamSlider
+// fallback (style as a narrow vertical slider if a rotary look is wanted).
+ui.add(widgets::ParamSlider::for_param(&self.params.<param.id>, setter));
 ui.end_row();
 ```
 
-`egui_extras` is not on crates.io with a knob primitive in all
-versions; if absent, fall back to `widgets::ParamSlider::for_param`
-styled rotary (a vertical slider with smaller width is often a
-sensible substitute). Document the dep in the project's
-architecture.toml.
+There is no rotary knob primitive in the pinned `nih_plug_egui` /
+`egui_extras`, so `knob` renders as a `widgets::ParamSlider` (the same
+automation-aware slider as `slider`, optionally styled narrow/vertical).
+If a future `egui_extras` adds a knob widget, swap the call and document
+the dep in the project's architecture.toml.
 
 ### `slider` — float / int parameter, linear
 
@@ -102,11 +100,19 @@ host-aware. Emits horizontally; for a vertical slider, use
 
 ```rust
 ui.label(<param.name>);
-ui.add(widgets::ParamButton::for_param(&self.params.<param.id>, setter));
+let mut value = self.params.<param.id>.value();
+if ui.checkbox(&mut value, <param.name>).changed() {
+    setter.begin_set_parameter(&self.params.<param.id>);
+    setter.set_parameter(&self.params.<param.id>, value);
+    setter.end_set_parameter(&self.params.<param.id>);
+}
 ui.end_row();
 ```
 
-`ParamButton` renders as a press-to-toggle button (sticky on/off).
+`nih_plug_egui` ships no `ParamButton`, so a sticky bool toggle is a
+plain egui `checkbox` wired through the `setter` (begin/set/end) so host
+automation observes the change. (`egui::Checkbox`/`toggle_value` are
+alternatives with the same setter plumbing.)
 
 ### `button` — bool parameter, momentary
 
@@ -137,21 +143,39 @@ handle the rapid-fire on/off pattern.
 
 ```rust
 ui.label(<param.name>);
-ui.add(widgets::ParamComboBox::for_param(&self.params.<param.id>, setter));
+let mut current = self.params.<param.id>.value();
+let names = <EnumType>::variants();
+egui::ComboBox::from_label(<param.name>)
+    .selected_text(names[current.to_index()])
+    .show_ui(ui, |ui| {
+        for (i, name) in names.iter().enumerate() {
+            let variant = <EnumType>::from_index(i);
+            if ui.selectable_value(&mut current, variant, *name).clicked() {
+                setter.begin_set_parameter(&self.params.<param.id>);
+                setter.set_parameter(&self.params.<param.id>, current);
+                setter.end_set_parameter(&self.params.<param.id>);
+            }
+        }
+    });
 ui.end_row();
 ```
 
-Where `ParamComboBox` is available; if not, fall back to a hand-rolled
-`egui::ComboBox` driven by the `Enum` derive.
+`nih_plug_egui` ships no `ParamComboBox`, so a collapsed enum selector is
+a hand-rolled `egui::ComboBox` driven by the `#[derive(Enum)]` type.
+`Enum::variants()` yields the variant *names* (`&[&str]`); reconstruct
+each value with `Enum::from_index(i)` and map the current value to its
+label via `to_index()`.
 
 ### `radio_group` — enum parameter, expanded
 
 ```rust
 ui.label(<param.name>);
+let mut current = self.params.<param.id>.value();
+let names = <EnumType>::variants();
 ui.horizontal(|ui| {
-    let current = self.params.<param.id>.value();
-    for variant in <EnumType>::variants() {
-        if ui.radio_value(&mut current, variant, variant.to_string()).clicked() {
+    for (i, name) in names.iter().enumerate() {
+        let variant = <EnumType>::from_index(i);
+        if ui.radio_value(&mut current, variant, *name).clicked() {
             setter.begin_set_parameter(&self.params.<param.id>);
             setter.set_parameter(&self.params.<param.id>, variant);
             setter.end_set_parameter(&self.params.<param.id>);
@@ -162,8 +186,11 @@ ui.end_row();
 ```
 
 `<EnumType>` is the parameter's enum type from the nih-plug block's
-emission (`#[derive(Enum)] pub enum FilterType { ... }`). The
-`variants()` method comes from `nih_plug::params::enums::Enum`.
+emission (`#[derive(Enum)] pub enum FilterType { ... }`).
+`Enum::variants()` (from `nih_plug::params::enums::Enum`) yields the
+variant *names* as `&[&str]`, NOT the enum values — iterate by index and
+reconstruct each value with `Enum::from_index(i)`. Use `let mut current`
+(`radio_value` takes `&mut`).
 
 ### `numeric_field` — float / int parameter, typed entry
 
@@ -194,7 +221,7 @@ ui.label(<param.name>);
 ui.label(format!(
     "{}{}",
     self.params.<param.id>.value(),
-    self.params.<param.id>.unit_string(),
+    self.params.<param.id>.unit(),
 ));
 ui.end_row();
 ```
