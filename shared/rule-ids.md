@@ -40,7 +40,7 @@ Distinct from rule names, the analyzer emits framework-level codes that are NOT 
 | `METASCHEMA-001..005` | Inlined block/bridge schema is misshapen (kind grammar, `extends`, etc.). |
 | `AGGREGATOR-005` | The aggregator failed to compile after inline. |
 | `DOMAIN-003`, `REDUCE_UNRESOLVED` | A reduction's `extends` chain or relation endpoint references a kind/name that doesn't exist. |
-| `BLOCK-LINT-001..007`, `BRIDGE-LEX-001` | Plugin-author-time lint codes (run via `specdev-analyzer plugin-lint --plugin <root>`). |
+| `BLOCK-LINT-001..007`, `BRIDGE-LEX-001`, `REF-COVERAGE-001`, `REF-ARITY-001`, `PROSE-PROFILE-001` | Plugin-author-time lint codes (run via `specdev-analyzer plugin-lint --plugin <root>`). `REF-COVERAGE-001`/`REF-ARITY-001` = reference-crate coverage + generic-arity consistency; `PROSE-PROFILE-001` = inlined codegen prose must not name a profile. |
 | `BOOTSTRAP-001..002`, `INLINE-001..003`, `MERGE-001..003`, `PLUGIN-001`, `LINEAGE-001`, `DRIFT-INVARIANT-001..003` | Build-time CLI errors (returned as exit-2). |
 
 These codes are stable across profiles and live in the analyzer source (`specdev-analyzer/src/lib.rs` docstring).
