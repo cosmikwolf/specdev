@@ -149,8 +149,11 @@ accept them.
   `target = <triple>` in `.cargo/config.toml`) vs `std` host-target (GUI/host
   blocks like egui/nih-plug → a plain host lib). Pick from the blocks' nature;
   the invariant is "a lib that **type-checks without link**," not embedded-ness.
-  A coherent bridge's two endpoint blocks **share** a nature (both embedded, or
-  both host). If they *disagree* (one embedded, one host), the reference target is
+  Add a `target = <triple>` **only if a dep forces it** (a chip-specific HAL that
+  won't build for the host); a portable `no_std` pairing type-checks on the host
+  with no triple — `#![no_std]` is independent of the target, so do not assume
+  `no_std` ⇒ cross-target. A coherent bridge's two endpoint blocks **share** a
+  nature (both embedded, or both host). If they *disagree* (one embedded, one host), the reference target is
   ambiguous **because the pairing itself is almost certainly incoherent** — treat
   that as a sharp-test signal to reconsider whether this bridge should exist,
   rather than picking a nature by fiat.
@@ -239,8 +242,11 @@ This is the payoff — catch the bug now.
    - `BRIDGE-LEX-001` — directory / `$id` / references lex-ordered.
    - `REF-COVERAGE-001` — each `reference_cases.yaml` name has a
      `reference/<lang>/src/<name>.rs`.
-   - `REF-ARITY-001` — every generic type the README names is used at the same
-     generic arity as in the compiled reference source.
+   - `REF-ARITY-001` — matched **by base type name**: for each base name in the
+     reference source (`I2c`, `Vec`, …), every occurrence in the README must use
+     the same number of generic args (only names present in the reference are
+     checked, so README-only types never false-flag). Keep the type text identical
+     between README and reference source.
    - `PROSE-PROFILE-001` — no profile name in the inlined `codegen/<lang>/README.md`.
    - bridge structural checks (schema standalone-compiles, `entities: []`, etc.).
 
