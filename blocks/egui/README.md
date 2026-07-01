@@ -89,8 +89,7 @@ Reduction kinds (after inline):
   Qualified name is `<ModuleName>.<region_id>`.
 
 Reduction relation (intra-block — this is the first block in the arc
-to declare its own relation; precedent recorded in
-`18-authoring-recipes.md`):
+to declare its own relation):
 
 - `egui.region_in_panel` (extends `depends_on`) — Region → Panel.
   Materialized from each region's `panel` field. The reducer's

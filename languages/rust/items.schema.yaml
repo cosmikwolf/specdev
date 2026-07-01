@@ -10,8 +10,8 @@ description: >
   concern (e.g. `mod_item` is excluded — modules are spec entities, not
   items).
 
-  v1 covers the 12 kinds named in `000-items-design-conversation-2026-05-01.md`
-  §9. Sparseness rule: every `Item` carries `satisfies` (≥1 entry) except
+  v1 covers 12 item kinds (the `kind` enum below). Sparseness rule: every
+  `Item` carries `satisfies` (≥1 entry) except
   `kind = "re_export"`, where the inherently-contractual nature of a `pub
   use` makes `satisfies` optional.
 
