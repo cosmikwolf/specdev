@@ -17,6 +17,21 @@ populated `<layer>` as a `mod` and re-exports public items per the
 project's idiom. Do **not** emit a `mod.rs` unless multiple modules
 share the same parent layer.
 
+**Crate root — binary vs library member.** The crate root form follows
+`spec.toml`'s `[project].crate_shape`:
+
+- Default / `crate_shape = "binary"` → the crate is an embedded binary. The
+  entry point is `src/main.rs` (`#![no_std]` + `#![no_main]`, the runtime's
+  entry attribute, and any `bind_interrupts!` the architecture/bridge prose
+  prescribes). This is the app package of a workspace.
+- `crate_shape = "library"` → the crate is a `no_std` **library** member
+  (a driver / HAL-shim borrowed by a sibling crate). The crate root is
+  `src/lib.rs`: `#![no_std]`, `mod <layer>;` for each populated layer, and
+  `pub use` re-exports of the public items other crates consume. Emit **no**
+  `#![no_main]`, no entry attribute, no `bind_interrupts!`, and no panic
+  handler — those belong to the binary that links this library. The
+  Cargo.toml `[lib]` target is rendered automatically from `crate_shape`.
+
 ```text
 src/
   lib.rs              # mod hal; mod drivers; mod application;
