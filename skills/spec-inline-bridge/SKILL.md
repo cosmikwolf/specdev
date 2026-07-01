@@ -76,5 +76,5 @@ Report:
 ## What this skill does NOT do
 
 - **Inline blocks.** Use `/spec-inline`.
-- **Author project-local bridges.** Project-local bridges live under `specs/specdev/schemas/inlined/bridges/<a>+<b>.schema.yaml` + `specs/specdev/reductions/bridges/local/<a>+<b>.yaml` and are hand-authored — see the relevant section in `15-blocks-and-bridges.md`. This skill only handles canonical (plugin-shipped) bridges.
+- **Author project-local bridges.** Project-local bridges live under `specs/specdev/schemas/inlined/bridges/<a>+<b>.schema.yaml` + `specs/specdev/reductions/bridges/local/<a>+<b>.yaml` and are hand-authored per project. This skill only handles canonical (plugin-shipped) bridges.
 - **Edit module-spec `bindings` after the bridge inline.** Use `/spec-edit <module>` or hand-edit the module TOML.
