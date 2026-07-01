@@ -276,3 +276,9 @@ Rust keywords (fold an `enum`-like case into a combined file). Declare only the
 cases you actually ship a compiled example for — documenting more kinds in the
 README than you build is the *completeness* gap (surfaced by plugin CI / this
 skill), which is fine and separate from the coverage/arity consistency checks.
+
+**Match the README (`REF-ARITY-001`):** the check compares generic arity **by base
+type name** between the README and these reference sources — write the type text
+identically in both (`I2c<'static, Async, Master>` in the README ⇒ the same here).
+**Also commit** a `.gitignore` (ignoring `target/`) and the resolved `Cargo.lock`,
+as the shipped reference crates do, for reproducible CI.
