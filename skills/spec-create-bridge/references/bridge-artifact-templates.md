@@ -62,8 +62,11 @@ $defs:
 
 **Invariants:** `$id` matches the directory (`<a>+<b>.v1`); the single
 `bindings.<a>+<b>` namespace key; `additionalProperties: false` on the table
-body; endpoint patterns inlined (never `$ref` a profile's `enums.schema.yaml` —
-the bridge must compose against any profile carrying both blocks).
+body; endpoint patterns **self-contained** — never `$ref` a profile's
+`enums.schema.yaml` (the bridge must compose against any profile carrying both
+blocks). "Self-contained" allows either style, and the two shipped bridges differ:
+a local `$defs` + `$ref` (as above), **or** a literal `pattern:` on each property
+(no `$defs`). Both lint clean; the only rule is *never `$ref` a profile enum*.
 
 ---
 
@@ -83,8 +86,8 @@ entities: []
 relations:
   - kind: <relation>                    # TODO: semantic name, e.g. peripheral_owned_by
     extends: depends_on                 # a canonical relation kind
-    from_kind: <a>.<Entity>             # TODO: path-qualified — read the block's reduction.yaml
-    to_kind: <b>.<Entity>               # TODO: path-qualified
+    from_kind: <a-dir>.<Entity>         # qualifier = block DIR name (may be hyphenated: nih-plug.Parameter)
+    to_kind: <b-dir>.<Entity>           # NOT the underscore table key — see the trap in Invariants below
     from_spec: "specs/modules/*.toml"
     for_each: 'bindings."<a>+<b>".<table>[]'   # quoted bridge segment (path-selector strips the quotes)
     endpoints:
@@ -95,11 +98,20 @@ relations:
 ```
 
 **Invariants:** `entities: []` always; exactly the relations, each `extends` a
-canonical kind; `from_kind`/`to_kind` **path-qualified** to the source blocks;
-`for_each` uses the quoted `"<a>+<b>"` segment; `endpoints` interpolate
-`${root.name}` (co-residency makes endpoints intra-module). A binding that
-references a nonexistent block entity surfaces as `REDUCE_UNRESOLVED` at
+canonical kind; `for_each` uses the quoted `"<a>+<b>"` segment; `endpoints`
+interpolate `${root.name}` (co-residency makes endpoints intra-module). A binding
+that references a nonexistent block entity surfaces as `REDUCE_UNRESOLVED` at
 validate — no new graph-check primitive needed.
+
+⚠️ **Hyphen/underscore trap on `from_kind`/`to_kind`.** These are qualified by the
+block's **directory name** — which may be hyphenated (`nih-plug.Parameter`,
+`stm32h5-rs.Peripheral`). That is a *different string* from the schema **table
+key**, which is often the underscore form (`nih_plug`) and is what the `for_each`
+path and the binding fields use (`bindings."<a>+<b>"` +
+`<a-dir-underscored>.<table>[]`). The block's `reduction.yaml` gives you the
+`<Entity>` kind (e.g. `Parameter`), **not** the qualifier — take the qualifier
+from the block directory name. Getting this wrong yields a silent
+`REDUCE_UNRESOLVED` (the kind never resolves), not a schema error.
 
 ---
 
@@ -109,7 +121,7 @@ validate — no new graph-check primitive needed.
 # Manifest — <a>+<b> bridge dispatch contract.
 # Schema: specdev-analyzer/src/embedded/bridge_contract.schema.yaml.
 
-binding_locality: endpoint_module        # v1: same-module co-residency
+binding_locality: endpoint_module        # closed enum — pick per the two values below
 
 diagnostic_template: |
   the {bridge_name} bridge requires intra-module wiring:
@@ -118,7 +130,20 @@ diagnostic_template: |
 ```
 
 The endpoint pair is encoded in the directory name — do not restate it in the
-body. `{bridge_name}` is substituted by the analyzer.
+body. `binding_locality` is a **closed 2-value enum** — pick by *where the bound
+entities live*, not by copying whichever precedent you happened to open:
+
+- `endpoint_module` — both endpoints on the **same** module that carries the
+  bindings (intra-module; the template above fits this case). Precedent:
+  `embassy+stm32h5-rs`.
+- `plugin_shell_unique` — the binding targets the project's **single
+  `plugin_shell`-layer module** (auto-resolves when exactly one exists).
+  Precedent: `egui+nih-plug` — whose `diagnostic_template` reads very differently
+  and substitutes `{parameter}` / `{decl_module}` / `{binding_module}`.
+
+`diagnostic_template` may substitute `{bridge_name}`, `{parameter}`,
+`{decl_module}`, `{binding_module}`. Copy the template from **the precedent whose
+`binding_locality` you chose**, not the other one.
 
 ---
 

@@ -104,19 +104,36 @@ accept them.
   table.
 
 - **The relation.** The reduction materializes one relation per binding entry:
-  - `from_kind` / `to_kind` — **path-qualified** entity kinds in the source
-    blocks (e.g. `stm32h5-rs.Peripheral`, `embassy.Task`). Read each block's
-    `reduction.yaml` to get the exact entity-kind names — do not guess them.
+  - `from_kind` / `to_kind` — **path-qualified** entity kinds, `<block-dir>.<Kind>`.
+    ⚠️ **Hyphen-vs-underscore trap:** the qualifier is the block's **directory
+    name**, which may be hyphenated (`nih-plug.Parameter`, `stm32h5-rs.Peripheral`) —
+    **not** the schema table key, which is often the underscore form (`nih_plug`).
+    The entity qualifier uses the hyphenated dir name; the `for_each` path and the
+    binding fields (below) use the underscore table key
+    (`bindings."<a>+<b>"` + `nih_plug.parameters[]`). Read each block's
+    `reduction.yaml` for the exact `<Kind>` (e.g. `Parameter`, `Task`) — the
+    reduction gives you the kind but *not* the qualifier, so take the qualifier
+    from the block's directory name.
   - direction — semantic; "X uses Y" reads as `X → Y`.
   - `extends` — a canonical relation, almost always `depends_on` (so the
     existing acyclic / layer / reachability graph-checks run over the wiring
     with zero domain knowledge).
   - `attrs` — which binding fields become relation attributes.
 
-- **binding_locality + diagnostic_template** (`contract.yaml`). v1 default is
-  same-module co-residency (`endpoint_module`); the `diagnostic_template` is the
-  `{bridge_name}`-substituted message emitted when a binding's endpoints are not
-  co-resident. Copy a precedent and adjust the wording.
+- **binding_locality + diagnostic_template** (`contract.yaml`). `binding_locality`
+  is a **closed 2-value enum** — pick by *where the bound entities live*, not by
+  copying a precedent (the two shipped bridges legitimately differ):
+  - `endpoint_module` — both endpoints are ordinary per-module tables declared on
+    the **same** module that carries the bindings (intra-module co-residency). The
+    common case (`embassy+stm32h5-rs`: a Task + a Peripheral on one module).
+  - `plugin_shell_unique` — the binding targets the project's **single
+    `plugin_shell`-layer module**; auto-resolves when exactly one such module
+    exists (`egui+nih-plug`: a Region → a Parameter, both on the plugin shell).
+  The `diagnostic_template` is the `hint:` line appended to a REDUCE_UNRESOLVED
+  finding; it may substitute `{bridge_name}`, `{parameter}`, `{decl_module}`,
+  `{binding_module}`. Choose the value that matches your wiring, then copy **that**
+  precedent's template and adjust the wording (an `endpoint_module` template and a
+  `plugin_shell_unique` template read very differently).
 
 - **The discrete case set (reference vocabulary).** What is the finite set of
   worked-example cases this bridge's codegen prose covers (peripheral kinds,
@@ -132,6 +149,11 @@ accept them.
   `target = <triple>` in `.cargo/config.toml`) vs `std` host-target (GUI/host
   blocks like egui/nih-plug → a plain host lib). Pick from the blocks' nature;
   the invariant is "a lib that **type-checks without link**," not embedded-ness.
+  A coherent bridge's two endpoint blocks **share** a nature (both embedded, or
+  both host). If they *disagree* (one embedded, one host), the reference target is
+  ambiguous **because the pairing itself is almost certainly incoherent** — treat
+  that as a sharp-test signal to reconsider whether this bridge should exist,
+  rather than picking a nature by fiat.
 
 ## Step 2 — resolve the REAL API (the load-bearing step)
 
@@ -221,6 +243,12 @@ This is the payoff — catch the bug now.
      generic arity as in the compiled reference source.
    - `PROSE-PROFILE-001` — no profile name in the inlined `codegen/<lang>/README.md`.
    - bridge structural checks (schema standalone-compiles, `entities: []`, etc.).
+
+   `REF-ARITY-001` is a README↔reference **consistency** check only: it confirms
+   the two *agree* on generic arity, not that the types are real. The **Step 4.1
+   compile is the correctness gate** — an internally-consistent but wrong
+   reference passes arity yet fails the build. Never read a clean `REF-ARITY-001`
+   as "the API is correct"; that is what the compile is for.
 
    Surface any finding verbatim and fix the scaffold; re-run until clean.
 
