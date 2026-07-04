@@ -100,8 +100,8 @@ $defs:
 
   ValueTransform:
     description: |
-      Closed set of six named transforms plus a `custom` escape hatch
-     . Discriminated on `kind`.
+      Closed set of six named transforms plus a `custom` escape hatch.
+      Discriminated on `kind`.
 
         identity       — pass through unchanged.
         clamp          — `value.clamp(min, max)`.
