@@ -71,6 +71,12 @@ output      = false
 note_events = true
 cc_events   = false
 
+# Optional — only when the plugin handles SysEx (e.g. patch dumps).
+# Requires input = true to receive (output = true to send).
+[nih_plug.midi.sysex]
+max_message_len = 4104        # bytes, incl. 0xF0…0xF7 (DX7 bank dump)
+message_type    = "Dx7Dump"   # optional; default <PluginType>SysEx
+
 [nih_plug.process]
 mode             = "realtime"  # realtime | offline_capable
 block_size_max   = 4096        # optional
@@ -85,7 +91,9 @@ Reduction kinds (after inline):
   `[[nih_plug.audio_ports]]`.
 - `nih-plug.MidiConfig` (extends `Module`) — at most one per module
   (the `[nih_plug.midi]` singleton). Qualified name is
-  `<ModuleName>.midi`.
+  `<ModuleName>.midi`. Its optional `sysex` subtable is NOT surfaced as
+  graph attributes — like `ProcessConfig`, it's a nameless config
+  singleton that only codegen reads.
 - `ProcessConfig` is intentionally NOT materialized as an entity —
   it carries no name and no graph check needs to reach into it;
   codegen prose reads it directly from the module's TOML.
@@ -114,13 +122,12 @@ preallocation patterns in `initialize()`.
 
 ## Deferred (revisit triggers per §12)
 
-- **Sysex handling.** v1 wires `MIDI_INPUT::Basic`; sysex requires
-  `MIDI_INPUT::MidiAndMpe` or `MidiSysEx` plus `type SysExMessage`
-  beyond `()`. Promote when a real sysex-needing plugin shows up.
 - **Background tasks.** `type BackgroundTask` is `()` in v1; nih-plug
   supports per-plugin background-thread work for things like preset
   loading. Promote when authoring a plugin with non-trivial deferred
-  work.
+  work. (This is the natural home for decoding a SysEx patch dump off
+  the audio thread — see `[nih_plug.midi.sysex]` below, whose codegen
+  hands the raw frame to the engine but leaves the parse to the user.)
 - **Custom state save/load.** `extra_state` / `load_state` for state
   beyond the parameter set is hand-authored in the plugin shell
   module today. Promote to a typed `[nih_plug.state]` subtable when
