@@ -66,13 +66,11 @@ channel_count = 2
 kind          = "main"         # main | aux | sidechain
 
 [nih_plug.midi]
-input       = true
-output      = false
-note_events = true
-cc_events   = false
+input_level  = "midi_ccs"   # none | basic | midi_ccs
+output_level = "none"       # (midi_ccs delivers CC + pitch-bend events)
 
 # Optional — only when the plugin handles SysEx (e.g. patch dumps).
-# Requires input = true to receive (output = true to send).
+# Requires input_level or output_level at "basic" or higher.
 [nih_plug.midi.sysex]
 max_message_len = 4104        # bytes, incl. 0xF0…0xF7 (DX7 bank dump)
 message_type    = "Dx7Dump"   # optional; default <PluginType>SysEx

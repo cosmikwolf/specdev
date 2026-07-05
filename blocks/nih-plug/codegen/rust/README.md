@@ -190,8 +190,8 @@ impl Plugin for MyPlugin {
         // populated from [audio] + [[nih_plug.audio_ports]] (see below)
     ];
 
-    const MIDI_INPUT: MidiConfig  = /* [nih_plug.midi].input ? Basic : None */;
-    const MIDI_OUTPUT: MidiConfig = /* [nih_plug.midi].output ? Basic : None */;
+    const MIDI_INPUT: MidiConfig  = /* [nih_plug.midi].input_level  → None|Basic|MidiCCs */;
+    const MIDI_OUTPUT: MidiConfig = /* [nih_plug.midi].output_level → None|Basic|MidiCCs */;
 
     const SAMPLE_ACCURATE_AUTOMATION: bool = true;
 
@@ -323,6 +323,44 @@ Two rules:
 note release) needs to keep running after note-off. nih-plug uses
 this to prevent the host from sleeping the plugin.
 
+## MIDI input / output levels
+
+`[nih_plug.midi].input_level` / `output_level` map 1:1 to nih-plug's
+`MidiConfig` (three levels — there is no `MidiAndMpe` / `MidiSysEx`
+variant):
+
+| level      | `MidiConfig` const   | delivers                                    |
+|------------|----------------------|---------------------------------------------|
+| `none`     | `MidiConfig::None`   | nothing (no MIDI port on this direction)    |
+| `basic`    | `MidiConfig::Basic`  | note on/off/choke + pressure; SysEx capable |
+| `midi_ccs` | `MidiConfig::MidiCCs`| `basic` + full MIDI CC + pitch-bend events  |
+
+```rust
+const MIDI_INPUT: MidiConfig  = MidiConfig::MidiCCs; // from input_level
+const MIDI_OUTPUT: MidiConfig = MidiConfig::None;    // from output_level
+```
+
+CC and pitch-bend events are delivered in `process()` **only** at
+`midi_ccs` (they do not arrive at `basic`). Drain them alongside notes:
+
+```rust
+while let Some(event) = context.next_event() {
+    match event {
+        NoteEvent::MidiCC { timing, channel, cc, value } => {
+            // `value` is normalized to [0, 1] (× 127 for the raw 0..=127).
+            // See nih_plug::midi::control_change for named CC numbers.
+        }
+        NoteEvent::MidiPitchBend { timing, channel, value } => { /* ... */ }
+        NoteEvent::NoteOn { .. } => { /* ... */ }
+        _ => {}
+    }
+}
+```
+
+If the spec sets `midi_ccs`, the plugin author is responsible for the
+CC-handling body — codegen wires the level and the drain skeleton, the
+mapping of CC → engine state is user code (the `process()` body rule).
+
 ## SysEx message handling
 
 By default `type SysExMessage = ();` — the plugin ignores system-
@@ -335,8 +373,9 @@ Two facts fix the shape (verified against pinned nih-plug's
 
 - **`MidiConfig::Basic` is the level that carries SysEx** — there is no
   `MidiAndMpe` or `MidiSysEx` variant. Receiving SysEx needs
-  `[nih_plug.midi] input = true` (⇒ `MIDI_INPUT = Basic`); sending needs
-  `output = true` (⇒ `MIDI_OUTPUT = Basic`).
+  `input_level = "basic"` (or `"midi_ccs"`); sending needs
+  `output_level` at `"basic"` or higher. The schema enforces that at
+  least one direction is `basic`+ whenever `sysex` is present.
 - **The `SysExMessage::Buffer` associated type is `[u8; N]`** with `N` a
   compile-time constant — hence `max_message_len` is a required spec
   field, not a codegen placeholder.
