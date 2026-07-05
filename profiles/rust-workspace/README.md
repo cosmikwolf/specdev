@@ -38,6 +38,60 @@ specdev-analyzer bootstrap \
 #      shared package fields under [workspace_package]
 ```
 
+## Adopting an existing single-crate project as a member
+
+You have a *validated* single-crate project (`library-api`,
+`firmware-layered`, or `audio-plugin`) and want to make it the first
+member of a new workspace. There is no skill for this yet; the move is
+manual and **ordering-sensitive** — `bootstrap` refuses a target whose
+`specs/specdev/` already exists (`BOOTSTRAP-001`), so the single-crate
+baseline must leave the root *before* you bootstrap the workspace shell
+there.
+
+The move is clean because the tree is already partitioned the right
+way: the id-bearing baseline (`spec.toml`, `specs/requirements.toml`,
+`specs/decisions.toml`, `specs/open_questions.toml`,
+`specs/architecture.toml`, `specs/modules/`) and the member's own
+machinery (`specs/specdev/`) all relocate together, and every path
+resolves relative to the member's `spec.toml` — so a moved member
+validates standalone (bidirectional minimality, above). Move the whole
+tree; do not bootstrap the member fresh and clobber it.
+
+```bash
+# From the existing single-crate project root:
+
+# 1. Move the ENTIRE spec tree + marker into a member slot. `git mv` is a
+#    byte-preserving rename, so requirement / decision / open-question ids
+#    come along verbatim. This also frees the root of specs/specdev/,
+#    which step 2 requires.
+mkdir -p crates/<member-name>
+git mv spec.toml crates/<member-name>/spec.toml
+git mv specs     crates/<member-name>/specs
+#    (repeat for any other pre-existing crate you're folding in)
+
+# 2. The root is now clear. Bootstrap the workspace shell here:
+specdev-analyzer bootstrap \
+  --profile rust-workspace --language rust --name <project-name> .
+
+# 3. Wire the member into the workspace (same as a fresh member):
+#    - append [[workspace.members]] { name, path = "crates/<member-name>" }
+#      to the root spec.toml
+#    - declare hoisted deps / shared package fields in
+#      specs/architecture.toml
+#    - (optional) opt the member into inheritance: omit the inherited
+#      [project] fields and set source = "workspace" on shared deps
+
+# 4. Validate the member tree and the root:
+specdev-analyzer validate --project crates/<member-name>
+specdev-analyzer validate --project .
+```
+
+**Ordering trap:** if step 2 runs while the root still holds a
+single-crate `specs/specdev/`, it fails with `BOOTSTRAP-001`. Move the
+baseline out (step 1) first. If the adopted crate's inlined schemas
+predate the current plugin, run `specdev-analyzer migrate` on the
+member after step 1 to refresh its machinery without disturbing ids.
+
 ## Composition with member profiles
 
 The workspace profile carries no module / requirement / feature surface
