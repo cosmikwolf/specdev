@@ -195,7 +195,7 @@ impl Plugin for MyPlugin {
 
     const SAMPLE_ACCURATE_AUTOMATION: bool = true;
 
-    type SysExMessage = ();
+    type SysExMessage = ();  /* or the sysex message type — see "SysEx message handling" */
     type BackgroundTask = ();
 
     fn params(&self) -> Arc<dyn Params> {
@@ -322,6 +322,88 @@ Two rules:
 `ProcessStatus::KeepAlive` only when the plugin's tail (reverb decay,
 note release) needs to keep running after note-off. nih-plug uses
 this to prevent the host from sleeping the plugin.
+
+## SysEx message handling
+
+By default `type SysExMessage = ();` — the plugin ignores system-
+exclusive messages. When the plugin shell module declares a
+`[nih_plug.midi.sysex]` subtable, codegen emits a real SysEx message
+type and wires it into the plugin trait.
+
+Two facts fix the shape (verified against pinned nih-plug's
+`src/midi.rs` / `src/midi/sysex.rs`):
+
+- **`MidiConfig::Basic` is the level that carries SysEx** — there is no
+  `MidiAndMpe` or `MidiSysEx` variant. Receiving SysEx needs
+  `[nih_plug.midi] input = true` (⇒ `MIDI_INPUT = Basic`); sending needs
+  `output = true` (⇒ `MIDI_OUTPUT = Basic`).
+- **The `SysExMessage::Buffer` associated type is `[u8; N]`** with `N` a
+  compile-time constant — hence `max_message_len` is a required spec
+  field, not a codegen placeholder.
+
+Emit a message type named by `sysex.message_type` (default
+`<PluginType>SysEx`) implementing `nih_plug::midi::SysExMessage`. The
+byte buffer is the RAW SysEx frame — it includes the `0xF0` start and
+`0xF7` end bytes:
+
+```rust
+use nih_plug::prelude::*;
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Dx7Dump {
+    /// Raw frame, 0xF0 … 0xF7 inclusive.
+    pub raw: [u8; 4104],   // = sysex.max_message_len
+    pub len: usize,
+}
+
+impl SysExMessage for Dx7Dump {
+    // From sysex.max_message_len — must be a const array length.
+    type Buffer = [u8; 4104];
+
+    fn from_buffer(buffer: &[u8]) -> Option<Self> {
+        // Cheaply recognize + copy the frame; return None for SysEx you
+        // don't handle so nih-plug leaves it untouched. Do NOT do the
+        // real DX7 voice/bank decode here — that belongs in the engine
+        // crate, off the audio thread (see below).
+        let mut raw = [0u8; 4104];
+        let len = buffer.len().min(raw.len());
+        raw[..len].copy_from_slice(&buffer[..len]);
+        Some(Self { raw, len })
+    }
+
+    fn to_buffer(self) -> (Self::Buffer, usize) {
+        (self.raw, self.len)
+    }
+}
+```
+
+Set the associated type on the plugin impl (replacing the `()` default):
+
+```rust
+type SysExMessage = Dx7Dump;
+```
+
+Drain SysEx alongside notes at the top of `process()`. Incoming/outgoing
+events are `PluginNoteEvent<Self>` = `NoteEvent<Self::SysExMessage>`, so
+the `message` field is your message type:
+
+```rust
+while let Some(event) = context.next_event() {
+    match event {
+        NoteEvent::MidiSysEx { timing, message } => {
+            // `message: Dx7Dump` — hand the raw bytes to the engine.
+            // If the parse allocates, post it to a background task
+            // rather than decoding on the audio thread.
+        }
+        NoteEvent::NoteOn { .. } => { /* ... */ }
+        _ => {}
+    }
+}
+```
+
+To **send** SysEx, construct the message and push it with
+`context.send_event(NoteEvent::MidiSysEx { timing, message })`; nih-plug
+serializes it via `to_buffer`.
 
 ## initialize() for preallocation
 

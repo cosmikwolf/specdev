@@ -4,3 +4,4 @@
 //! `../codegen/rust/README.md` against pinned nih-plug. A std host-target lib:
 //! it type-checks parameter construction without running a plugin. CI-only.
 pub mod params;
+pub mod sysex;
