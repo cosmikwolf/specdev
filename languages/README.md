@@ -13,6 +13,7 @@ For each language `<lang>`:
 
 - `rust/items.schema.yaml` — used by `extract-items` and by Rust profile module schemas.
 - `c/`, `cpp/` — `items.schema.yaml` for C is on the roadmap; current artifacts cover the existing tree-sitter-backed adapters.
+- `dart/` — `audit.scm`, `syntax.md`, `build.md` (pub/flutter toolchain); `items.schema.yaml` + `items.scm` are the next step for this tier.
 
 ## Sparseness rule
 
