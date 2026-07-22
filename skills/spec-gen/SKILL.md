@@ -132,17 +132,17 @@ Do not modify files outside the auto-generated regions. If hand-written code alr
 
 When the target file already exists from a prior generation run, read it before emitting and **minimize the diff**: preserve code that is still spec-equivalent verbatim, and change only what the spec change actually requires. Do not reorder, rename, or rephrase code the spec doesn't force to change — gratuitous churn makes the gen-lineage record (Step 6.5) and the user's VCS history useless for spotting real changes.
 
-## Step 6 — emit Cargo.toml
+## Step 6 — emit the build manifest
 
 ```sh
-specdev-analyzer cargo-toml --output Cargo.toml
+specdev-analyzer manifest --write
 ```
 
-The analyzer renders Cargo.toml deterministically from `spec.toml [project]` + `architecture.toml` (`[platform]`, `[runtime]`, `[logger]`, `[[external_deps]]`, `[msrv]`, `[[features]]`) + per-module `external_deps[]`. Lex-sorted; byte-stable.
+The analyzer renders the project's build manifest deterministically from the spec, dispatching on `[project].language` and writing the language's canonical filename in the project root — `Cargo.toml` for rust (from `spec.toml [project]` + `architecture.toml` `[platform]`/`[runtime]`/`[logger]`/`[[external_deps]]`/`[msrv]`/`[[features]]` + per-module `external_deps[]`), `pubspec.yaml` for dart (from `[project]` + `architecture.toml` `[environment]`/`[[external_deps]]`/`[[dependency_overrides]]` + per-module `external_deps[]`). Lex-sorted; byte-stable.
 
-If stderr has `warning:` lines (typically version conflicts when two modules declare the same crate at different versions), surface them in the report. The user reconciles by editing the spec, not the generated Cargo.toml.
+If stderr has `warning:` lines (typically version conflicts when two spec locations declare the same dependency at different versions), surface them in the report. The user reconciles by editing the spec, not the generated manifest.
 
-**Do not edit the generated Cargo.toml by hand.** If you need a dep that isn't there, add it to the spec — `[[external_deps]]` in `architecture.toml` for project-wide infra, or `external_deps[]` in a module file for module-scoped deps — and re-run this step.
+**Do not edit the generated manifest by hand.** If you need a dep that isn't there, add it to the spec — `[[external_deps]]` in `architecture.toml` for project-wide infra, or `external_deps[]` in a module file for module-scoped deps — and re-run this step.
 
 ## Step 6.5 — record generation lineage
 
@@ -150,7 +150,7 @@ Record every file this run emitted, so later runs can detect hand-edits:
 
 ```sh
 specdev-analyzer gen-record --module <Name> <source files written in Step 5>
-specdev-analyzer gen-record Cargo.toml
+specdev-analyzer gen-record Cargo.toml   # or pubspec.yaml — whichever manifest Step 6 wrote
 ```
 
 `gen-record` writes a SHA-256 per file into `specs/specdev/gen-lineage.toml`. The flow from spec to code is one-way; a generated file that later gets hand-edited is where that flow silently breaks, and the hash record is what makes the break visible — `/spec-drift` runs `specdev-analyzer report gen-drift` and flags any recorded file whose bytes have diverged (`edited`) or that has disappeared (`missing`).
@@ -191,7 +191,7 @@ Then one paragraph per module **generated** (skipped modules need no paragraph):
 - Source file(s) written, with paths relative to project root.
 - Any prose rule that required a choice and the choice made (e.g., "embassy bridge `handoff = "shared"` chose `Mutex<CriticalSectionRawMutex, ...>`").
 - Build result (pass/fail; first error if fail).
-- Any `cargo-toml` warnings (version conflicts, missing typed picks).
+- Any `manifest` warnings (version conflicts, missing typed picks).
 - Confirmation that emitted files were recorded in `gen-lineage.toml` (Step 6.5).
 - Suggested follow-ups: `/spec-gen <OtherModule>`, wire this module into `main.rs`, regenerate after editing the spec, etc.
 
@@ -200,7 +200,7 @@ Then one paragraph per module **generated** (skipped modules need no paragraph):
 ## What this skill does NOT do
 
 - **Multi-package coordination outside `rust-workspace`.** If members are independent (no `[workspace]` in spec.toml), invoke `/spec-gen` per member from the member's directory.
-- **Cargo.toml editing.** The analyzer's `cargo-toml` subcommand is the only path to write Cargo.toml. If a dep is missing, edit the spec.
+- **Manifest editing.** The analyzer's `manifest` subcommand is the only path to write the build manifest (Cargo.toml / pubspec.yaml). If a dep is missing, edit the spec.
 - **Auto-fix build errors.** Report and stop; the user fixes (likely by editing the spec).
 - **Generate placeholder bodies.** No `todo!()` / stubs — stop and ask if the spec is incomplete. The audio-plugin profile's audio-thread methods are the one structured exception, and the silence-and-log emit template for those methods lives in the audio-plugin codegen prose (`codegen/rust/module.conventions.md` § "Audio-thread method bodies"); the prompt assembled in Step 4 already includes it for audio-plugin modules.
 

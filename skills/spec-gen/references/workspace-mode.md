@@ -40,7 +40,7 @@ If any member fails validate, do NOT skip downstream members — record the fail
 After every member has been processed, emit the workspace-root Cargo.toml:
 
 ```sh
-specdev-analyzer cargo-toml --output Cargo.toml
+specdev-analyzer manifest --write
 ```
 
 Run from the workspace root. The analyzer detects `[workspace]` and renders workspace-root mode (`[workspace]` + `[workspace.package]` + `[workspace.dependencies]`).
