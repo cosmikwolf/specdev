@@ -17,6 +17,12 @@
 ;; - Dart has NO visibility nodes: privacy is the `_` name prefix and is
 ;;   filtered in the extractor (any `_`-prefixed segment → not an item),
 ;;   so no `.vis` captures appear in this file.
+;; - Member patterns capture annotation names as `inherent.annotation`;
+;;   the extractor drops `@override` members (an override implements an
+;;   inherited contract — the contract lives on the declaring base, so
+;;   an override is never new public surface). Annotations sit INSIDE
+;;   `method_declaration` for concrete members but on `class_member`
+;;   (as siblings of `declaration`) for abstract ones — both captured.
 ;; - Not captured in v1 (see the schema's description for rationale):
 ;;   constructors, fields, top-level `final`/`var` variables, `export`
 ;;   directives, unnamed extensions.
@@ -107,6 +113,8 @@
   body: (class_body
     (class_member
       (method_declaration
+        (annotation
+          (identifier) @inherent.annotation)*
         signature: (method_signature
           (function_signature
             name: (identifier) @inherent_function.name))) @inherent_function.def)))
@@ -117,6 +125,8 @@
   body: (class_body
     (class_member
       (method_declaration
+        (annotation
+          (identifier) @inherent.annotation)*
         signature: (method_signature
           (getter_signature
             name: (identifier) @inherent_getter.name))) @inherent_getter.def)))
@@ -127,6 +137,8 @@
   body: (class_body
     (class_member
       (method_declaration
+        (annotation
+          (identifier) @inherent.annotation)*
         signature: (method_signature
           (setter_signature
             name: (identifier) @inherent_setter.name))) @inherent_setter.def)))
@@ -136,6 +148,8 @@
   name: (identifier) @inherent.host
   body: (class_body
     (class_member
+      (annotation
+        (identifier) @inherent.annotation)*
       (declaration
         (function_signature
           name: (identifier) @inherent_function.name)) @inherent_function.def)))
@@ -145,6 +159,8 @@
   name: (identifier) @inherent.host
   body: (class_body
     (class_member
+      (annotation
+        (identifier) @inherent.annotation)*
       (declaration
         (getter_signature
           name: (identifier) @inherent_getter.name)) @inherent_getter.def)))
@@ -154,6 +170,8 @@
   name: (identifier) @inherent.host
   body: (class_body
     (class_member
+      (annotation
+        (identifier) @inherent.annotation)*
       (declaration
         (setter_signature
           name: (identifier) @inherent_setter.name)) @inherent_setter.def)))
@@ -167,6 +185,8 @@
   body: (class_body
     (class_member
       (method_declaration
+        (annotation
+          (identifier) @inherent.annotation)*
         signature: (method_signature
           (function_signature
             name: (identifier) @inherent_function.name))) @inherent_function.def)))
@@ -176,6 +196,8 @@
   body: (class_body
     (class_member
       (method_declaration
+        (annotation
+          (identifier) @inherent.annotation)*
         signature: (method_signature
           (getter_signature
             name: (identifier) @inherent_getter.name))) @inherent_getter.def)))
@@ -185,6 +207,8 @@
   body: (class_body
     (class_member
       (method_declaration
+        (annotation
+          (identifier) @inherent.annotation)*
         signature: (method_signature
           (setter_signature
             name: (identifier) @inherent_setter.name))) @inherent_setter.def)))
@@ -193,6 +217,8 @@
   name: (identifier) @inherent.host
   body: (class_body
     (class_member
+      (annotation
+        (identifier) @inherent.annotation)*
       (declaration
         (function_signature
           name: (identifier) @inherent_function.name)) @inherent_function.def)))
@@ -201,6 +227,8 @@
   name: (identifier) @inherent.host
   body: (class_body
     (class_member
+      (annotation
+        (identifier) @inherent.annotation)*
       (declaration
         (getter_signature
           name: (identifier) @inherent_getter.name)) @inherent_getter.def)))
@@ -209,6 +237,8 @@
   name: (identifier) @inherent.host
   body: (class_body
     (class_member
+      (annotation
+        (identifier) @inherent.annotation)*
       (declaration
         (setter_signature
           name: (identifier) @inherent_setter.name)) @inherent_setter.def)))
@@ -222,6 +252,8 @@
   body: (extension_body
     (class_member
       (method_declaration
+        (annotation
+          (identifier) @inherent.annotation)*
         signature: (method_signature
           (function_signature
             name: (identifier) @inherent_function.name))) @inherent_function.def)))
@@ -231,6 +263,8 @@
   body: (extension_body
     (class_member
       (method_declaration
+        (annotation
+          (identifier) @inherent.annotation)*
         signature: (method_signature
           (getter_signature
             name: (identifier) @inherent_getter.name))) @inherent_getter.def)))
@@ -240,6 +274,8 @@
   body: (extension_body
     (class_member
       (method_declaration
+        (annotation
+          (identifier) @inherent.annotation)*
         signature: (method_signature
           (setter_signature
             name: (identifier) @inherent_setter.name))) @inherent_setter.def)))
@@ -254,6 +290,8 @@
   body: (class_body
     (class_member
       (method_declaration
+        (annotation
+          (identifier) @inherent.annotation)*
         signature: (method_signature
           (function_signature
             name: (identifier) @inherent_function.name))) @inherent_function.def)))
@@ -264,6 +302,8 @@
   body: (class_body
     (class_member
       (method_declaration
+        (annotation
+          (identifier) @inherent.annotation)*
         signature: (method_signature
           (getter_signature
             name: (identifier) @inherent_getter.name))) @inherent_getter.def)))
@@ -274,6 +314,8 @@
   body: (class_body
     (class_member
       (method_declaration
+        (annotation
+          (identifier) @inherent.annotation)*
         signature: (method_signature
           (setter_signature
             name: (identifier) @inherent_setter.name))) @inherent_setter.def)))

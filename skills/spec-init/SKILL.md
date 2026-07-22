@@ -64,7 +64,7 @@ Ask all of these in one message. Show defaults from Step 2 in parentheses:
 
 1. **Project name** — lowercase, digits, underscores, hyphens; must start with a letter; ≤64 chars. (default: detected `[package].name` or directory name)
 2. **Profile** — one of the names listed in Step 3. Default heuristics for shipped profiles: `firmware-layered` if a `Cargo.toml` with `cortex-m`/`embassy`/`stm32*`/`nrf*`/`esp*` deps was detected; `library-api` if a non-bin `Cargo.toml` was detected; `audio-plugin` if a `nih-plug` / `vst3-sys` / `clack-host` dep was detected; `rust-workspace` if `[workspace]` was detected. Otherwise ask. For user-authored profiles no default is inferred — ask.
-3. **Language** — `rust` is the only option in v1; C-language support is on the roadmap. (default: `rust`)
+3. **Language** — `rust` or `dart`. The profile decides: each profile's `profile.yaml` declares its `language:`, so offer the language matching the chosen profile (`dart` for `flutter-app`, `rust` for the Rust profiles); a mismatch fails at bootstrap. C-language support is on the roadmap. (default: the chosen profile's declared language)
 4. **Bootstrap directory** — usually the current working directory, but the analyzer creates it if absent and refuses if `specs/specdev/` is already present. (default: `.`)
 
 These four questions are all the schema requires. Profile-specific decisions (target triple, MCU part, license, MSRV, …) live in `architecture.toml` / optional `[project]` fields and are filled in Step 6, after the analyzer has emitted templates.
@@ -110,9 +110,9 @@ Expect a clean report — bootstrap emits valid templates, and Step 6's optional
 
 Summarize:
 - Files created (one line each, with paths).
-- The selected profile and a one-line reminder of what it shapes (firmware-layered → layered embedded; library-api → Rust library).
+- The selected profile and a one-line reminder of what it shapes (firmware-layered → layered embedded; library-api → Rust library; flutter-app → Flutter application).
 - Validate result.
-- **Suggested next steps**: render per-profile guidance from `${CLAUDE_PLUGIN_ROOT}/shared/profile-next-steps.md` (covers firmware-layered, library-api, audio-plugin, rust-workspace, and user-authored profiles).
+- **Suggested next steps**: render per-profile guidance from `${CLAUDE_PLUGIN_ROOT}/shared/profile-next-steps.md` (it has a section per shipped profile plus a fallback for user-authored ones).
 
 ## What this skill does NOT do
 

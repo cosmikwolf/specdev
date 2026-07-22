@@ -1,6 +1,6 @@
 ---
 name: spec-gen
-description: This skill should be used when the user asks to "generate code", "codegen", "run spec-gen", "generate <ModuleName>", "codegen all modules", "implement this spec", "build my source files from spec", or names any module to materialize as source. Generates Rust source code AND Cargo.toml deterministically from validated specdev specs (blocks + bridges + profiles model). Refuses on incomplete specs — no `todo!()` / stub bodies; if the spec is missing information needed to implement a function, the skill stops and asks rather than improvising.
+description: This skill should be used when the user asks to "generate code", "codegen", "run spec-gen", "generate <ModuleName>", "codegen all modules", "implement this spec", "build my source files from spec", or names any module to materialize as source. Generates source code (Rust or Dart, per the project's language) AND the build manifest (Cargo.toml / pubspec.yaml) deterministically from validated specdev specs (blocks + bridges + profiles model). Refuses on incomplete specs — no stub bodies (`todo!()` / `throw UnimplementedError()`); if the spec is missing information needed to implement a function, the skill stops and asks rather than improvising.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 argument-hint: <ModuleName | --all [--force]>
 ---
@@ -126,7 +126,7 @@ Output the source files the prompt prescribes, following these priority rules wh
 For each file written:
 - File header line: `// SPDX-License-Identifier: <project license>` if the spec declares one in `spec.toml [project].license`.
 - A regen-pointer comment: `// @spec specs/modules/<Name>.toml` so a reader can navigate from source to spec.
-- No `todo!()` / `unimplemented!()` placeholders. If the spec lacks information needed to implement a function body, **stop and ask the user** — do not improvise.
+- No stub bodies. Rust: no `todo!()` / `unimplemented!()`. Dart: no `throw UnimplementedError()` (in any dress). If the spec lacks information needed to implement a function body, **stop and ask the user** — do not improvise. (The comment syntax above is `//` in both languages; for Dart use `// @spec ...` the same way.)
 
 Do not modify files outside the auto-generated regions. If hand-written code already exists in the target file, preserve it and warn in the report.
 
@@ -161,19 +161,21 @@ Re-running gen and re-recording replaces the entries; there is nothing else to m
 
 Do **not** record `memory.x` — firmware post-processing (Step 7) may preserve a hand-authored version, and recording it would flag legitimate hand-authorship as drift.
 
+Do **not** record externally-owned files in a Dart/Flutter tree: the platform directories (`android/`, `ios/`, `web/`, `macos/`, `windows/`, `linux/`), `analysis_options.yaml`, `.metadata`, and any third-party codegen output (`*.g.dart`, `*.freezed.dart`, FFI-bridge glue). Those files belong to `flutter create` or their own generators; recording them reports perpetual `edited` drift the moment their generator reruns. Record only what this skill emitted: `lib/main.dart`, `lib/src/*.dart`, test files, and `pubspec.yaml`.
+
 ## Step 7 — firmware-layered post-processing (memory.x)
 
 If `spec.toml [project].profile != "firmware-layered"`, skip this step entirely. For firmware-layered, follow `references/firmware-layered-postprocess.md` to emit (or preserve a hand-authored) `memory.x`.
 
 ## Step 8 — compile gate
 
+Dispatch on `spec.toml [project].language`.
+
 For Rust projects:
 
 ```sh
 cargo check --quiet
 ```
-
-If the build fails, report the first error verbatim and stop. Do not auto-edit code to fix build errors stemming from missing scaffolding outside the per-module emission scope (e.g. `main.rs` doesn't register this module yet) — surface the gap as a one-line action item.
 
 For firmware-layered, `cargo check` against the host won't pass without the target triple. Use:
 
@@ -182,6 +184,16 @@ cargo check --quiet --target <[platform].target_triple from architecture.toml>
 ```
 
 If the target isn't installed (`rustup target add ...` missing), surface the install command in the report; don't try to install it automatically.
+
+For Dart projects (Flutter profiles):
+
+```sh
+flutter pub get && flutter analyze
+```
+
+The analyze gate must come back **clean** (no errors; treat analyzer errors like compile errors). If the Flutter SDK is not on PATH, report that the gate could not run and stop — do not mark generation verified without it. A Flutter app also needs its platform scaffolding once per project (`flutter create . --platforms <matrix>` from the project root, platforms from `architecture.toml`); if the platform dirs are absent, surface that command as an action item rather than running it implicitly — it writes a large externally-owned tree the user should see created.
+
+In every language: if the gate fails, report the first error verbatim and stop. Do not auto-edit code to fix build errors stemming from missing scaffolding outside the per-module emission scope (e.g. the entry point doesn't register this module yet) — surface the gap as a one-line action item.
 
 ## Step 9 — report
 

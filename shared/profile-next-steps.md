@@ -32,12 +32,18 @@ Inline an audio framework block (e.g. `nih-plug`) and optionally a UI block (e.g
 
 Then `/spec-design <plugin shell module>`.
 
+## flutter-app
+
+Go straight to `/spec-design <one-line module description>` — start with the composition root (an `app`-role module), then screens and services. If the app consumes a Rust library over FFI or needs BLE, inline the matching block once it ships (list with `ls "${CLAUDE_PLUGIN_ROOT}/blocks/"`).
+
+Platform scaffolding (`flutter create . --platforms <matrix>`) is a one-time manual step before the first `/spec-gen` compile gate; the platform directories it writes are externally owned and never generated.
+
 ## rust-workspace
 
-Bootstrap each member crate with its own profile:
+Bootstrap each member crate with its own profile, passing the language the member's profile declares (`language:` in `${CLAUDE_PLUGIN_ROOT}/profiles/<profile>/profile.yaml`):
 
 ```
-cd <member> && /spec-init --non-interactive --profile <profile> --language rust --name <member-name>
+cd <member> && /spec-init --non-interactive --profile <profile> --language <profile language> --name <member-name>
 ```
 
 ## Other / user-authored profile
