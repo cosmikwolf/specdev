@@ -187,3 +187,23 @@ void main() {
 
 - One `group` per type under test; `test` names are behavior sentences.
 - Widget tests use `testWidgets` + `WidgetTester` and live in the same layout.
+
+---
+
+## Items Naming
+
+The `[[items]]` vocabulary for Dart lives in `items.schema.yaml` (the
+`kind` enum) with extraction driven by `items.scm`. Naming rules the
+extractor and authors share:
+
+- Members qualify with `.`: `Device.connect` (`kind = "function"`),
+  `Device.state` (`kind = "getter"`). Type parameters never appear in a
+  name (`Box.put`, not `Box<T>.put`).
+- A getter/setter pair legitimately shares one name — identity is
+  `(name, kind)`, so `scanWindow` appears once as a `getter` item and
+  once as a `setter` item.
+- Privacy is the `_` prefix: a `_`-prefixed declaration, or any member of
+  one, is never an item.
+- Not items: constructors (spec the class), fields (state belongs to the
+  enclosing declaration), top-level `final`/`var` variables (public
+  constants should be `const`), `export` directives, unnamed extensions.
