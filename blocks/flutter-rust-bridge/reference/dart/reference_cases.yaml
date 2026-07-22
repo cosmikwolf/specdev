@@ -1,0 +1,7 @@
+# Reference-package coverage manifest. CI-only — never inlined. Drives
+# REF-COVERAGE-001 (each name → src/<name>.dart).
+reference_cases:
+  - init
+  - sync_call
+  - async_call
+  - stream

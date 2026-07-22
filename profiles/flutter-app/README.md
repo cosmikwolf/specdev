@@ -135,7 +135,9 @@ a graph check.
 
 ## Extending
 
-Blocks attach to modules through the `bindings` aggregator slot and may
-contribute their own schema tables; inline them with `/spec-inline`.
+Blocks contribute their own **top-level** namespaced tables to modules
+(composed through the module schema's `allOf` aggregation); the
+`bindings` slot is reserved for *bridge* contributions. Inline blocks
+with `/spec-inline`.
 Framework-specific codegen prose layers via each block's
 `codegen/dart/README.md` on top of the conventions doc here.

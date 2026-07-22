@@ -1,0 +1,22 @@
+# CI-only reference crate for the flutter-rust-bridge block codegen prose.
+# Plays the COMPANION Rust crate role: the flutter_rust_bridge_codegen input
+# whose `crate::api` module the generated Dart in ../dart type-checks against.
+# The .cargo/config.toml pins wasm32-unknown-unknown so CI witnesses the
+# wasm-purity rule (a web-enabled companion crate must compile for wasm).
+# NOT inlined — this dir is a sibling to codegen/.
+[package]
+name = "frb_reference"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+flutter_rust_bridge = "=2.12.0"
+
+# The #[frb] attribute macro emits `cfg(frb_expand)` probes; upstream's own
+# project template declares the cfg to keep builds warning-free.
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(frb_expand)"] }
