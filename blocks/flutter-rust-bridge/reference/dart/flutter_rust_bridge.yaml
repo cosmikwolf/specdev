@@ -1,0 +1,7 @@
+# FRB codegen config for the reference pair — the same file /spec-gen emits
+# from a project's [flutter_rust_bridge] table. Regenerate the committed
+# bindings with `flutter_rust_bridge_codegen generate` (run from this dir)
+# when bumping the pinned version.
+rust_input: crate::api
+rust_root: ../rust
+dart_output: lib/src/rust
