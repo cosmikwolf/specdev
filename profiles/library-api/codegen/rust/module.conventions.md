@@ -441,10 +441,11 @@ alloc = []
 serde = ["std"]
 ```
 
-Generated `Cargo.toml` (or the manual one the project author maintains)
-should reflect this exactly. Codegen does not own Cargo.toml in v1 —
-maintain it manually, with a future enhancement to write it from the
-spec.
+The generated `Cargo.toml` reflects this exactly. Cargo.toml is OUTPUT:
+the analyzer's `manifest` subcommand writes it deterministically from
+the spec (architecture features + the union of module `external_deps`)
+— never maintain it by hand; if a dep or feature is missing, edit the
+spec and re-emit.
 
 Do **not** emit feature definitions in code (e.g. `#[cfg(feature = …)]`
 for an undeclared feature). The schema check catches missing feature

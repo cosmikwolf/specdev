@@ -85,8 +85,9 @@ orchestration; that file is the material.
      a bridge. (Naming a companion block in the *author-facing README* is fine;
      reaching in *codegen prose* is a leg-3 violation.)
 
-5. **Language.** Default `rust`. One language per invocation (the common case);
-   re-invoke for a second language's codegen + reference.
+5. **Language.** `rust` or `dart`; default to the language of the profile the
+   block targets. One language per invocation (the common case); re-invoke for
+   a second language's codegen + reference.
 
 6. **Read the precedents.** Read `references/block-artifact-templates.md` and an
    existing shipped block whose shape matches: `<root>/blocks/embassy/`
@@ -183,16 +184,22 @@ nested — inline never copies `reference/`, so it is CI-only):
 
 ## Step 4 — gate at authoring time (compile + lint)
 
-1. **Compile the reference** (discrete-case blocks only):
+1. **Compile the reference** (discrete-case blocks only). Rust:
    ```sh
-   cd <root>/blocks/<name>/reference/<lang> && cargo build
+   cd <root>/blocks/<name>/reference/rust && cargo build
    ```
    (the `.cargo/config.toml` target applies for a cross-target reference; install
    it first with `rustup target add <triple>` if the build reports it missing —
-   an environment gap, **not** a prose bug). A wrong type / arity / constructor
-   fails on a *type error* — fix the prose **and** the reference against the real
-   API (Step 2); do not `#[allow]` it green. Distinguish a type-check failure (the
-   gate working) from a toolchain-missing failure.
+   an environment gap, **not** a prose bug). Dart:
+   ```sh
+   cd <root>/blocks/<name>/reference/dart && dart pub get && dart analyze
+   ```
+   (use `flutter pub get && flutter analyze` when the reference's pubspec depends
+   on the Flutter SDK; the analyzer is the type-check gate — no binary build is
+   needed). In either language a wrong type / arity / constructor fails on a
+   *type error* — fix the prose **and** the reference against the real API
+   (Step 2); do not `#[allow]` / `// ignore:` it green. Distinguish a type-check
+   failure (the gate working) from a toolchain-missing failure.
 
 2. **Run plugin-lint:**
    ```sh
@@ -224,7 +231,7 @@ nested — inline never copies `reference/`, so it is CI-only):
 
 ## Step 5 — report + next steps
 
-Report the files written, the reference `cargo build` result + target (or the
+Report the files written, the reference build/analyze result + target (or the
 opt-out reason), the `plugin-lint` codes cleared, and the sharp-test verdict.
 **Next:** in a project, `/spec-inline <name>`, then author a module using the
 `[<block-key>]` table and `/spec-validate`. To wire this block to another, author
