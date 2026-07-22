@@ -36,7 +36,7 @@ Then `/spec-design <plugin shell module>`.
 
 Go straight to `/spec-design <one-line module description>` — start with the composition root (an `app`-role module), then screens and services. If the app consumes a Rust library over FFI or needs BLE, inline the matching block once it ships (list with `ls "${CLAUDE_PLUGIN_ROOT}/blocks/"`).
 
-Platform scaffolding (`flutter create . --platforms <matrix>`) is a one-time manual step before the first `/spec-gen` compile gate; the platform directories it writes are externally owned and never generated.
+Platform scaffolding (`flutter create . --platforms <matrix>`) is a one-time manual step before the first `/spec-gen` compile gate; the platform directories it writes are externally owned and never generated. Delete the scaffold's `test/widget_test.dart` afterwards — it references template symbols a spec-generated app doesn't have.
 
 ## rust-workspace
 

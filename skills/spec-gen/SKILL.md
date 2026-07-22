@@ -191,7 +191,7 @@ For Dart projects (Flutter profiles):
 flutter pub get && flutter analyze
 ```
 
-The analyze gate must come back **clean** (no errors; treat analyzer errors like compile errors). If the Flutter SDK is not on PATH, report that the gate could not run and stop — do not mark generation verified without it. A Flutter app also needs its platform scaffolding once per project (`flutter create . --platforms <matrix>` from the project root, platforms from `architecture.toml`); if the platform dirs are absent, surface that command as an action item rather than running it implicitly — it writes a large externally-owned tree the user should see created.
+The analyze gate must come back **clean** (no errors; treat analyzer errors like compile errors). If the Flutter SDK is not on PATH, report that the gate could not run and stop — do not mark generation verified without it. A Flutter app also needs its platform scaffolding once per project (`flutter create . --platforms <matrix>` from the project root, platforms from `architecture.toml`); if the platform dirs are absent, surface that command as an action item rather than running it implicitly — it writes a large externally-owned tree the user should see created. Include in the same action item: delete the scaffold's `test/widget_test.dart` afterwards — it references template symbols that don't exist in a spec-generated app and breaks both gates; the spec's test items supersede it.
 
 In every language: if the gate fails, report the first error verbatim and stop. Do not auto-edit code to fix build errors stemming from missing scaffolding outside the per-module emission scope (e.g. the entry point doesn't register this module yet) — surface the gap as a one-line action item.
 
