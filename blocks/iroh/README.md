@@ -79,27 +79,47 @@ capacity     = 4096
 overflow     = "drop_oldest"
 
 [[iroh.streams]]
-name      = "signals"
+name      = "signals_out"
 kind      = "bidi"
 direction = "outbound"
 framing   = "length_prefixed"
 carries   = "Signal"
-channel   = "events"
+channel   = "commands"     # outbound reads FROM a to_runtime channel
 
 [[iroh.streams]]
-name      = "telemetry"
-kind      = "uni"
+name      = "signals_in"
+kind      = "bidi"
 direction = "inbound"
 framing   = "length_prefixed"
-carries   = "TelemetryFrame"
-channel   = "events"
-rate_hz   = 94
+carries   = "Signal"
+channel   = "events"       # inbound writes INTO a from_runtime channel
 ```
 
 Two entity kinds (`Stream`, `Channel`) and one intra-block relation,
 `stream_on_channel`, from each stream's `channel` field — so a stream
 naming a channel that was never declared is caught at validate time rather
 than at codegen.
+
+### Direction coherence — author-checked, not machine-checked
+
+An `outbound` stream *reads from* its channel and an `inbound` stream
+*writes into* it. So an outbound stream must name a `to_runtime` channel
+and an inbound stream a `from_runtime` one. Pairing them the other way
+describes a stream reading from the channel that carries data out to the
+caller, which cannot be implemented.
+
+The `stream_on_channel` relation catches an unknown channel name but
+**not** a mismatched direction: a block can declare relations (does the
+target resolve?) but not invariants over the related pair's attributes,
+and no block in this tree declares `graph_checks`. Until that changes,
+this is a review item, and it is an easy one to get wrong — note that the
+two entries above differ only in `direction` and `channel`.
+
+Note also that a symmetric peer (`role = "both"`) needs **both**
+directions of every flow it participates in — two stream entries and two
+channels per flow, not one of each. A single `direction = "outbound"`
+stream on a `role = "both"` endpoint means that peer can send but never
+receive, which is rarely what a symmetric protocol wants.
 
 ## What this block does NOT contribute
 

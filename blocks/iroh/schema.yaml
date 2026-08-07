@@ -160,8 +160,22 @@ $defs:
           Name of the `[[iroh.channels]]` entry this stream is wired to.
           An `inbound` stream decodes messages and sends them into that
           channel; an `outbound` stream receives from it and encodes.
+
+          DIRECTION COHERENCE: it follows that an `inbound` stream must
+          name a `from_runtime` channel and an `outbound` stream must
+          name a `to_runtime` channel. Pairing them the other way round
+          describes a stream reading from the channel that carries data
+          out to the caller, which cannot be implemented. This is NOT
+          machine-checked — a block can declare relations but not
+          invariants over the related pair's attributes — so it is on
+          the author. Check it when reviewing a module.
+
+          Note that a symmetric peer (`role = "both"`) needs BOTH
+          directions of any flow it participates in, which means two
+          stream entries and two channels, not one of each.
+
           Must match a declared channel name — a stream naming an unknown
-          channel is caught at validate time.
+          channel is caught at validate time by `stream_on_channel`.
         $ref: "#/$defs/Identifier"
       rate_hz:
         description: >

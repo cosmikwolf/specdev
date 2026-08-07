@@ -169,6 +169,15 @@ failure appears as a decode error far from its cause.
 Separate streams are what stops a bulk transfer from head-of-line-blocking
 a latency-sensitive one, which is the reason to declare them separately.
 
+**Do NOT** emit a stream whose `direction` contradicts its channel's
+`direction`. An `outbound` stream reads from its channel, so that channel
+must be `to_runtime`; an `inbound` stream writes into its channel, so that
+channel must be `from_runtime`. The reverse pairing describes a stream
+reading from the channel that carries data out to the caller — there is
+nothing to emit. Nothing machine-checks this, so verify it before
+generating: stop and report the mismatch rather than guessing which of the
+two fields the author meant.
+
 ## Channel emission
 
 Each `[[iroh.channels]]` entry becomes one bounded `tokio::sync::mpsc`
