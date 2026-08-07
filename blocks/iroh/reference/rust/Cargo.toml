@@ -1,0 +1,18 @@
+# CI-only reference crate for the iroh block codegen prose. Type-checks the
+# worked examples in ../../codegen/rust/README.md against the pinned iroh API.
+# A std host lib: it type-checks every example without binding a socket or
+# running a runtime. NOT inlined — this dir is a sibling to codegen/.
+[package]
+name = "iroh-reference"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[lib]
+
+[dependencies]
+iroh = "1.0.3"
+iroh-mdns-address-lookup = "0.4"
+tokio = { version = "1", features = ["rt-multi-thread", "sync", "macros"] }
+serde = { version = "1", features = ["derive"] }
+postcard = { version = "1", features = ["use-std"] }

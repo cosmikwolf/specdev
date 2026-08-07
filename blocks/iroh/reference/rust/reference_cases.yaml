@@ -1,0 +1,11 @@
+# Reference-crate coverage manifest.
+#
+# Plugin-author / CI-only -- NEVER inlined (lives under `reference/`). Declares
+# the discrete emission kinds this block ships a COMPILED reference for.
+reference_cases:
+  - endpoint
+  - protocol
+  - stream_bidi
+  - stream_uni
+  - channel
+  - ticket
