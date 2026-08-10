@@ -83,6 +83,43 @@ the orchestration; that file is the material.
    (std / host-target reference). Read the one whose shape matches this pairing
    end to end — all six files plus its `reference/rust/` crate.
 
+## Step 0.5 — does this bridge earn its keep?
+
+Three tests, in order. Any one of them failing means **do not author a bridge** —
+say so and stop. The cost of getting this wrong is asymmetric: an unnecessary
+bridge is six files, a reference crate, and a permanent maintenance surface,
+while a missing one is a few lines someone writes by hand.
+
+1. **Co-residency (mechanical — check this first, it is a hard gate).** A
+   bridge's bindings table lives on **one module**, and its reduction qualifies
+   **both** endpoints with that same module's name (`${root.name}` on each side).
+   So both endpoint declarations must resolve on the module carrying the table.
+   Ask the user where the two things being wired actually live. If they sit on
+   **different modules** — or in **different crates** — a bridge cannot express
+   that wiring, and no `binding_locality` value changes it (that field selects a
+   diagnostic template; it does not relax the requirement). Stop here and use one
+   of the shapes in test 2 or 3 instead. Do not scaffold and hope.
+
+2. **Asymmetry.** Estimate each side's contribution. If one side is small enough
+   to hand-author — on the order of a dozen lines of glue — the pairing does not
+   need a bridge. Push the substantial half **down into the block that owns it**
+   and leave the thin half to be hand-authored. `blocks/iroh/README.md`'s
+   "Why the channel surface lives in this block" section is the worked precedent:
+   the endpoint runtime and its channel surface are substantial and belong to the
+   transport block; whatever drains the event channel is a handful of
+   consumer-specific lines and belongs to nobody.
+
+3. **Cross-cutting, or single-block in disguise?** Read the heavy half's
+   description back. If it names **no concept from the other block**, it is not
+   cross-cutting — it only looked that way because a consumer was in view while
+   describing it. It belongs in its own block. A real bridge's contribution
+   cannot be stated without naming both sides.
+
+When a pairing fails these tests, the honest report is: "the substantial half is
+`<X>`, which is a `<block>` concern; author or extend that block, and hand-author
+the `<N>`-line consumer side. No bridge." That is a successful outcome for this
+skill, not a refusal.
+
 ## Step 1 — interview the bridge's semantics
 
 A bridge is defined by *what it wires* and *what join-product it owns*. Batch
