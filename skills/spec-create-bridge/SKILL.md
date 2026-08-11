@@ -128,9 +128,24 @@ accept them.
 
 - **The join-product crate(s).** Which crate exists *only because these two
   blocks are paired* — one neither block may own without reaching across the
-  pairing (e.g. `embassy-stm32` for `embassy+stm32h5-rs`)? Capture its name,
-  version (or git `rev`), and features. There may be none (some bridges only
-  wire types both blocks already provide) — then `deps.yaml` is omitted.
+  pairing (e.g. `embassy-stm32` for `embassy+stm32h5-rs`)? Capture its name and
+  features. There may be none (some bridges only wire types both blocks already
+  provide) — then `deps.yaml` is omitted.
+
+  ⚠️ **Resolve the version from the registry; never from memory.** Query
+  crates.io (`/api/v1/crates/<name>`) or the context7 docs tool for the current
+  release and pin that. Step 2's API research verifies everything *against* the
+  pin, so a recalled pin anchors all of it to a guess. For a git source, pin a
+  `rev` or `tag` — a bare repo URL means projects track a moving HEAD while the
+  reference proves one commit. If the registry is unreachable, stop rather than
+  guess.
+
+  A join product is the **most** exposed crate in the system: by construction no
+  block owns it, so nothing else in the tree is watching it. It must also stay
+  compatible with what *both* endpoint blocks pin — check their `deps.yaml`
+  versions before choosing, and make the reference crate build the whole set
+  together. `plugin-lint` compares your pins against the reference
+  (`REF-PIN-001` / `REF-PIN-002`).
 
 - **The binding table.** What does a module declare to invoke this wiring? Name
   the table (e.g. `peripheral_tasks`, `parameter_widgets`) and its per-entry
