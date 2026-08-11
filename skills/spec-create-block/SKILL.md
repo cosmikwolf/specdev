@@ -109,8 +109,25 @@ Batch these; show precedent answers as defaults.
   from/to kinds + the field. Most blocks have none (`relations: []`). This is
   intra-block only — cross-block references are a bridge.
 - **Crate deps the block contributes** (`deps.yaml`): the crate(s) this block's
-  generated code needs, with versions/features (or git `rev`). Plus any
-  `recommended_external_deps` (surfaced to the user, not auto-injected).
+  generated code needs, with features. Plus any `recommended_external_deps`
+  (surfaced to the user, not auto-injected).
+
+  ⚠️ **Never take the version from the user's memory or your own — resolve it.**
+  Ask the registry what the current release is (crates.io `/api/v1/crates/<name>`,
+  pub.dev `/api/packages/<name>`, or the context7 docs tool), and pin *that*. This
+  is the one fact Step 2's API research cannot check: everything there is verified
+  *against* the pin, so a pin recalled from training data anchors all of it to a
+  guess. Blocks have shipped wrong this exact way — a library went 1.0 and renamed
+  its core vocabulary, and prose written from pre-1.0 memory referenced names that
+  no longer existed. If the registry is unreachable, say so and stop; do not guess
+  a version.
+
+  For a **git** source, pin a `rev` (or `tag`) — never a bare repo URL. An
+  unpinned git dep resolves to the default branch at emit time, so projects track
+  a moving HEAD while the reference crate proves one fixed commit; the reference
+  then stays green through an upstream break every project hits. Use the same rev
+  the reference crate builds against. `plugin-lint` enforces this
+  (`REF-PIN-001` / `REF-PIN-002`).
 - **Discrete case set (reference vocabulary)** — the finite set of worked-example
   cases the codegen prose covers (usually the entity kinds or their variants).
   These become `reference/<lang>/src/<case>.rs` + `reference_cases.yaml`.
