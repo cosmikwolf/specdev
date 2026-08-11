@@ -17,8 +17,11 @@
 //! `Enum::variants()` yields names; `Param::unit()` not `unit_string()`).
 // A dependency declared but never imported is one the unit contributes to user
 // projects with no compiled witness that it is needed or that its version is
-// right. Plugin CI builds reference crates with `-D warnings`.
-#![warn(unused_crate_dependencies)]
+// right. `deny` rather than `warn` so the build fails wherever it runs -- the
+// reference-crate CI script uses a plain `cargo build`, and a warning nobody
+// reads catches nothing. If a dep is genuinely used only under a cfg, add
+// `use <crate> as _;` here rather than downgrading this.
+#![deny(unused_crate_dependencies)]
 
 pub mod params;
 
