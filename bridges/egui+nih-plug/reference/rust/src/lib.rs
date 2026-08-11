@@ -15,6 +15,10 @@
 //! directly (`slider`/`button`/`numeric_field`); five were corrected to the
 //! pinned `nih_plug_egui` reality (no `ParamButton`/`ParamComboBox`/`Knob`;
 //! `Enum::variants()` yields names; `Param::unit()` not `unit_string()`).
+// A dependency declared but never imported is one the unit contributes to user
+// projects with no compiled witness that it is needed or that its version is
+// right. Plugin CI builds reference crates with `-D warnings`.
+#![warn(unused_crate_dependencies)]
 
 pub mod params;
 
