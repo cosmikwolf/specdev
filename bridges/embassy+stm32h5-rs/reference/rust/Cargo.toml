@@ -12,7 +12,12 @@ publish = false
 
 [dependencies]
 # Versions/features mirror what the bridge + embassy block contribute at codegen.
+#
+# Only the crates the examples actually import are listed. `embassy-sync` and
+# `embassy-time` were declared here but imported by nothing, which made this
+# crate look like a compiled witness for the full embassy+HAL composition when
+# it only ever exercised embassy-stm32 and the executor. Proving the wider
+# composition needs examples that use those crates, not entries that merely
+# name them.
 embassy-stm32 = { version = "0.6", features = ["stm32h563zi", "rt", "time-driver-any", "exti"] }
 embassy-executor = { version = "0.10", features = ["executor-thread", "platform-cortex-m"] }
-embassy-sync = "0.8"
-embassy-time = "0.5"

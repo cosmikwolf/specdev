@@ -9,6 +9,10 @@
 //!
 //! It is a `no_std` LIB (not a bin): a lib type-checks every example without
 //! linking, so no `memory.x` / entry point / panic handler / runner is needed.
+// A dependency declared but never imported is one the unit contributes to user
+// projects with no compiled witness that it is needed or that its version is
+// right. Plugin CI builds reference crates with `-D warnings`.
+#![warn(unused_crate_dependencies)]
 #![no_std]
 
 // One shared interrupt binding for the whole crate. (Per-module `bind_interrupts!`

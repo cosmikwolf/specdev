@@ -13,4 +13,3 @@ publish = false
 [dependencies]
 nih_plug = { git = "https://github.com/robbert-vdh/nih-plug.git", rev = "f36931f7af4646065488a9845d8f8c2f95252c23" }
 nih_plug_egui = { git = "https://github.com/robbert-vdh/nih-plug.git", rev = "f36931f7af4646065488a9845d8f8c2f95252c23" }
-egui = "0.27"
