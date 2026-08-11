@@ -149,15 +149,21 @@ If stderr has `warning:` lines (typically version conflicts when two spec locati
 Record every file this run emitted, so later runs can detect hand-edits:
 
 ```sh
-specdev-analyzer gen-record --module <Name> <source files written in Step 5>
-specdev-analyzer gen-record Cargo.toml   # or pubspec.yaml — whichever manifest Step 6 wrote
+specdev-analyzer gen-record --accept-edits --module <Name> <source files written in Step 5>
+specdev-analyzer gen-record --accept-edits Cargo.toml   # or pubspec.yaml — whichever manifest Step 6 wrote
 ```
+
+**Why `--accept-edits` here, and only here.** On a re-run the emitted bytes differ from the previous recording, and byte-difference alone cannot tell a fresh emission from a hand-edit — so `gen-record` refuses to move the baseline unless the caller states that the current bytes are the intended one. This step is that statement: you just wrote these files, so their bytes are the new baseline by definition.
+
+**Never pass it anywhere else.** In particular, if `/spec-drift` reports a file as `edited`, do **not** re-record to clear it. Recording is what makes a file `clean`, so re-recording makes the hand-edit the new truth and the drift report can never surface it again — the file silently stops matching what the spec produces. Fix the cause instead: fold the change into the spec and re-run `/spec-gen`, or discard the edit.
 
 `gen-record` writes a SHA-256 per file into `specs/specdev/gen-lineage.toml`. The flow from spec to code is one-way; a generated file that later gets hand-edited is where that flow silently breaks, and the hash record is what makes the break visible — `/spec-drift` runs `specdev-analyzer report gen-drift` and flags any recorded file whose bytes have diverged (`edited`) or that has disappeared (`missing`).
 
 For a module record (`--module <Name>`), `gen-record` also captures the SHA-256 of that module's whole assembled prompt — the *input* hash that the next `--all` compares in Step 3.5 to decide skip-vs-regenerate. Nothing extra to pass; recording the emitted files is what makes the module skippable next time. (Project-level records like `Cargo.toml` carry no input hash.)
 
 Re-running gen and re-recording replaces the entries; there is nothing else to manage. Do not hand-edit `gen-lineage.toml`.
+
+**Ordering trap (formatters).** Run any formatter — `dart format`, `rustfmt` — on the emitted files *before* this step, not after. A formatter pass after recording changes the bytes, so `/spec-drift` reports gen-owned files as `edited`, and the only clean-looking fix is exactly the re-record this section forbids. Formatting is part of emission; record what you are going to keep.
 
 Do **not** record `memory.x` — firmware post-processing (Step 7) may preserve a hand-authored version, and recording it would flag legitimate hand-authorship as drift.
 
