@@ -61,16 +61,31 @@ The generator is a **standalone CLI, not build_runner** — no
 `dart run build_runner` step exists for FRB; sequence it explicitly:
 
 1. **One-time integration** (first FRB setup in an app; scaffolding, not
-   codegen): `flutter_rust_bridge_codegen integrate
-   --integration-backend cargokit --rust-crate-dir <rust_root>` wires the
-   per-platform hooks (Gradle/CocoaPods/CMake via Cargokit shims) so
-   `flutter build`/`flutter run` compiles the companion crate natively.
-   Cargokit is the required backend when `web = true` — the alternative
-   build-hooks backend is native-only. Surface this as a user action
-   item; do NOT hand-author platform-dir build files. `integrate` may
-   scaffold its own default `flutter_rust_bridge.yaml`; the spec-emitted
-   file is authoritative — after integrate runs, re-emit (or restore)
-   the spec's version and diff-check before the next generate.
+   codegen):
+
+   ```sh
+   flutter_rust_bridge_codegen integrate --rust-crate-dir <rust_root> \
+     --no-write-lib --no-integration-test
+   ```
+
+   This wires the per-platform hooks (Gradle/CocoaPods/CMake via Cargokit
+   shims) so `flutter build`/`flutter run` compiles the companion crate
+   natively. Surface it as a user action item; do NOT hand-author
+   platform-dir build files.
+
+   - **There is no `--integration-backend` flag.** The CLI rejects it
+     (`unexpected argument`). Cargokit is the only backend; the closest
+     real option is `--template app|plugin`, which defaults to `app`.
+   - **`--no-write-lib --no-integration-test` are required here**, not
+     optional. Without them `integrate` scaffolds its own `lib/` example
+     and an integration test, overwriting spec-generated Dart.
+   - `integrate` also **edits `pubspec.yaml`**, which is spec-emitted —
+     see "Generated-file ownership" below for what that costs and how to
+     make it survive.
+   - `integrate` may scaffold its own default `flutter_rust_bridge.yaml`;
+     the spec-emitted file is authoritative — after integrate runs,
+     re-emit (or restore) the spec's version and diff-check before the
+     next generate.
 2. **Every generation pass:** `flutter_rust_bridge_codegen generate`
    (run from the app root; it reads `flutter_rust_bridge.yaml`). Re-run
    whenever the companion crate's scanned modules change — a failing or
@@ -194,6 +209,22 @@ Three parties write into an FRB-enabled app; keep their boundaries:
 - Do **NOT** gen-record or hand-edit generator-owned files — recording
   them reports perpetual drift after every regeneration; hand-edits are
   destroyed by the next `generate` run.
+
+- **`integrate` edits `pubspec.yaml`, and the next manifest emission
+  removes the edit.** It adds `rust_lib_<project>: {path: rust_builder}`
+  — the Cargokit shim package that compiles the companion crate for
+  native targets. `pubspec.yaml` is emitted from the spec, so the next
+  emission drops that dep and **native builds silently stop including any
+  Rust**: the app still builds, and the artifact contains no `.so`.
+  Declare the shim in the spec instead — `architecture.toml`
+  `[[external_deps]]` with a `path`, which the pub dep vocabulary already
+  supports — and it survives regeneration:
+
+  ```toml
+  [[external_deps]]
+  package = "rust_lib_my_app"
+  path = "rust_builder"
+  ```
 
 - **The last row is the one the boundaries get wrong.** `generate` will
   write into the companion crate's `src/lib.rs` if the `frb_generated`

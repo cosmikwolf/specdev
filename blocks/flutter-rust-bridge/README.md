@@ -6,6 +6,35 @@ Rust crate through [flutter_rust_bridge](https://github.com/fzyzcjy/flutter_rust
 codegen prose that emits the FRB config file and sequences the standalone
 generator CLI, Cargokit integration, and web/wasm builds.
 
+## Platform status — read before choosing this block
+
+Verified working: **web** and **host/desktop**, including the companion
+crate compiling for `wasm32-unknown-unknown`.
+
+**Android does not currently work**, through no fault of the spec. Two
+independent upstream defects sit between an integrated project and a
+working `.apk`:
+
+1. `integrate` vendors a copy of Cargokit taken from a repository that is
+   now **archived**. That copy calls Gradle's `Project.exec()`, removed
+   in Gradle 9, so the Android build fails with
+   `Could not find method exec()`. Current Flutter ships Gradle 9.x, and
+   the Android Gradle Plugin it ships refuses to run on Gradle 8 — the
+   two constraints cannot both be satisfied by pinning.
+2. Replacing the vendored copy with the maintained fork clears that
+   error and the companion crate compiles for all four Android ABIs — but
+   the built libraries are **not packaged into the `.apk`**. Cargokit
+   creates the `jniLibs/<buildType>/<abi>/` staging directories and
+   leaves them empty, so the source set it registers contributes nothing.
+
+The second failure is the dangerous one: **the build reports success and
+the artifact contains no Rust at all.** An app in that state passes CI and
+crashes at `RustLib.init()` on a device.
+
+Until upstream resolves both, treat this block as **web + host only**. Do
+not apply the fork swap as a workaround on its own — it converts a loud
+build failure into a silent one, which is worse.
+
 ## When to use
 
 A Flutter app project needs to call Rust — DSP, protocol parsing, domain
