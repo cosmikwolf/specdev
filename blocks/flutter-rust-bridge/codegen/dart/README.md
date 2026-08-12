@@ -83,6 +83,47 @@ The generator is a **standalone CLI, not build_runner** — no
 - Do **NOT** run `generate` from inside `dart_output` or the companion
   crate — path resolution in the config is app-root-relative.
 
+### The companion crate must declare `mod frb_generated;` itself
+
+**Required, not optional.** The companion crate's crate root
+(`src/lib.rs`) must contain:
+
+```rust
+mod frb_generated;
+```
+
+Include it in that crate's spec — an `[[items]]` entry or the module
+prose, whichever the crate's profile uses — so it is present before
+`generate` first runs.
+
+**Why: `generate` injects this line at byte 0 when it is absent, and that
+placement is a hard compile error for any crate whose root opens with a
+module doc comment.** Rust requires inner doc comments (`//!`) to precede
+every item, so an injected `mod` above them fails with:
+
+```
+error[E0753]: expected outer doc comment
+ --> src/lib.rs:2:1
+  | //! <the crate's module doc>
+```
+
+The generator's own injected comment concedes the point — *"This line may
+not be accurate, and you can change it according to your needs."* Since a
+module doc comment is standard for a spec-generated crate root, a
+companion crate that does not pre-declare the `mod` breaks on the **first
+generation pass**, before any Dart is written.
+
+Declaring it yourself is what avoids this: `generate` finds the module
+present and skips the injection entirely. Verified idempotent — a second
+`generate` leaves the crate root byte-identical.
+
+There is a second, independent reason, and it holds even if placement
+were correct: **`src/lib.rs` is a generated, lineage-recorded file.** An
+injected line lives only in the source, so the next generation pass for
+that module overwrites it and the build breaks again. Anything the
+companion crate needs permanently belongs in its spec, not in a line some
+other tool writes into the output.
+
 ## Consuming the generated bindings
 
 Generated Dart lands under `<dart_output>/` — `frb_generated.dart` (the
@@ -148,10 +189,19 @@ Three parties write into an FRB-enabled app; keep their boundaries:
 | `flutter_rust_bridge.yaml`, wrapper-module source | this codegen | yes |
 | `<dart_output>/**` (`frb_generated.*`, per-module bindings), the companion crate's `frb_generated.rs` | FRB generator | **never** |
 | platform-dir hook files from `integrate` (Cargokit shims) | FRB integrate | **never** |
+| the companion crate's `src/lib.rs` | **the companion crate's own spec** | yes, by that crate |
 
 - Do **NOT** gen-record or hand-edit generator-owned files — recording
   them reports perpetual drift after every regeneration; hand-edits are
   destroyed by the next `generate` run.
+
+- **The last row is the one the boundaries get wrong.** `generate` will
+  write into the companion crate's `src/lib.rs` if the `frb_generated`
+  module is missing (see "The companion crate must declare
+  `mod frb_generated;` itself"), and that file is owned by the companion
+  crate's spec, not by any generator. Pre-declaring the module keeps the
+  generator out of it. This is the one place where two generators contend
+  for the same file, and the resolution is that the spec wins.
 
 `<dart_output>/` typically nests inside the project's source root
 (`lib/src/rust` under `lib/src`). That is safe: items extraction reads
