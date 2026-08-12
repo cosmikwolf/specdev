@@ -132,13 +132,22 @@ inside it.
 
 ### Interaction with the egui block
 
-The shipped `egui` block contributes egui at version `0.27` and pulls
-`nih_plug_egui` alongside it, because it was authored for plugin editor
-shells. Inlining both `egui` and `eframe` into one crate today therefore
-declares two incompatible egui versions, and drags a plugin framework
-into an application that is not a plugin. Until the `egui` block is
-widened and its host-specific dependency moved, prefer inlining `eframe`
-alone for a native application and hand-authoring the layout.
+The shipped `egui` block contributes `nih_plug_egui` (git, rev
+`f36931f7`), because it was authored for plugin editor shells. That crate
+pulls egui **0.31.1** transitively; `eframe` pulls egui **0.36.0**.
+Inlining both into one crate puts two semver-incompatible eguis in the
+dependency graph, whose `Context` and `Ui` types do not unify — a
+confusing failure well downstream of its cause.
+
+**This collision is transitive, so nothing warns.** The two blocks
+declare different crate names, so the manifest merge sees no conflict and
+emits no diagnostic; the incompatibility appears only in the resolved
+graph. Co-inlining also drags a plugin framework into an application that
+is not a plugin.
+
+Until the `egui` block is re-scoped host-neutrally and its
+`nih_plug_egui` dependency moved to a host block, inline `eframe` alone
+for a native application and hand-author the layout.
 
 ### Profiles
 
