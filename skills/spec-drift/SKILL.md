@@ -57,6 +57,10 @@ Exit codes: `0` clean, `1` drift present, `2` analyzer error (surface verbatim a
 2. **edited** — the file was generated, then hand-edited. This is the one-way spec→code flow breaking silently: the edit lives only in source and will be lost on the next `/spec-gen` run. Surface the path and suggest: fold the change back into the spec (then regenerate), or — if the edit was accidental — re-run `/spec-gen <module>` to restore spec-derived code.
 3. **missing** — recorded at generation time but no longer on disk. Usually a rename or delete outside the spec flow; suggest re-running `/spec-gen <module>` or, if the module was intentionally removed, removing its spec.
 
+**If the user needs certainty about the code inside functions.** A `clean` line means the file's bytes still match the hash recorded when it was emitted — it answers "did these bytes change since then", nothing more. `specdev-analyzer items diff --module <Name>` is a second opinion that uses no stored record (it re-reads the source with tree-sitter), but it covers only the public surface: names of types, functions and fields, not what is inside them. To check the bodies, re-run `/spec-gen <module>` and compare the output.
+
+**Never re-record to clear an `edited` line.** Recording is what makes a file `clean`, so `gen-record` on an edited file makes the hand-edit the new baseline and this report can never surface it again. The analyzer refuses this by default; the refusal is correct — fix the cause instead, per the `edited` guidance above.
+
 If `gen-lineage.toml` doesn't exist yet (empty report), say so in one line — the project either predates lineage recording or hasn't run `/spec-gen` since; the record starts accruing on the next gen run.
 
 On `GEN-LINEAGE-001` (malformed `gen-lineage.toml`): surface verbatim. The recovery is re-running `/spec-gen` for the affected modules (recording rewrites the file); do not hand-edit it.

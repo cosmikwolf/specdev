@@ -107,7 +107,7 @@ Batch these; show the precedents' answers as defaults.
   layers; audio: 4)? If yes, the layer enum + a `layer_dependency` graph-check; if
   no (library, workspace), skip it.
 - **Graph-checks** (`domain.toml.template`): which checks run + their severity.
-  Every profile ships `requirements_have_satisfiers` (F-006 parity). Add
+  Every profile ships `requirements_have_satisfiers` for orphan-requirement parity. Add
   shape-specific checks by reusing existing primitives (acyclic, layer-dependency,
   orphan/inbound-relation). A novel check kind is out of scope (Step 0.4).
 - **Codegen conventions** (`codegen/<lang>/module.conventions.md` — any
@@ -117,6 +117,24 @@ Batch these; show the precedents' answers as defaults.
   only as `e.g.` examples, unless the profile is genuinely single-framework and
   says so. (This is the symmetric side of the block/bridge `PROSE-PROFILE-001`
   discipline.)
+
+  ⚠️ **Every API shape in this prose must be read, never recalled.** Blocks and
+  bridges have a reference crate that compiles their claims; a profile has no
+  such artifact, so its conventions prose is the *least* checked substrate in
+  the tree. Whatever framework, SDK or standard-library shape you name — a
+  widget constructor, a lifecycle hook, an idiom — open the installed version's
+  documentation and confirm the current form before writing it down. SDK APIs
+  are deprecated and replaced between releases, and prose written from training
+  data compiles against a version that no longer exists.
+
+  This has already shipped wrong: a UI profile documented a selection widget's
+  per-item callback form that current releases had replaced with an ancestor
+  wrapper. It type-checked at authoring time against nothing, reached a real
+  project, and was found only when a person ran the app.
+
+  Prefer shapes that are stable across releases. When you must name a
+  version-sensitive one, say which version you verified it against, so the next
+  author knows how old the claim is.
 - **Auxiliary schemas?** Does the shape need an extra schema beyond the standard
   set (firmware-layered's `metadata.schema.yaml`)? Bootstrap enumerates `schemas/`
   dynamically, so extras are fine.
