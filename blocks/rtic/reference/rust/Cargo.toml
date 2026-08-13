@@ -1,0 +1,25 @@
+# CI-only reference crate for the rtic block codegen prose.
+# Type-checks the worked examples in ../../codegen/rust/README.md against
+# the pinned rtic API. NOT inlined (inline never copies `reference/`).
+#
+# The PAC here is a COMPILE VEHICLE, not a recommendation. The block is
+# chip-agnostic; `#[rtic::app]` simply requires some `device` path, and
+# this one satisfies rtic's contract directly, which keeps the reference
+# about rtic rather than about a chip binding. A project supplies its own.
+#
+# `thumbv7-backend` is likewise this reference's choice. The block declares
+# no backend feature because the correct one depends on the core; see
+# ../../codegen/rust/deps.yaml.
+[package]
+name = "rtic-reference"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[lib]
+
+[dependencies]
+rtic = { version = "2.3", features = ["thumbv7-backend"] }
+rtic-sync = "1.5"
+lm3s6965 = "0.2"
+cortex-m = { version = "0.7", features = ["critical-section-single-core"] }
