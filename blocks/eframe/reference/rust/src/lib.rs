@@ -14,7 +14,12 @@
 // `use <crate> as _;` here rather than downgrading this.
 #![deny(unused_crate_dependencies)]
 
+/// This block's host obligation for the `egui` block: one crate-root
+/// re-export, so emitted topology code resolves `crate::egui`.
+pub use eframe::egui;
+
 pub mod app;
+pub mod host_alias;
 pub mod persistence;
 pub mod repaint;
 pub mod viewport;

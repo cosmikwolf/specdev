@@ -1,10 +1,19 @@
 # egui+nih-plug bridge
 
-Pairwise wiring between the `egui` block (editor topology) and the
+Pairwise wiring between the `egui` block (interface topology) and the
 `nih-plug` block (plugin parameters + audio I/O). Contributes
 parameter ↔ widget bindings under
 `bindings."egui+nih-plug".parameter_widgets[]` on plugin shell
 modules.
+
+It is also **the egui host for a plugin**. The `egui` block is
+host-neutral and contributes no crates, so this bridge supplies
+`nih_plug_egui` — the join product of the pairing, an adapter that
+exists only because a nih-plug plugin hosts an egui interface — along
+with the crate-root `pub use nih_plug_egui::egui;` alias and the
+`create_egui_editor` closure the topology draws into. Neither endpoint
+block may own that crate: `nih-plug` must stay UI-agnostic and `egui`
+must stay host-agnostic.
 
 This is the **architectural validation moment** for the bridge
 primitive. Unlike `embassy+stm32h5-rs` (which is closer to a wiring
@@ -24,12 +33,15 @@ Inline `egui+nih-plug` when:
   button, dropdown, radio_group, numeric_field, value_display per WIDGET-KIND-V1)
   rather than hand-authoring the egui calls inside `free_form` regions.
 
+- Your plugin ships an egui editor at all, **even with no parameter
+  widgets yet**. The bindings table may be empty; the host binding is
+  what makes the stack compile, and it lives here.
+
 Don't inline if:
 
-- Your editor is entirely custom-drawn (no parameter widgets) — the
-  egui block's `free_form` regions handle this.
 - You're not using egui (using iced / vizia / raw skia). A different
   bridge would handle that pairing.
+- Your plugin ships no editor.
 
 ## What this bridge contributes
 

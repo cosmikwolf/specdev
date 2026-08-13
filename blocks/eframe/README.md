@@ -126,36 +126,45 @@ as continuous repaint and idles at zero CPU.
 
 ## Companion blocks and profiles
 
-Pairs with a block describing **what is drawn** inside the window. The
-two are complementary: this one ends at the window, that one starts
-inside it.
+Pairs with the `egui` block, which describes **what is drawn** inside
+the window. The two are complementary: this one ends at the window,
+that one starts inside it.
 
 ### Interaction with the egui block
 
-The shipped `egui` block contributes `nih_plug_egui` (git, rev
-`f36931f7`), because it was authored for plugin editor shells. That crate
-pulls egui **0.31.1** transitively; `eframe` pulls egui **0.36.0**.
-Inlining both into one crate puts two semver-incompatible eguis in the
-dependency graph, whose `Context` and `Ui` types do not unify — a
-confusing failure well downstream of its cause.
+**This block is the egui host for a native application.** The `egui`
+block models topology — panels, regions, purposes — and contributes no
+crates at all, so egui arrives from here. Inline both: this block ends
+at the window, that one starts inside it.
 
-**This collision is transitive, so nothing warns.** The two blocks
-declare different crate names, so the manifest merge sees no conflict and
-emits no diagnostic; the incompatibility appears only in the resolved
-graph. Co-inlining also drags a plugin framework into an application that
-is not a plugin.
+Two obligations follow, both discharged by this block's codegen prose:
 
-Until the `egui` block is re-scoped host-neutrally and its
-`nih_plug_egui` dependency moved to a host block, inline `eframe` alone
-for a native application and hand-author the layout.
+1. **The crate-root alias.** Emit `pub use eframe::egui;` once. The
+   egui block's emitted topology code refers to `crate::egui` and
+   resolves through it. Exactly one host per crate emits this line; a
+   second would collide there, which is the intended failure.
+2. **The panel API generation.** eframe 0.36 supplies egui 0.36, so the
+   egui block's **modern** panel form applies — unified `egui::Panel`,
+   `show` taking a `&mut Ui`, sizes via `default_size`. That matches
+   what `App::ui` hands you, so the topology function takes the `ui`
+   directly.
+
+Historical note worth keeping: this pairing used to be impossible. The
+`egui` block contributed `nih_plug_egui` (pulling egui 0.31) while this
+block pulls egui 0.36, so co-inlining put two semver-incompatible eguis
+in one graph — and because the two blocks declared *different crate
+names*, the manifest merge saw no conflict and nothing warned. The
+collision was transitive and only visible in the resolved graph. That is
+why the egui block now contributes no version at all and the host owns
+it.
 
 ### Profiles
 
-Wants a profile whose cargo shape is a **binary application**. At the
-time of writing no such profile ships: `firmware-layered` is the only
-`binary` shape and its module surface is hardware-specific. A member of a
-workspace can carry this block, but the binary-application profile is the
-missing piece.
+Wants a profile that produces a runnable application. Use **`rust-app`**:
+it emits a `[lib]` testable core plus a `[[bin]]` entry point in one
+crate, which is the shape an eframe application has — headless logic in
+the lib, the `run_native` call in the bin. A member of a workspace can
+carry this block too.
 
 ## Deferred
 

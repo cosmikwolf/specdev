@@ -321,12 +321,15 @@ Module specs in this profile typically carry block-contributed tables:
   declarative config. The block's `codegen/rust/README.md` drives
   `#[derive(Params)]` emission, range constructors, smoother
   attachment, and the export-macro selection.
-- `[egui]` block — editor topology (panels, regions). The block's
-  prose drives `nih_plug_egui::create_egui_editor` skeleton emission
-  and per-region scaffolding.
-- `bindings."egui+nih-plug"` bridge — parameter→widget bindings. The
-  bridge's prose drives per-binding widget emission inside region
-  loops.
+- `[egui]` block — editor topology (panels, regions). The block is
+  host-neutral and contributes no crates; its prose drives panel
+  emission and per-region scaffolding only.
+- `bindings."egui+nih-plug"` bridge — parameter→widget bindings **and
+  the egui host binding**. The bridge contributes `nih_plug_egui`,
+  emits the crate-root `pub use nih_plug_egui::egui;` alias and the
+  `create_egui_editor` skeleton, and drives per-binding widget
+  emission inside region bodies. Because this host pins egui 0.31, the
+  egui block's legacy panel form applies throughout this profile.
 
 Read the relevant block / bridge READMEs for those emission rules.
 This profile prose covers only the architecture-level shape (crate

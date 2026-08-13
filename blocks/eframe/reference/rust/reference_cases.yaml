@@ -4,6 +4,7 @@
 # the discrete emission kinds this block ships a COMPILED reference for.
 reference_cases:
   - app
+  - host_alias
   - window
   - repaint
   - persistence
