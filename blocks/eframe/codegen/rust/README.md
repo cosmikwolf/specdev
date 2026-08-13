@@ -27,6 +27,36 @@ The `persistence` feature is what provides the storage helpers — without
 it they do not exist. Emit it whenever the spec declares any persisted
 entry.
 
+## Host obligation — the crate-root egui alias
+
+This block is a **host** for the `egui` block, which models topology
+and contributes no crates of its own. Emit exactly one line at the
+crate root:
+
+```rust
+pub use eframe::egui;
+```
+
+Emit it whether or not the `egui` block is inlined — it is cheap, and
+it is what that block's emitted code resolves through (`crate::egui`).
+Exactly one host per crate emits this; a second host would collide at
+this line, which is the intended failure rather than two
+semver-incompatible eguis resolving silently.
+
+**Which panel form the egui block uses:** eframe 0.36 supplies egui
+0.36, so its **modern** form applies — unified `egui::Panel`, `show`
+taking a `&mut Ui`, sizes via `default_size`. That is the same `&mut Ui`
+`App::ui` hands you, so the topology function takes it directly:
+
+```rust
+fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut Frame) {
+    crate::<module>::draw(ui);
+}
+```
+
+The egui block's prose is the source for the panel tables; this section
+only fixes which of its two forms is in play.
+
 ## The App trait
 
 An application implements `eframe::App`. In 0.36 the trait has two frame

@@ -13,16 +13,100 @@ source block knows about the other.
 
 ## Crate dependencies
 
-This bridge contributes no new crates. It composes against:
+This bridge contributes **one crate**, `nih_plug_egui` — the join
+product of this pairing. It is the adapter that lets a nih-plug plugin
+host an egui interface, so it exists only because both endpoints are in
+play, and neither endpoint block may declare it.
+
+It composes against:
 
 - `nih_plug` (from the `nih-plug` block) — provides `ParamSetter`,
   parameter types (`FloatParam`/`IntParam`/`BoolParam`/`EnumParam`), and
   the `Enum` trait (`variants()` / `from_index()` / `to_index()`).
-- `nih_plug_egui` (from the `egui` block) — provides the editor closure
-  context (`ctx`, `setter`, `state`) and `widgets::ParamSlider` (the only
-  parameter widget it ships: there is **no** `ParamButton` or
-  `ParamComboBox`, so `toggle`/`dropdown` use plain egui widgets + the
-  setter — see those kinds below).
+- `nih_plug_egui` (this bridge's own contribution) — provides
+  `create_egui_editor`, `EguiState`, the editor closure context (`ctx`,
+  `setter`, `state`), the re-exported egui, and
+  `widgets::ParamSlider` (the only parameter widget it ships: there is
+  **no** `ParamButton` or `ParamComboBox`, so `toggle`/`dropdown` use
+  plain egui widgets + the setter — see those kinds below).
+
+## Host binding — this bridge is the egui host for a plugin
+
+The `egui` block models topology and contributes no crates; egui always
+arrives from a host. For a plugin, **this bridge is that host**. Three
+obligations follow, all of them this bridge's.
+
+### 1. The crate-root egui alias
+
+Emit exactly one line at the crate root:
+
+```rust
+pub use nih_plug_egui::egui;
+```
+
+The egui block's emitted topology code refers to `crate::egui` and
+resolves through this. Emit it once per crate; a second host in the
+same crate would collide here, which is the intended failure.
+
+### 2. Which panel API generation applies
+
+`nih_plug_egui` pins **egui 0.31**, which predates egui's panel-API
+change. So the egui block's **legacy form** applies throughout this
+stack: `SidePanel` / `TopBottomPanel` / `CentralPanel`, `show` taking a
+`&Context`, sizes via `default_width` / `default_height`.
+
+Read the panel table from the egui block's prose — it is the single
+source for panel emission and carries both forms. This section only
+states which one to pick. When `nih_plug_egui` moves to egui 0.34 or
+newer, this paragraph is what changes.
+
+### 3. The editor closure
+
+Every plugin shell module that carries `[egui]` emits one
+`create_egui_editor` call wired into the plugin's `editor()` method.
+The editor closure runs per frame on the UI thread; it captures
+`Arc<MyParams>` and any `Arc<Atomic*>` meter cells, but NEVER captures
+the engine struct (the engine lives behind `Arc<Mutex<...>>` or in
+audio-thread-owned state — passing it through the editor is a thread-
+safety violation).
+
+```rust
+use nih_plug::prelude::*;
+use nih_plug_egui::{create_egui_editor, EguiState};
+use std::sync::Arc;
+
+#[derive(Default)]
+struct EditorState {
+    // editor-thread state goes here (cached UI values, drag-in-progress
+    // flags, preset-picker open/closed). NEVER engine state.
+}
+
+fn editor() -> Option<Box<dyn Editor>> {
+    let editor_state = EguiState::from_size(<default_size.width>, <default_size.height>);
+    let params = self.params.clone();
+    create_egui_editor(
+        editor_state,
+        EditorState::default(),
+        |_ctx, _state| {},  // build_fn — runs once
+        move |ctx, setter, state| {
+            // update_fn — runs per frame. The egui block's panel
+            // emission goes here, in the legacy form, with `ctx`.
+        },
+    )
+}
+```
+
+The `editor()` method is implemented on the plugin (`impl Plugin for
+MyPlugin { fn editor(...) -> ... }`) — not in the module's body. The
+project's profile's prose covers the `impl Plugin` skeleton; this
+bridge's prose fills in the editor closure body.
+
+`EguiState::from_size` consumes `[egui].default_size`; when it is
+omitted, fall back to `EguiState::from_size(400, 300)` (egui's
+conventional small editor). When `[egui].resizable = true`, call
+`editor_state.set_resizable(true)` after construction. Those two fields
+live on the egui block's table but are consumed here, because the host
+is what has a window to size.
 
 ## Editor closure plumbing
 
@@ -288,10 +372,27 @@ Codegen warns when `label = "right"` is used in a vertical layout
 
 ## State ownership rule
 
-Same rule as the egui block prose: the editor closure captures
-`Arc<MyParams>` and any `Arc<Atomic*>` meter cells, NEVER the engine
-struct. The `setter` parameter is an editor-thread argument provided
-by `nih_plug_egui`; pass it through to all `setter.*` calls as shown
+The editor closure captures `Arc<MyParams>` and any `Arc<Atomic*>`
+meter cells, NEVER the engine struct. Three reasons:
+
+1. The editor runs on the UI thread; the engine runs on the audio
+   thread. Sharing engine state requires `Arc<Mutex<...>>` and locking
+   on the audio path, which violates the realtime contract (no locks).
+2. egui closures are `'static` — capturing references doesn't compile
+   without `Arc`-wrapping. Wrapping the engine in `Arc<Mutex<...>>`
+   means the audio path locks every block.
+3. The decoupling matches nih-plug's design — params + meters are the
+   thread-safe surface; everything else is per-thread.
+
+When the editor needs engine-derived state (output level, active voice
+count), the plugin shell module publishes it via `Arc<AtomicF32>` /
+`Arc<AtomicUsize>` updated from `process()`, and the editor reads with
+`.load(Relaxed)`. The egui block's `metering` region scaffold documents
+the read side; emission of the audio-thread side lives in the user's
+`process()` body.
+
+The `setter` parameter is an editor-thread argument provided by
+`nih_plug_egui`; pass it through to all `setter.*` calls as shown
 above.
 
 The bridge's emission must:
@@ -308,18 +409,25 @@ Three concerns this bridge is silent on (handled elsewhere):
 
 - **Crate-type emission.** The project's profile's prose owns
   Cargo.toml shape (cdylib + optional standalone bin). This
-  bridge contributes no Cargo.toml content.
+  bridge contributes no Cargo.toml content beyond the one crate in its
+  `deps.yaml`.
 - **Plugin trait skeleton.** The nih-plug block's prose owns the
   `impl Plugin for X` skeleton, the parameter struct (`#[derive(Params)]`),
   the export macros at crate root, and the `process()` callback shape.
   This bridge composes against the parameter struct but does not
   emit it.
-- **Editor closure shell.** The egui block's prose owns
-  `create_egui_editor` construction, panel emission ordering, and
-  per-region `purpose`-driven scaffolds. This bridge fills in the
-  `parameter_controls` region bodies, but does not own the closure
-  itself.
+- **Panel and region emission.** The egui block's prose owns panel
+  ordering, the panel-kind tables for both API generations, and the
+  per-region `purpose`-driven scaffolds. This bridge says which
+  generation applies and fills in the `parameter_controls` region
+  bodies; it does not restate the panel code.
 
-This division of labor is what makes the bridge primitive earn its
-keep architecturally — the bridge owns ONE concern (parameter ↔
-widget wiring) that neither source block can express alone.
+This division of labour is what makes the bridge primitive earn its
+keep architecturally. The bridge owns two concerns neither source block
+can express alone: parameter ↔ widget wiring, and the host binding —
+the join-product crate plus the editor closure that gives the topology
+an egui context to draw into.
+
+**Inline this bridge whenever a nih-plug plugin ships an egui editor**,
+even with no `parameter_widgets` entries yet. The bindings table may be
+empty; the host binding above is what the stack needs to compile.

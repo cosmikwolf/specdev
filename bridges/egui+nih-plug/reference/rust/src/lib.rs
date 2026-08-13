@@ -23,6 +23,12 @@
 // `use <crate> as _;` here rather than downgrading this.
 #![deny(unused_crate_dependencies)]
 
+/// The host obligation this bridge owns: one crate-root re-export, so the
+/// egui block's emitted topology code resolves `crate::egui`. A real project
+/// gets exactly one of these, from exactly one host.
+pub use nih_plug_egui::egui;
+
+pub mod editor;
 pub mod params;
 
 pub mod button;

@@ -5,8 +5,10 @@
 # NOT inlined into user projects (this dir is a sibling to codegen/, which inline
 # never copies from).
 #
-# nih-plug is git-only; the rev is pinned here for reproducible CI (the inlined
-# block deps.yaml deliberately leaves the pin to the project's architecture.toml).
+# nih-plug is git-only. Both revs below must match what the corresponding
+# deps.yaml files pin -- `nih_plug` from the nih-plug block, `nih_plug_egui`
+# from this bridge's own deps.yaml. The pin checks compare them; a reference
+# compiling against a rev users never receive proves nothing.
 [package]
 name = "egui-nih-plug-reference"
 version = "0.0.0"
