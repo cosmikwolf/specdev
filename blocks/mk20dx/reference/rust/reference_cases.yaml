@@ -1,0 +1,13 @@
+# Reference-crate coverage manifest.
+#
+# Plugin-author / CI-only -- NEVER inlined (lives under `reference/`). Declares
+# the discrete emission kinds this block ships a COMPILED reference for.
+#
+# One module per kind the schema models: `pins` covers every mode the Pin
+# entry admits; `port_interrupt` covers a pin's `interrupt` trigger and the
+# one-handler-per-port dispatch; `vector_interrupt` covers a
+# `[[mk20dx.interrupts]]` vector with its family's flag clear.
+reference_cases:
+  - pins
+  - port_interrupt
+  - vector_interrupt

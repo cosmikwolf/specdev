@@ -1,0 +1,4 @@
+# Cortex-M4 without FPU — the core in the MK20DX family this block models,
+# and the same triple flxs1 builds for.
+[build]
+target = "thumbv7em-none-eabi"
