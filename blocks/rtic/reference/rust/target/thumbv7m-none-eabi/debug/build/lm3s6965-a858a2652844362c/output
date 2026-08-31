@@ -1,5 +1,0 @@
-cargo:rustc-cfg=armv7m
-cargo:rustc-link-search=/Users/tenkai/Development/agentic_tools/specdev/blocks/rtic/reference/rust/target/thumbv7m-none-eabi/debug/build/lm3s6965-a858a2652844362c/out
-cargo:rerun-if-changed=device.x
-cargo:rerun-if-changed=memory.x
-cargo:rerun-if-changed=build.rs

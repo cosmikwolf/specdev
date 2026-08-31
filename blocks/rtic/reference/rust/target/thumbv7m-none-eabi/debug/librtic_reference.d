@@ -1,1 +1,0 @@
-/Users/tenkai/Development/agentic_tools/specdev/blocks/rtic/reference/rust/target/thumbv7m-none-eabi/debug/librtic_reference.rlib: /Users/tenkai/Development/agentic_tools/specdev/blocks/rtic/reference/rust/src/app.rs /Users/tenkai/Development/agentic_tools/specdev/blocks/rtic/reference/rust/src/lib.rs
