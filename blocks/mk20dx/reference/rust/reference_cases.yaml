@@ -6,8 +6,18 @@
 # One module per kind the schema models: `pins` covers every mode the Pin
 # entry admits; `port_interrupt` covers a pin's `interrupt` trigger and the
 # one-handler-per-port dispatch; `vector_interrupt` covers a
-# `[[mk20dx.interrupts]]` vector with its family's flag clear.
+# `[[mk20dx.interrupts]]` vector with its family's flag clear; `clock`
+# covers the `[mk20dx.clock]` preset; the rest cover one peripheral table
+# each — both construction forms where the entry forks on a field
+# (timer with/without period, FTM with/without frequency).
 reference_cases:
   - pins
   - port_interrupt
   - vector_interrupt
+  - clock
+  - timer
+  - spi
+  - uart
+  - adc
+  - dma_channel
+  - ftm
