@@ -1,7 +1,7 @@
 # CI-only reference crate for the embassy+stm32h5-rs bridge codegen prose.
 # Type-checks the worked examples in ../../codegen/rust/README.md against the
 # pinned embassy-stm32 API. NOT inlined into user projects (this dir is a
-# sibling to codegen/, which inline never copies from). See specdev-next Phase 31.
+# sibling to codegen/, which inline never copies from). See specdev-planning Phase 31.
 [package]
 name = "embassy-stm32h5-rs-reference"
 version = "0.0.0"
