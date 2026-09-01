@@ -10,6 +10,11 @@
 # `thumbv7-backend` is likewise this reference's choice. The block declares
 # no backend feature because the correct one depends on the core; see
 # ../../codegen/rust/deps.yaml.
+#
+# `rtic-sync` and `embassy-sync` are WITNESSES, not contributions: the block
+# recommends both and contributes neither, and the prose documents one
+# channel form per crate. A form nobody compiles is a form nobody checked,
+# so both compile here.
 [package]
 name = "rtic-reference"
 version = "0.0.0"
@@ -21,5 +26,6 @@ publish = false
 [dependencies]
 rtic = { version = "2.3", features = ["thumbv7-backend"] }
 rtic-sync = "1.5"
+embassy-sync = "0.8"
 lm3s6965 = "0.2"
 cortex-m = { version = "0.7", features = ["critical-section-single-core"] }
