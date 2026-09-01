@@ -19,3 +19,4 @@ publish = false
 [dependencies]
 mk20dx-hal = { version = "^0.1.1", features = ["mk20d7", "rt", "critical-section"] }
 fugit = "0.3"
+embedded-hal = "1.0"

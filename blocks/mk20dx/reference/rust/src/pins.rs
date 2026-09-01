@@ -1,6 +1,7 @@
 //! `[[mk20dx.pins]]` — every mode the schema admits, emitted the way the
 //! codegen prose says to (§2 and §3 of `../../codegen/rust/README.md`).
 
+use embedded_hal::digital::{InputPin, OutputPin, StatefulOutputPin};
 use mk20dx_hal::gpio::{Alternate, GpioExt, Input, Output, Pin, PullUp, PushPull};
 use mk20dx_hal::pac;
 
@@ -35,9 +36,20 @@ pub fn init(dp: pac::Peripherals) -> OwnedPins {
     // `mode = "pull_down_input"`
     let _strap = pins_d.pd6.into_pull_down_input();
 
+    let mut status_led = pins_c.pc5.into_push_pull_output();
+    let mut button = pins_d.pd5.into_pull_up_input();
+
+    // Driving the handles goes through embedded-hal's digital traits,
+    // which the block contributes (the HAL implements them without
+    // re-exporting them). The error is infallible on this chip; .ok() /
+    // .unwrap() at the call site is the accepted form.
+    status_led.set_high().ok();
+    status_led.toggle().ok();
+    let _pressed = button.is_low().unwrap();
+
     OwnedPins {
-        status_led: pins_c.pc5.into_push_pull_output(),
-        button: pins_d.pd5.into_pull_up_input(),
+        status_led,
+        button,
         spi_clk: pins_d.pd1.into_alternate::<2>(),
     }
 }
