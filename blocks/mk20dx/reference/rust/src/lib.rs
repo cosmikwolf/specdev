@@ -15,6 +15,13 @@
 #![deny(unused_crate_dependencies)]
 #![no_std]
 
+pub mod adc;
+pub mod clock;
+pub mod dma_channel;
+pub mod ftm;
 pub mod pins;
 pub mod port_interrupt;
+pub mod spi;
+pub mod timer;
+pub mod uart;
 pub mod vector_interrupt;

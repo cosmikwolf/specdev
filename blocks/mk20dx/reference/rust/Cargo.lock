@@ -194,6 +194,7 @@ dependencies = [
 name = "mk20dx-reference"
 version = "0.0.0"
 dependencies = [
+ "fugit",
  "mk20dx-hal",
 ]
 
