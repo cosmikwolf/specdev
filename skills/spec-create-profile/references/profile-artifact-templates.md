@@ -54,10 +54,10 @@ cargo_toml:
   shape: library                  # CLOSED enum: library | binary | plugin | workspace
   default_edition: "2021"
   lib: {}                         # or [[bin]]/cdylib config appropriate to `shape`
-  features:
-    synthesize_default: true      # off for firmware-layered
-    drain_from: ["features"]      # architecture.toml's [[features]]
-  architecture_deps:
+  features:                       # descriptive: the renderer dispatches on `shape` and
+    synthesize_default: true      #   reads architecture.toml tables by fixed key; nothing
+    drain_from: ["features"]      #   reads these keys — keep them truthful for the shape
+  architecture_deps:              # descriptive, same rule
     typed_slots: []               # named infra-dep slots (platform/runtime/logger for firmware)
     open_arrays: ["external_deps"]
 
