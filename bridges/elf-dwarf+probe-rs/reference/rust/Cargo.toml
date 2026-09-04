@@ -1,0 +1,23 @@
+# CI-only reference crate for the elf-dwarf+probe-rs bridge codegen prose.
+# Type-checks the worked examples in ../../codegen/rust/README.md against the
+# pinned APIs of BOTH endpoint blocks. NOT inlined — this dir is CI-only, a
+# sibling to codegen/.
+#
+# The bridge introduces no join-product crate: probe-rs already accepts a
+# u64 address and elf-dwarf already produces one, so the pairing needs no
+# adapter. What it needs is the type-to-width mapping, which is code, and
+# this crate is what compiles it.
+#
+# Pins mirror the two blocks' deps.yaml. Bump all three together.
+[package]
+name = "elf-dwarf-probe-rs-reference"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[lib]
+
+[dependencies]
+gimli = "0.34"
+object = { version = "0.40", features = ["read", "std", "compression"] }
+probe-rs = "0.32"
