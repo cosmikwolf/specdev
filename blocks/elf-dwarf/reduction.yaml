@@ -1,0 +1,58 @@
+metaschema_version: "v1"
+
+# elf-dwarf block reduction. Two entity kinds — Image and Selection —
+# both extending Module, since each is a declarative sub-unit of a module
+# that reads debug info.
+#
+# One intra-block relation, `selection_in_image` (Selection -> Image),
+# materialized from each selection's `image` field. The existing
+# reference_exists / REDUCE_UNRESOLVED machinery then flags a selection
+# naming an image that was never declared. No new graph-check primitive
+# is needed.
+#
+# `kinds` is a list-valued filter criterion. It is NOT surfaced as a
+# graph attr: attrs carry scalars, and no graph check reaches into the
+# accepted-kind set. Codegen prose reads it directly from the module's
+# TOML, the same way the nih-plug block reads its process-config table.
+#
+# Kinds are written bare here, not qualified. File location establishes
+# the `elf-dwarf` namespace for an INTRA-block relation; the hyphenated
+# qualifier (`elf-dwarf.Selection`) is what a BRIDGE writes when it
+# reaches these kinds from outside.
+#
+# Cross-block relations live in bridges, never here. In particular, the
+# binding from a selection to whatever reads the recovered addresses out
+# of a running target belongs in a bridge.
+
+entities:
+  - kind: Image
+    extends: Module
+    from: "specs/modules/*.toml"
+    for_each: "elf_dwarf.images[]"
+    name: "${root.name}.${.id}"
+    attrs:
+      endian:                   ".endian"
+      reload:                   ".reload"
+      require_linked:           ".require_linked"
+      include_function_statics: ".include_function_statics"
+
+  - kind: Selection
+    extends: Module
+    from: "specs/modules/*.toml"
+    for_each: "elf_dwarf.selections[]"
+    name: "${root.name}.${.id}"
+    attrs:
+      image:        ".image"
+      name_pattern: ".name_pattern"
+      max_bytes:    ".max_bytes"
+
+relations:
+  - kind: selection_in_image
+    extends: depends_on
+    from_kind: Selection
+    to_kind: Image
+    from_spec: "specs/modules/*.toml"
+    for_each: "elf_dwarf.selections[]"
+    endpoints:
+      from: "${root.name}.${.id}"
+      to:   "${root.name}.${.image}"
