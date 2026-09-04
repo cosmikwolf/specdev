@@ -1,0 +1,23 @@
+# CI-only reference crate for the egui+egui-plot bridge codegen prose.
+# Type-checks the worked examples in ../../codegen/rust/README.md against the
+# pinned APIs of BOTH endpoint blocks. NOT inlined — this dir is CI-only, a
+# sibling to codegen/.
+#
+# The bridge introduces no join-product crate: a plot draws into whatever
+# `Ui` it is handed, and a region body already has one. This crate proves
+# that the region scaffold and the plot builder meet at that `&mut Ui`.
+#
+# Neither block contributes egui itself, so this reference declares it
+# directly and re-exports it from lib.rs, standing in for a host -- the
+# same arrangement both blocks' own references use.
+[package]
+name = "egui-egui-plot-reference"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[lib]
+
+[dependencies]
+egui = "0.36"
+egui_plot = "0.37"
