@@ -1,0 +1,229 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://specdev.dev/blocks/egui-plot.v1"
+title: "egui-plot block (v1)"
+description: >
+  Schema fragment contributed by the `egui-plot` block. Adds a namespaced
+  `[egui_plot]` table to `Module` carrying **plot topology** — plots and
+  the data series drawn inside them — for any module that renders charts
+  with [egui_plot](https://github.com/emilk/egui_plot).
+
+  v1 models structure and appearance: WHICH plots exist, WHICH series
+  belong to each, and how each is drawn. It does not model where the
+  data comes from. A series names a channel; filling it is the emitted
+  code's job, and binding it to a producer is a bridge's job.
+
+  The block contributes the `egui_plot` crate but **not egui itself**,
+  which always arrives from whichever unit supplies the crate-root
+  `pub use ...::egui;` alias. Emitted code therefore reaches plot types
+  through `egui_plot::` and everything else through `crate::egui`. The
+  host's egui and the one `egui_plot` builds against must be the same
+  minor version, or their `Ui` types will not unify — see the block
+  README.
+
+  This schema is self-contained: identifier patterns are inlined rather
+  than $ref'd against profile-shipped enums.schema.yaml so the block
+  composes against any profile that exposes `Module`.
+type: object
+properties:
+  egui_plot:
+    type: object
+    additionalProperties: false
+    properties:
+      plots:
+        description: >
+          Plots. Each becomes one `egui_plot::Plot` with its axes,
+          legend, interaction masks and bounds policy.
+        type: array
+        items: { $ref: "#/$defs/Plot" }
+        minItems: 1
+      series:
+        description: >
+          Data series drawn inside plots. Each becomes one plot item
+          added in the plot's build closure.
+        type: array
+        items: { $ref: "#/$defs/Series" }
+
+$defs:
+  Identifier:
+    description: snake_case or PascalCase identifier usable as a Rust ident.
+    type: string
+    pattern: "^[A-Za-z_][A-Za-z0-9_]*$"
+
+  Axes:
+    description: >
+      An axis mask. Interaction and bounds settings apply per axis, so
+      each is chosen independently.
+    type: string
+    enum: [none, x, y, both]
+
+  Plot:
+    description: >
+      One plot. `id` is both the Rust name and the plot's persistence
+      key: egui_plot stores pan and zoom state under it, so renaming a
+      plot resets the view the user had set up.
+    type: object
+    additionalProperties: false
+    required: [id]
+    properties:
+      id:
+        $ref: "#/$defs/Identifier"
+      x_label:
+        description: Axis label drawn under the x axis. Free text.
+        type: string
+        minLength: 1
+      y_label:
+        description: Axis label drawn beside the y axis. Free text.
+        type: string
+        minLength: 1
+      legend:
+        description: >
+          Legend corner, or `none` to draw no legend. A legend entry is
+          created per series name, and clicking one hides that series.
+        type: string
+        enum: [none, left_top, right_top, left_bottom, right_bottom]
+        default: right_top
+      height:
+        description: >
+          Fixed height in points. When absent the plot fills the space
+          its container gives it, which is usually what a single-plot
+          panel wants and never what a stack of plots wants.
+        type: number
+        exclusiveMinimum: 0
+      follow_window:
+        description: >
+          Width of a scrolling x-axis window, in x-axis units. When set,
+          codegen pins the x bounds to the most recent window on every
+          frame — the behaviour a live streaming plot needs. When absent
+          the x axis is left under user and auto-bounds control.
+
+          Setting this necessarily takes the x axis away from
+          auto-bounds; declaring `auto_bounds = "x"` or `"both"`
+          alongside it is contradictory, and codegen resolves it in
+          favour of the window.
+        type: number
+        exclusiveMinimum: 0
+      auto_bounds:
+        description: >
+          Which axes refit themselves to the data each frame. `y` is the
+          default and suits a streaming plot whose x is pinned by
+          `follow_window` while y should track the signal.
+        allOf:
+          - $ref: "#/$defs/Axes"
+        default: y
+      allow_drag:
+        description: Axes the user may pan by dragging.
+        allOf:
+          - $ref: "#/$defs/Axes"
+        default: both
+      allow_zoom:
+        description: Axes the user may zoom.
+        allOf:
+          - $ref: "#/$defs/Axes"
+        default: both
+      link_group:
+        description: >
+          Opaque group name. Every plot sharing a group keeps its linked
+          axes in step, which is how a signal plot and an event timeline
+          stay aligned. A plot belongs to at most one group.
+        type: string
+        minLength: 1
+      link_axes:
+        description: >
+          Which axes are linked within `link_group`. Ignored without a
+          group. `x` is the useful case: shared time, independent
+          vertical scales.
+        allOf:
+          - $ref: "#/$defs/Axes"
+        default: x
+      link_cursor:
+        description: >
+          Links the hover cursor across the plots in `link_group`, so
+          pointing at a time in one marks the same time in the others.
+          Ignored without a group.
+        type: boolean
+        default: false
+
+  Series:
+    description: >
+      One data series inside a plot. `kind` selects the plot item type;
+      the remaining fields are its appearance.
+    type: object
+    additionalProperties: false
+    required: [id, plot, kind]
+    properties:
+      id:
+        $ref: "#/$defs/Identifier"
+      plot:
+        description: >
+          Id of the plot this series is drawn in. Must reference a
+          declared `[[egui_plot.plots]]` id; the `series_in_plot`
+          reduction relation surfaces an unresolved reference at
+          validate time.
+        $ref: "#/$defs/Identifier"
+      kind:
+        description: |
+          Plot item type:
+
+            line       — connected points. The default shape for a
+                         sampled signal over time.
+            points     — unconnected markers. Correct for events, and
+                         for sampling too sparse for a line to imply
+                         values between the samples.
+            h_line     — a horizontal reference line at a constant y
+                         (a threshold, a zero line).
+            v_line     — a vertical reference line at a constant x
+                         (a cursor, a trigger instant).
+            bar_chart  — bars. For histograms and counts.
+        type: string
+        enum: [line, points, h_line, v_line, bar_chart]
+      label:
+        description: >
+          Legend text. Defaults to `id` when absent. This string is also
+          the item's identity for legend show/hide, so two series
+          sharing a label share one legend entry and toggle together.
+        type: string
+        minLength: 1
+      color:
+        description: >
+          Colour as `#RRGGBB`. When absent the plot assigns one
+          automatically — but auto-assignment counts items in the order
+          they are added, and an item with no data is skipped entirely,
+          so colours shift as series appear and disappear. Set this
+          explicitly for any plot whose series can be empty.
+        type: string
+        pattern: "^#[0-9a-fA-F]{6}$"
+      width:
+        description: >
+          Stroke width in points, for `line`, `h_line` and `v_line`.
+        type: number
+        exclusiveMinimum: 0
+      style:
+        description: >
+          Stroke style, for `line`, `h_line` and `v_line`. The `_dense`
+          and `_loose` pairs differ only in dash or dot spacing.
+        type: string
+        enum: [solid, dashed_dense, dashed_loose, dotted_dense, dotted_loose]
+        default: solid
+      marker:
+        description: Marker shape, for `points`.
+        type: string
+        enum:
+          - circle
+          - diamond
+          - square
+          - cross
+          - plus
+          - up
+          - down
+          - left
+          - right
+          - asterisk
+        default: circle
+      radius:
+        description: Marker radius in points, for `points`.
+        type: number
+        exclusiveMinimum: 0
+      filled:
+        description: Whether markers are filled, for `points`.
+        type: boolean
+        default: true

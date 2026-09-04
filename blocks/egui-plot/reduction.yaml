@@ -1,0 +1,68 @@
+metaschema_version: "v1"
+
+# egui-plot block reduction. Two entity kinds — Plot and Series — both
+# extending Module. One intra-block relation, `series_in_plot`
+# (Series -> Plot), materialized from each series' `plot` field. This
+# mirrors the egui block's `region_in_panel`: the existing
+# reference_exists / REDUCE_UNRESOLVED machinery then flags a series
+# naming a plot that was never declared, with no new graph-check
+# primitive.
+#
+# Kinds are written bare here, not qualified. File location establishes
+# the `egui-plot` namespace for an INTRA-block relation; the hyphenated
+# qualifier (`egui-plot.Plot`) is what a BRIDGE writes when it reaches
+# these kinds from outside.
+#
+# Cross-block relations live in bridges, never here. In particular, the
+# binding that places a plot inside a surrounding interface region, and
+# any binding from a series to whatever produces its samples, are bridge
+# concerns.
+#
+# Qualified entity names combine the parent module name with the local
+# id, so several modules may each declare a plot without colliding.
+
+entities:
+  - kind: Plot
+    extends: Module
+    from: "specs/modules/*.toml"
+    for_each: "egui_plot.plots[]"
+    name: "${root.name}.${.id}"
+    attrs:
+      x_label:        ".x_label"
+      y_label:        ".y_label"
+      legend:         ".legend"
+      height:         ".height"
+      follow_window:  ".follow_window"
+      auto_bounds:    ".auto_bounds"
+      allow_drag:     ".allow_drag"
+      allow_zoom:     ".allow_zoom"
+      link_group:     ".link_group"
+      link_axes:      ".link_axes"
+      link_cursor:    ".link_cursor"
+
+  - kind: Series
+    extends: Module
+    from: "specs/modules/*.toml"
+    for_each: "egui_plot.series[]"
+    name: "${root.name}.${.id}"
+    attrs:
+      plot:   ".plot"
+      kind:   ".kind"
+      label:  ".label"
+      color:  ".color"
+      width:  ".width"
+      style:  ".style"
+      marker: ".marker"
+      radius: ".radius"
+      filled: ".filled"
+
+relations:
+  - kind: series_in_plot
+    extends: depends_on
+    from_kind: Series
+    to_kind: Plot
+    from_spec: "specs/modules/*.toml"
+    for_each: "egui_plot.series[]"
+    endpoints:
+      from: "${root.name}.${.id}"
+      to:   "${root.name}.${.plot}"
