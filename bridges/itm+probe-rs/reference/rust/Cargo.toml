@@ -1,0 +1,22 @@
+# CI-only reference crate for the itm+probe-rs bridge codegen prose.
+# Type-checks the worked examples in ../../codegen/rust/README.md against the
+# pinned APIs of BOTH endpoint blocks. NOT inlined — this dir is CI-only, a
+# sibling to codegen/.
+#
+# The bridge introduces no join-product crate. probe-rs's SwoReader already
+# implements std::io::Read and itm's Decoder already accepts any R: Read, so
+# the two compose directly -- this reference is what proves that, and it is
+# the whole reason the seam needs no adapter.
+#
+# Pins mirror the two blocks' deps.yaml. Bump all three together.
+[package]
+name = "itm-probe-rs-reference"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[lib]
+
+[dependencies]
+itm = { version = "0.9.0-rc.1", default-features = false }
+probe-rs = "0.32"
