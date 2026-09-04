@@ -1,0 +1,158 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://specdev.dev/blocks/elf-dwarf.v1"
+title: "elf-dwarf block (v1)"
+description: >
+  Schema fragment contributed by the `elf-dwarf` block. Adds a namespaced
+  `[elf_dwarf]` table to `Module` describing **symbol recovery from debug
+  info**: which ELF images are read, and which statically-allocated
+  variables are selected out of them.
+
+  This block targets the [object](https://github.com/gimli-rs/object)
+  container reader and the [gimli](https://github.com/gimli-rs/gimli)
+  DWARF reader. It answers one question — "what global variables does
+  this image have, at what addresses, of what type and size?" — and
+  stops there.
+
+  v1 covers two concerns:
+
+    images[]     — how one ELF is loaded and how strict the load is
+    selections[] — a named filter over one image's global variables
+
+  A selection is a **filter, not a list**. Variable names are a property
+  of the firmware being observed, not of the tool observing it, and they
+  change with every rebuild. Declaring a pattern survives a rebuild;
+  declaring names does not.
+
+  The block is deliberately silent about what is done with an address
+  once recovered. Reading target memory is a separate concern and
+  belongs in a bridge against whichever unit owns the target connection.
+
+  This schema is self-contained: identifier patterns are inlined rather
+  than $ref'd against profile-shipped enums.schema.yaml so the block
+  composes against any profile that exposes `Module`.
+type: object
+properties:
+  elf_dwarf:
+    type: object
+    additionalProperties: false
+    properties:
+      images:
+        description: >
+          ELF images read for debug info. Each becomes one load path:
+          parse the container, hand gimli the debug sections, and expose
+          the resulting unit set. The file path is a runtime input.
+        type: array
+        items: { $ref: "#/$defs/Image" }
+        minItems: 1
+      selections:
+        description: >
+          Named filters over an image's statically-allocated variables.
+          Each becomes one filtered walk returning name, address, size
+          and type classification.
+        type: array
+        items: { $ref: "#/$defs/Selection" }
+
+$defs:
+  Identifier:
+    description: snake_case or PascalCase identifier usable as a Rust ident.
+    type: string
+    pattern: "^[A-Za-z_][A-Za-z0-9_]*$"
+
+  ScalarKind:
+    description: >
+      How a variable's bytes are interpreted, after following its type
+      through any typedefs and qualifiers. `other` covers structs,
+      arrays and unions — readable as raw bytes, but not as a number.
+    type: string
+    enum: [unsigned, signed, float, bool, other]
+
+  Image:
+    description: >
+      One ELF image. The path is supplied at runtime: which build is
+      being observed is a property of the session, not of the spec.
+    type: object
+    additionalProperties: false
+    required: [id]
+    properties:
+      id:
+        $ref: "#/$defs/Identifier"
+      endian:
+        description: >
+          `auto` reads the container's own declaration, which is correct
+          for every real toolchain output and is the default. The
+          explicit values exist for a hand-assembled image whose header
+          cannot be trusted.
+        type: string
+        enum: [auto, little, big]
+        default: auto
+      reload:
+        description: |
+          What happens when the file changes on disk:
+
+            manual — reload only when asked. Predictable, and the right
+                     default: addresses changing under a running
+                     acquisition is a surprise worth opting into.
+            watch  — watch the file and reload on change. Suits a
+                     rebuild-and-observe loop, where the alternative is
+                     reading a stale address after every firmware build.
+        type: string
+        enum: [manual, watch]
+        default: manual
+      require_linked:
+        description: >
+          Refuses an unlinked object file. In one of those, every
+          address is an unresolved relocation placeholder — normally
+          zero — so the whole symbol table is uniformly wrong rather
+          than visibly broken. Defaults to true; the failure this
+          prevents is silent, which is exactly the kind worth a check.
+        type: boolean
+        default: true
+      include_function_statics:
+        description: >
+          Includes `static` variables declared inside functions. They
+          are statically allocated and perfectly readable, but their
+          names are not unique across a program, so a viewer showing
+          them needs the declaring unit to tell two apart. Defaults to
+          true.
+        type: boolean
+        default: true
+
+  Selection:
+    description: >
+      One named filter over an image's globals. All declared criteria
+      must match; an absent criterion constrains nothing.
+    type: object
+    additionalProperties: false
+    required: [id, image]
+    properties:
+      id:
+        $ref: "#/$defs/Identifier"
+      image:
+        description: >
+          Id of the `[[elf_dwarf.images]]` this selection reads. The
+          `selection_in_image` reduction relation surfaces an
+          unresolved reference at validate time.
+        $ref: "#/$defs/Identifier"
+      name_pattern:
+        description: >
+          Glob over the variable name. `*` matches any run of
+          characters and is the only metacharacter — the vocabulary is
+          kept this small on purpose, so the pattern needs no regex
+          engine and no escaping rules. Absent means every name.
+        type: string
+        minLength: 1
+      kinds:
+        description: >
+          Accepted type classifications. Absent or empty accepts every
+          kind. Naming the scalar kinds is the usual way to keep
+          structs and arrays out of a plot-oriented view.
+        type: array
+        items: { $ref: "#/$defs/ScalarKind" }
+        uniqueItems: true
+      max_bytes:
+        description: >
+          Rejects variables larger than this. Useful against a filter
+          that would otherwise sweep in a multi-kilobyte buffer whose
+          transfer would dominate every sampling pass.
+        type: integer
+        minimum: 1

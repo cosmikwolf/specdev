@@ -1,0 +1,34 @@
+# Manifest — Cargo deps the elf-dwarf block contributes.
+# Schema: specdev-analyzer/src/embedded/block_deps.schema.yaml.
+#
+# Inlined alongside codegen/rust/README.md during `specdev inline elf-dwarf`;
+# participates in the block's per-unit content_hash.
+#
+# Two crates, both from the gimli-rs project and versioned independently:
+# `object` reads the container (ELF), `gimli` reads the DWARF inside it.
+#
+# gimli reshaped its DIE-access API within the 0.3x series -- several
+# accessors that returned Result now return Option -- so the pin is
+# load-bearing for whether the codegen prose compiles at all. Bump it and
+# reference/rust/Cargo.toml together, never one alone.
+#
+# `compression` on object is not optional in practice: CompressedData
+# only decompresses zlib/zstd behind that feature, so an image built with
+# --compress-debug-sections fails to load without it. `read` and `std`
+# are named explicitly rather than relied on as defaults.
+
+crates:
+  - name: gimli
+    version: "0.34"
+    features: []
+    source: crates-io
+  - name: object
+    version: "0.40"
+    features: ["read", "std", "compression"]
+    source: crates-io
+
+# Reloading on change needs a file watcher, which is a platform concern
+# the block does not take a position on.
+recommended_external_deps:
+  - crate: notify
+    purpose: "Filesystem watcher backing an image's `reload = \"watch\"`."
