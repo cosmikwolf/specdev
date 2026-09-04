@@ -1,0 +1,14 @@
+# Manifest — itm+probe-rs bridge dispatch contract.
+# Schema: specdev-analyzer/src/embedded/bridge_contract.schema.yaml.
+#
+# Both endpoints are ordinary declarations on the module that carries the
+# bindings table: a data watch and a trace source both belong to
+# whichever module owns the debug session. There is no privileged shell
+# module to auto-resolve against, so locality is endpoint_module.
+
+binding_locality: endpoint_module
+
+diagnostic_template: |
+  the {bridge_name} bridge requires intra-module wiring:
+  binding endpoints must reference declarations on the same module that
+  carries the bindings table. Move the binding or move the declaration.
