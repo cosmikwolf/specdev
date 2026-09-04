@@ -24,14 +24,25 @@
 ;; stays ONE item: the conformance is the contract; its method bodies are
 ;; codegen-derived from the trait, not separate items. The `trait:` field
 ;; (present → trait impl) vs `!trait` (absent → inherent impl) partitions
-;; the two cases; visibility is captured and filtered to `pub` in the
-;; extractor (private associated members are not contract surface).
+;; the two cases; visibility is captured (`*.vis`) and compared against
+;; the profile's visibility floor in the extractor (private associated
+;; members are not contract surface).
+;;
+;; Visibility (#101(b) / #103 / #104): every top-level kind whose grammar
+;; node accepts a `visibility_modifier` carries an optional `@<kind>.vis`
+;; capture — fn, struct, enum, union, trait, type, const, static, and the
+;; three inherent members. A declared-but-absent capture means "no
+;; modifier" = private, so the item drops under any floor. `macro` has NO
+;; capture: `macro_rules!` takes no visibility_modifier in the grammar (its
+;; export is the `#[macro_export]` attribute), so every macro extracts.
+;; `re_export` is gated by the spec's own `visibility` enum (`pub` |
+;; `crate`), not by the floor — see the pattern below.
 
 ;; ──────────────────────────────────────────────────────────────────
 ;; fn — top-level free functions. Visibility is captured (`@fn.vis`) and
-;; filtered to `pub` in the extractor: a non-`pub` free fn is a
-;; module-private helper, not public contract surface, and must not
-;; surface as `in_source_only` drift (mirrors the inherent-method rule).
+;; compared against the floor in the extractor: a free fn below the floor
+;; is a module-private helper, not contract surface, and must not surface
+;; as `in_source_only` drift (mirrors the inherent-method rule).
 (source_file
   (function_item
     (visibility_modifier)? @fn.vis
@@ -42,21 +53,25 @@
 ;; struct
 (source_file
   (struct_item
+    (visibility_modifier)? @struct.vis
     name: (type_identifier) @struct.name) @struct.def)
 
 ;; enum
 (source_file
   (enum_item
+    (visibility_modifier)? @enum.vis
     name: (type_identifier) @enum.name) @enum.def)
 
 ;; union
 (source_file
   (union_item
+    (visibility_modifier)? @union.vis
     name: (type_identifier) @union.name) @union.def)
 
 ;; trait
 (source_file
   (trait_item
+    (visibility_modifier)? @trait.vis
     name: (type_identifier) @trait.name) @trait.def)
 
 ;; impl — TRAIT impls only: one item per `impl Trait for Type` (the
@@ -71,7 +86,8 @@
 ;; no impl item — each PUBLIC associated fn/const/type is an item named
 ;; `<Type>::<member>`. `!trait` restricts these to inherent impls;
 ;; `inherent.host` carries the `<Type>` for the qualified-name prefix.
-;; Visibility is captured (`*.vis`) and filtered to `pub` in the extractor.
+;; Visibility is captured (`*.vis`) and compared against the floor in the
+;; extractor.
 (source_file
   (impl_item
     !trait
@@ -102,21 +118,28 @@
 ;; type alias
 (source_file
   (type_item
+    (visibility_modifier)? @type.vis
     name: (type_identifier) @type.name) @type.def)
 
 ;; const
 (source_file
   (const_item
+    (visibility_modifier)? @const.vis
     name: (identifier) @const.name) @const.def)
 
 ;; static
 (source_file
   (static_item
+    (visibility_modifier)? @static.vis
     name: (identifier) @static.name) @static.def)
 
-;; re_export — `pub use ...;` at top level
+;; re_export — `pub use ...;` / `pub(crate) use ...;` at top level
 ;; The grammar models `pub use foo::bar as baz;` as
-;; `(use_declaration (visibility_modifier) (_ ...))`.
+;; `(use_declaration (visibility_modifier) (_ ...))`. The modifier is
+;; REQUIRED here, so a bare `use` never matches. The extractor then admits
+;; exactly what the spec's `re_export.visibility` enum admits — `pub` and
+;; `pub(crate)` (spec value `crate`) — through the adapter; `pub(super)`
+;; and `pub(in ...)` drop (#104).
 (source_file
   (use_declaration
     (visibility_modifier) @re_export.vis
