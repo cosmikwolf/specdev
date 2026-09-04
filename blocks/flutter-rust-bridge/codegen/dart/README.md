@@ -98,6 +98,52 @@ The generator is a **standalone CLI, not build_runner** — no
 - Do **NOT** run `generate` from inside `dart_output` or the companion
   crate — path resolution in the config is app-root-relative.
 
+### Android: two mandatory steps
+
+`integrate` leaves an Android project that builds green with **no Rust in
+the `.apk`**. Both steps below are required; neither is optional and
+neither is done for you.
+
+1. **Swap the vendored Cargokit for the maintained fork.** FRB 2.12.0
+   vendors the archived `irondash` copy, which calls Gradle's removed
+   `Project.exec()`:
+
+   ```sh
+   rm -rf rust_builder/cargokit
+   git clone --depth 1 https://github.com/fzyzcjy/cargokit rust_builder/cargokit
+   rm -rf rust_builder/cargokit/.git
+   ```
+
+   Without it the build fails loudly: `Could not find method exec()`.
+
+2. **Give the companion crate an underscored `[package].name`.** Cargokit
+   reads `[package].name` and looks for `lib<name>.so` verbatim; cargo
+   writes `lib<name_with_underscores>.so`. A hyphenated name means the two
+   never meet, and Cargokit silently stages **empty** `jniLibs/` ABI
+   directories. Set it in the companion crate's `spec.toml`:
+
+   ```toml
+   [project]
+   name = "hello_rust"   # NOT "hello-rust"
+   ```
+
+   then `specdev-analyzer manifest --write` in that root. Declaring it in
+   the spec is what makes it survive the next emission — hand-editing
+   `Cargo.toml` does not.
+
+Then **gate on the artifact, not the exit code.** After `flutter build apk
+--debug`:
+
+```sh
+unzip -l build/app/outputs/flutter-apk/app-debug.apk | grep 'lib<crate_name>.so'
+```
+
+An empty result with a green build is the expected symptom of missing step
+1 or 2 — both fail silently.
+
+Also align the shim's `compileSdkVersion` with the app's — the scaffolded
+`rust_builder/android/build.gradle` hardcodes an older value.
+
 ### The companion crate must declare `mod frb_generated;` itself
 
 **Required, not optional.** The companion crate's crate root
