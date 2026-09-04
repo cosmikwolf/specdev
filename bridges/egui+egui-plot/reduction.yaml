@@ -1,0 +1,47 @@
+metaschema_version: "v1"
+
+# egui+egui-plot bridge reduction. Each region_plots[] binding
+# materializes one `region_draws_plot` relation from the egui Region
+# entity to the egui-plot Plot entity it renders.
+#
+# The relation extends `depends_on` (a canonical relation) so layer-
+# dependency / acyclic / reachability primitives can run against bridge-
+# contributed wiring with zero domain knowledge.
+#
+# REDUCE_UNRESOLVED handles the load-bearing referential checks at
+# validate time:
+#   * region must resolve to a Region entity on the same module.
+#     Surfaces as `unresolved Region endpoint <id>`.
+#   * plot must resolve to a Plot entity on the same module. Surfaces as
+#     `unresolved Plot endpoint <id>`.
+#
+# The region-purpose constraint (EGP-001: the bound region's `purpose`
+# must be `free_form`) is NOT expressible as a relation -- it constrains
+# an attribute on one endpoint rather than the pairing -- and lives in
+# the bridge's codegen prose as a discipline rule that emission
+# enforces. This mirrors how the egui+nih-plug bridge treats its own
+# region-purpose constraint.
+#
+# Note the endpoint qualifiers: `egui.Region` uses the block's directory
+# name, and so does `egui-plot.Plot` -- hyphenated, NOT the underscore
+# table key `egui_plot` that the for_each path uses.
+#
+# Bridges declare relations only -- the metaschema rejects bridge-
+# qualified entity kinds. Both endpoint kinds live in their respective
+# blocks; this bridge just wires them.
+
+entities: []
+
+relations:
+  - kind: region_draws_plot
+    extends: depends_on
+    from_kind: egui.Region
+    to_kind: egui-plot.Plot
+    from_spec: "specs/modules/*.toml"
+    for_each: 'bindings."egui+egui-plot".region_plots[]'
+    endpoints:
+      from: "${root.name}.${.region}"
+      to:   "${root.name}.${.plot}"
+    attrs:
+      fill:  ".fill"
+      order: ".order"
