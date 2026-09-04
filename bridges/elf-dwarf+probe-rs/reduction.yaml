@@ -1,0 +1,45 @@
+metaschema_version: "v1"
+
+# elf-dwarf+probe-rs bridge reduction. Each sampled_selections[] binding
+# materializes one `selection_sampled_by` relation from the elf-dwarf
+# Selection entity to the probe-rs Sampler entity that reads it.
+#
+# The relation extends `depends_on` (a canonical relation) so layer-
+# dependency / acyclic / reachability primitives can run against bridge-
+# contributed wiring with zero domain knowledge.
+#
+# REDUCE_UNRESOLVED handles the load-bearing referential checks at
+# validate time:
+#   * selection must resolve to a Selection entity on the same module.
+#     Surfaces as `unresolved Selection endpoint <id>`.
+#   * sampler must resolve to a Sampler entity on the same module.
+#     Surfaces as `unresolved Sampler endpoint <id>`.
+#
+# One further invariant is NOT expressible as a relation and lives in
+# the bridge's codegen prose as a discipline rule: a selection whose
+# `kinds` admits only aggregates, bound with `aggregates = "skip"`,
+# yields an address list that is always empty. Promotion to a graph-check
+# primitive is a bounded follow-up; the trigger is the first dogfood that
+# lands this misconfiguration.
+#
+# Bridges declare relations only — the metaschema rejects bridge-
+# qualified entity kinds. Both endpoint kinds (elf-dwarf.Selection and
+# probe-rs.Sampler) live in their respective blocks; this bridge just
+# wires them.
+
+entities: []
+
+relations:
+  - kind: selection_sampled_by
+    extends: depends_on
+    from_kind: elf-dwarf.Selection
+    to_kind: probe-rs.Sampler
+    from_spec: "specs/modules/*.toml"
+    for_each: 'bindings."elf-dwarf+probe-rs".sampled_selections[]'
+    endpoints:
+      from: "${root.name}.${.selection}"
+      to:   "${root.name}.${.sampler}"
+    attrs:
+      width_from: ".width_from"
+      aggregates: ".aggregates"
+      on_missing: ".on_missing"
