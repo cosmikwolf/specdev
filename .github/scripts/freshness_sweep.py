@@ -150,6 +150,41 @@ def latest_pub_dev(name: str) -> str | None:
     return json.loads(body).get("latest", {}).get("version")
 
 
+def latest_dart_sdk() -> str | None:
+    body = _get("https://storage.googleapis.com/dart-archive/channels/stable/release/latest/VERSION")
+    return json.loads(body).get("version")
+
+
+def latest_flutter_sdk() -> str | None:
+    body = _get("https://storage.googleapis.com/flutter_infra_release/releases/releases_macos.json")
+    doc = json.loads(body)
+    stable = doc.get("current_release", {}).get("stable")
+    for release in doc.get("releases", []):
+        if release.get("hash") == stable:
+            return release.get("version")
+    return None
+
+
+def latest_node() -> str | None:
+    body = _get("https://nodejs.org/dist/index.json")
+    doc = json.loads(body)
+    return doc[0]["version"].lstrip("v") if doc else None
+
+
+# An SDK is not a registry package, and looking one up on a package registry
+# is worse than not looking at all: pub.dev really does host unrelated
+# packages named `sdk` (0.1.0) and `flutter` (0.0.20), so the obvious
+# implementation reports the Dart SDK constraint `^3.9.0` as behind `0.1.0`.
+# Measured 2026-09-04. Each SDK gets its own release feed, keyed by the name
+# the manifest uses for it (pubspec calls the Dart SDK `sdk`).
+SDK_FEEDS = {
+    "sdk": latest_dart_sdk,      # pubspec `environment.sdk` IS the Dart SDK
+    "dart": latest_dart_sdk,
+    "flutter": latest_flutter_sdk,
+    "node": latest_node,
+}
+
+
 def remote_head(url: str) -> str | None:
     out = subprocess.run(
         ["git", "ls-remote", url, "HEAD"],
@@ -226,32 +261,118 @@ def read_profile_pins(root: Path) -> list[Pin]:
     built, said plainly, rather than being quietly counted as compiling.
 
     Templates are prose to the analyzer but are valid TOML, so they are parsed
-    rather than pattern-matched. Any table carrying both `crate` and `version`
-    is a pin, wherever it sits — no profile-specific key names.
+    rather than pattern-matched. Any table carrying a name key and `version`
+    is a pin, wherever it sits.
+
+    The name key is language-specific and there is no way around that: Rust
+    manifests say `crate`, pub manifests say `package` (`pub_reference.schema.yaml`),
+    and an npm list would say something else again. The earlier version of
+    this function accepted `crate` only while its own docstring claimed "no
+    profile-specific key names", so every Dart pin in the tree went unswept
+    and the report said all-current over pins it had never read (#105).
+    Accept both, and take the registry to look in from the profile's own
+    declared `language:` rather than a constant.
+
+    `profile.yaml` is swept too, for SDK constraints — see `read_profile_sdks`.
     """
     pins: list[Pin] = []
     for template in sorted(root.glob("profiles/*/architecture.toml.template")):
         profile = f"profiles/{template.parent.name}"
+        language = profile_language(template.parent)
         try:
             doc = tomllib.loads(template.read_text())
         except tomllib.TOMLDecodeError as e:
             print(f"warning: {profile} architecture template does not parse: {e}", file=sys.stderr)
             continue
-        for crate, version in _walk_crate_refs(doc):
-            pins.append(Pin(profile, "rust", crate, version, "registry"))
+        for name, version in _walk_dep_refs(doc):
+            pins.append(Pin(profile, language, name, version, "registry"))
+    pins.extend(read_profile_sdks(root))
     return pins
 
 
-def _walk_crate_refs(node) -> list[tuple[str, str]]:
+def profile_language(profile_dir: Path) -> str:
+    """The language a profile declares, defaulting to rust.
+
+    Every shipped profile.yaml carries `language:` at the top level. Reading
+    it is what lets the registry lookup follow the profile instead of a
+    hardcoded "rust" — the same constant that had a found pub pin being
+    queried on crates.io while `latest_pub_dev` sat unreachable in this file.
+    """
+    manifest = profile_dir / "profile.yaml"
+    if not manifest.is_file():
+        return "rust"
+    doc = yaml.safe_load(manifest.read_text()) or {}
+    lang = doc.get("language")
+    return lang if isinstance(lang, str) else "rust"
+
+
+def read_profile_sdks(root: Path) -> list[Pin]:
+    """SDK constraints declared in `profile.yaml`, as their own pin kind.
+
+    A profile pins more than packages. `flutter-app/profile.yaml` declares
+    `sdk: "^3.9.0"` and `flutter: ">=3.35.0"`, and 38-C's `engines.node` is
+    the same shape. These reach every bootstrapped project exactly like a
+    crate pin does, and nothing has ever read them.
+
+    They are NOT registry packages, and that distinction is the whole reason
+    this is a separate function. pub.dev hosts unrelated packages named `sdk`
+    and `flutter`; resolving these against a package registry would report
+    the Dart SDK constraint as behind version 0.1.0 of an abandoned package.
+    A false finding that names a real-looking version is worse than the false
+    clean it replaces. Each SDK resolves against its own release feed, and an
+    SDK this function does not have a feed for is reported `unswept` rather
+    than dropped — a gap that says so beats a gap that looks like coverage.
+    """
+    pins: list[Pin] = []
+    for manifest in sorted(root.glob("profiles/*/profile.yaml")):
+        profile = f"profiles/{manifest.parent.name}"
+        doc = yaml.safe_load(manifest.read_text()) or {}
+        language = doc.get("language") if isinstance(doc.get("language"), str) else "rust"
+        for name, constraint in _walk_sdk_constraints(doc):
+            pins.append(Pin(profile, language, name, constraint, "sdk"))
+    return pins
+
+
+# Manifest blocks that hold SDK/toolchain constraints rather than packages:
+# pubspec's `environment`, package.json's `engines`.
+_SDK_BLOCKS = ("environment", "engines")
+
+
+def _walk_sdk_constraints(node) -> list[tuple[str, str]]:
     found: list[tuple[str, str]] = []
     if isinstance(node, dict):
-        if isinstance(node.get("crate"), str) and isinstance(node.get("version"), str):
-            found.append((node["crate"], node["version"]))
-        for value in node.values():
-            found.extend(_walk_crate_refs(value))
+        for key, value in node.items():
+            if key in _SDK_BLOCKS and isinstance(value, dict):
+                for sdk, constraint in value.items():
+                    if isinstance(constraint, str):
+                        found.append((sdk, constraint))
+            else:
+                found.extend(_walk_sdk_constraints(value))
     elif isinstance(node, list):
         for value in node:
-            found.extend(_walk_crate_refs(value))
+            found.extend(_walk_sdk_constraints(value))
+    return found
+
+
+def _walk_dep_refs(node) -> list[tuple[str, str]]:
+    """Every `<name key> + version` pair in a parsed manifest.
+
+    `crate` is Rust's name key, `package` is pub's. A table carrying a source
+    key but no `version` (a path, git or sdk dep) is not a pin and is skipped
+    by the `version` requirement alone — which is also what keeps pubspec's
+    `{ package = "flutter", sdk = "flutter" }` out of the registry pins.
+    """
+    found: list[tuple[str, str]] = []
+    if isinstance(node, dict):
+        for name_key in ("crate", "package"):
+            if isinstance(node.get(name_key), str) and isinstance(node.get("version"), str):
+                found.append((node[name_key], node["version"]))
+                break
+        for value in node.values():
+            found.extend(_walk_dep_refs(value))
+    elif isinstance(node, list):
+        for value in node:
+            found.extend(_walk_dep_refs(value))
     return found
 
 
@@ -268,6 +389,11 @@ def satisfies(req: str, version: str) -> bool:
     exactly the class that needs a human. `eframe = "0.36"` is not stale
     because 0.36.1 exists; it is stale when 0.37 ships.
     """
+    # `>=X` is an open lower bound: anything at or above it satisfies it, so
+    # it can never be "behind". Strip-and-caret-compare would misread it —
+    # `_components(">=3.35.0")` yields (0, 35, 0), because `int(">=3")` fails.
+    if req.lstrip().startswith(">"):
+        return _components(version) >= _components(req.lstrip("> ="))
     r = _components(req.lstrip("^~= "))
     v = _components(version)
     if v < r:
@@ -397,6 +523,14 @@ SATISFIES_CASES = [
     ("1.0.3", "1.0.2", False, "latest is below the declared floor"),
     ("0.0.5", "0.0.5", True, "0.0.x pin, unchanged"),
     ("0.0.5", "0.0.6", False, "0.0.x — every patch is a breaking bump"),
+    # Open lower bounds. SDK constraints use these (`flutter: ">=3.35.0"`),
+    # and the caret path misreads them: `_components(">=3.35.0")` is
+    # (0, 35, 0), because int(">=3") fails and falls back to 0 — which made
+    # a satisfied constraint report as behind.
+    (">=3.35.0", "3.47.2", True, ">= is an open upper end; a major bump still satisfies it"),
+    (">=3.35.0", "3.35.0", True, ">= includes its own floor"),
+    (">=3.35.0", "3.34.9", False, "below the floor of a >= constraint"),
+    (">= 3.35.0", "3.47.2", True, ">= tolerates a space before the version"),
 ]
 
 
@@ -445,6 +579,16 @@ def main() -> int:
             current = head[:12] if head else "?"
             pinned_short = pin.pinned[:12]
             behind = bool(head) and not pin.pinned.startswith(head[:12])
+        elif pin.kind == "sdk":
+            feed = SDK_FEEDS.get(pin.name)
+            pinned_short = pin.pinned
+            if feed is None:
+                # No feed for this SDK. Say so; do not fall through to a
+                # package registry, and do not drop it silently.
+                rows.append((pin, pinned_short, "?", "behind", "unswept: no release feed for this SDK"))
+                continue
+            current = feed() or "?"
+            behind = current != "?" and not satisfies(pin.pinned, current)
         else:
             lookup = latest_pub_dev if pin.language == "dart" else latest_crates_io
             current = lookup(pin.name) or "?"
@@ -458,7 +602,7 @@ def main() -> int:
             rows.append((pin, pinned_short, current, "held", policy.get("reason", "")))
             continue
 
-        if args.no_build or pin.language != "rust":
+        if args.no_build or pin.language != "rust" or pin.kind == "sdk":
             rows.append((pin, pinned_short, current, "behind", "not built"))
             continue
 

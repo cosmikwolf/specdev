@@ -8,32 +8,49 @@ generator CLI, Cargokit integration, and web/wasm builds.
 
 ## Platform status — read before choosing this block
 
-Verified working: **web** and **host/desktop**, including the companion
-crate compiling for `wasm32-unknown-unknown`.
+Verified working: **web**, **host/desktop** (including the companion crate
+compiling for `wasm32-unknown-unknown`), and **Android**.
 
-**Android does not currently work**, through no fault of the spec. Two
-independent upstream defects sit between an integrated project and a
-working `.apk`:
+Android needs **two mandatory steps** that `integrate` does not do for you.
+Skip either one and the build still reports success while the `.apk`
+contains no Rust — see "Android: two mandatory steps" in the codegen prose
+for the commands, and "Assert the artifact, not the exit code" below for
+why a green build is not evidence.
 
-1. `integrate` vendors a copy of Cargokit taken from a repository that is
-   now **archived**. That copy calls Gradle's `Project.exec()`, removed
-   in Gradle 9, so the Android build fails with
-   `Could not find method exec()`. Current Flutter ships Gradle 9.x, and
-   the Android Gradle Plugin it ships refuses to run on Gradle 8 — the
-   two constraints cannot both be satisfied by pinning.
-2. Replacing the vendored copy with the maintained fork clears that
-   error and the companion crate compiles for all four Android ABIs — but
-   the built libraries are **not packaged into the `.apk`**. Cargokit
-   creates the `jniLibs/<buildType>/<abi>/` staging directories and
-   leaves them empty, so the source set it registers contributes nothing.
+1. **Replace the vendored Cargokit with the maintained fork.** FRB 2.12.0's
+   `integrate` vendors a copy taken from the now-**archived** `irondash`
+   repository. That copy calls Gradle's `Project.exec()`, removed in
+   Gradle 9, so the build fails loudly with `Could not find method exec()`.
+   Current Flutter ships Gradle 9.x and the Android Gradle Plugin it ships
+   refuses to run on Gradle 8, so pinning cannot satisfy both. The
+   maintained fork (`fzyzcjy/cargokit`, same author as FRB) already uses
+   the injected `ExecOperations`, and clears this.
+2. **Name the companion crate with underscores, not hyphens.** Cargokit
+   derives the artifact filename from the crate's `[package].name`
+   *verbatim* (`build_tool/lib/src/artifacts_provider.dart`,
+   `getArtifactNames` → `'lib$libraryName.so'`), while cargo normalizes
+   `-` to `_` when it writes the file. A crate named `hello-rust` makes
+   Cargokit look for `libhello-rust.so`; cargo wrote `libhello_rust.so`;
+   the existence filter drops it, the `jniLibs/<buildType>/<abi>/` staging
+   directories are created and left **empty**, and the source set Cargokit
+   registers contributes nothing. This is a spec-owned fact: set
+   `[project].name` in the companion crate's `spec.toml`, so
+   `manifest --write` keeps it. Note that `bootstrap --name` documents
+   itself as "lowercase, hyphens" — correct for a normal crate, wrong for
+   an FRB companion.
 
-The second failure is the dangerous one: **the build reports success and
-the artifact contains no Rust at all.** An app in that state passes CI and
-crashes at `RustLib.init()` on a device.
+### Assert the artifact, not the exit code
 
-Until upstream resolves both, treat this block as **web + host only**. Do
-not apply the fork swap as a workaround on its own — it converts a loud
-build failure into a silent one, which is worse.
+Both failure modes above are **silent**: `flutter build apk` exits 0 and
+the app crashes at `RustLib.init()` on a device. A gate over the `.apk`
+must assert the library is *inside* it, not that the command succeeded:
+
+```sh
+unzip -l build/app/outputs/flutter-apk/app-debug.apk | grep 'lib<crate_name>.so'
+```
+
+A debug `.apk` carries the ABIs Flutter selects (typically `arm64-v8a`,
+`armeabi-v7a`, `x86_64`); Cargokit stages four, including `x86`.
 
 ## When to use
 
