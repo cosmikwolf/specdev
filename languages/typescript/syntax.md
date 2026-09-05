@@ -216,9 +216,8 @@ describe("RateLimiter", () => {
 ## Items Naming
 
 The `[[items]]` vocabulary for TypeScript lives in `items.schema.yaml` (the
-`kind` enum) with extraction driven by `items.scm`; both ship with the
-items-vocabulary step of this tier. Naming rules the extractor and authors
-share:
+`kind` enum) with extraction driven by `items.scm`. Naming rules the
+extractor and authors share:
 
 - Members qualify with `.`: `Store.put` (`kind = "method"`), `Circle.diameter`
   (`kind = "getter"`). Type parameters never appear in a name (`Box.put`, not
