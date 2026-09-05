@@ -69,7 +69,15 @@ It emits one deterministic verdict per module under `specs/modules/` — no judg
 - `missing` — a recorded output file is gone. **Regenerate.**
 - `new` — never generated. **Regenerate.**
 
-Your **regenerate set** is every module whose category is `new`, `stale`, or `missing`. The rest are skipped (carry the `unchanged` and `edited` counts into the Step 9 report). If the regenerate set is empty, skip Steps 4–8 and go straight to Step 9 to report what was skipped.
+Your **regenerate set** is every module whose category is `new`, `stale`, or `missing`. The rest are skipped on this axis (carry the `unchanged` and `edited` counts into the Step 9 report).
+
+Each module also carries a second, independent field — **`verified`** — which is `true` only when a **passing** compile-gate result is recorded for it at the current inputs *and* the current lockfile (Step 8.5 writes those). It answers a different question from `category`: not "would regeneration produce something new?" but "did what is there ever compile, against the dependencies that are there now?". A module that failed its gate last run, or whose lockfile moved since (`cargo update`, a new dependency), is `unchanged` **and** `verified: false`.
+
+Your **re-gate set** is every module with `category: unchanged` and `verified: false`. These modules are **not regenerated** — nothing about their inputs changed — but they are **not skipped as done** either: run the compile gate (Step 8) for them and record the result (Step 8.5). A re-gate costs one compiler run; a regenerate costs a session. `edited` modules are never in the re-gate set (a hand-edit is `/spec-drift`'s finding).
+
+The report may also carry a `batch:` list — the whole-tree result of the last gate per label, with `current: true` when it was recorded against today's lockfile. A `pass: false` batch row means the tree did not build the last time a gate ran, even if every module you are about to skip reads `verified: true` (a later module broke it). Surface it in Step 9.
+
+**Exit rule.** If the regenerate set is empty, skip Steps 4–7. If the re-gate set is *also* empty, skip Step 8 too and go straight to Step 9 to report what was skipped. Otherwise run Step 8 (and 8.5) for the re-gate set alone.
 
 ## Step 4 — assemble the prompt: shared preamble once, then per-module tails
 
@@ -199,16 +207,39 @@ flutter pub get && flutter analyze
 
 The analyze gate must come back **clean** (no errors; treat analyzer errors like compile errors). If the Flutter SDK is not on PATH, report that the gate could not run and stop — do not mark generation verified without it. A Flutter app also needs its platform scaffolding once per project (`flutter create . --platforms <matrix>` from the project root, platforms from `architecture.toml`); if the platform dirs are absent, surface that command as an action item rather than running it implicitly — it writes a large externally-owned tree the user should see created. Include in the same action item: delete the scaffold's `test/widget_test.dart` afterwards — it references template symbols that don't exist in a spec-generated app and breaks both gates; the spec's test items supersede it.
 
-In every language: if the gate fails, report the first error verbatim and stop. Do not auto-edit code to fix build errors stemming from missing scaffolding outside the per-module emission scope (e.g. the entry point doesn't register this module yet) — surface the gap as a one-line action item.
+In every language: if the gate fails, **record the failure (Step 8.5) before you stop**, then report the first error verbatim and stop. Do not auto-edit code to fix build errors stemming from missing scaffolding outside the per-module emission scope (e.g. the entry point doesn't register this module yet) — surface the gap as a one-line action item.
+
+For an incremental `--all`, the gate runs for the **regenerate set and the re-gate set together** (Step 3.5). One `cargo check` / `flutter analyze` covers the whole tree; that is fine — the recording step below is what scopes the result to the modules of this run.
+
+## Step 8.5 — record the gate result
+
+Record the outcome of Step 8 for every module in this run — the regenerate set plus the re-gate set — under a label that names the gate:
+
+```sh
+# pass:
+specdev-analyzer gen-record-gate --label cargo-check --pass --module <A> --module <B> ...
+# fail:
+specdev-analyzer gen-record-gate --label cargo-check --fail --module <A> --module <B> ...
+```
+
+Use `--label flutter-analyze` for the Dart gate. One `--module` per module in the run; the command also writes one **batch** row (the whole-tree result) under the same label. It hashes the project's lockfile *at this moment* — which is why this step comes **after** Step 8 and never before it: `cargo check` creates or rewrites `Cargo.lock`, and a pass recorded against the pre-gate lockfile would be invalid the instant it was written.
+
+**Record every module in the run on a failure, not just the one the error names.** `cargo check` compiles the whole crate, so a failure proves nothing about any module in the run; under-claiming is the safe direction. Modules *outside* the run are untouched — their earlier pass rows stand, and the batch row is what tells Step 9 the tree does not build.
+
+**Never record a pass you did not observe.** If the gate could not run (SDK missing, target not installed), record nothing: an unrecorded gate reads `verified: false` next time and simply re-gates, which is the correct outcome. A recorded pass means exactly "one environment compiled these inputs against this lockfile, once" — the toolchain version is deliberately not part of the key, so do not read `verified: true` as "compiles everywhere".
+
+Do not hand-edit the `[[gates]]` rows in `gen-lineage.toml`.
 
 ## Step 9 — report
 
-For an incremental `--all`, open with a one-line summary of the plan from Step 3.5: `N unchanged (skipped), M regenerated, K edited (skipped — reconcile via /spec-drift)`, naming the `edited` modules and their files so the user can act on them. A `--force` or single-module run has no plan summary.
+For an incremental `--all`, open with a one-line summary of the plan from Step 3.5: `N unchanged + verified (skipped), R re-gated (unchanged, gate re-run), M regenerated, K edited (skipped — reconcile via /spec-drift)`, naming the `edited` modules and their files so the user can act on them. If the plan carried a `batch:` row with `pass: false`, say so on its own line: the tree did not build the last time a gate ran. A `--force` or single-module run has no plan summary.
 
-Then one paragraph per module **generated** (skipped modules need no paragraph):
+"Verified" in this report is the **recorded** fact from Step 8.5 — a module is verified when `gen-plan` says `verified: true`, and not otherwise. Do not call a module verified from memory of having seen the gate pass; if you did not record it, it is not verified.
+
+Then one paragraph per module **generated** (skipped modules need no paragraph; re-gated modules get one line each with the gate result):
 - Source file(s) written, with paths relative to project root.
 - Any prose rule that required a choice and the choice made (e.g., "embassy bridge `handoff = "shared"` chose `Mutex<CriticalSectionRawMutex, ...>`").
-- Build result (pass/fail; first error if fail).
+- Build result (pass/fail; first error if fail) — and that it was recorded (Step 8.5).
 - Any `manifest` warnings (version conflicts, missing typed picks).
 - Confirmation that emitted files were recorded in `gen-lineage.toml` (Step 6.5).
 - Suggested follow-ups: `/spec-gen <OtherModule>`, wire this module into `main.rs`, regenerate after editing the spec, etc.
