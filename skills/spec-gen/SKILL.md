@@ -1,6 +1,6 @@
 ---
 name: spec-gen
-description: This skill should be used when the user asks to "generate code", "codegen", "run spec-gen", "generate <ModuleName>", "codegen all modules", "implement this spec", "build my source files from spec", or names any module to materialize as source. Generates source code (Rust or Dart, per the project's language) AND the build manifest (Cargo.toml / pubspec.yaml) deterministically from validated specdev specs (blocks + bridges + profiles model). Refuses on incomplete specs — no stub bodies (`todo!()` / `throw UnimplementedError()`); if the spec is missing information needed to implement a function, the skill stops and asks rather than improvising.
+description: This skill should be used when the user asks to "generate code", "codegen", "run spec-gen", "generate <ModuleName>", "codegen all modules", "implement this spec", "build my source files from spec", or names any module to materialize as source. Generates source code (Rust or Dart, per the project's language) AND the build manifest (Cargo.toml / pubspec.yaml / package.json) deterministically from validated specdev specs (blocks + bridges + profiles model). Refuses on incomplete specs — no stub bodies (`todo!()` / `throw UnimplementedError()`); if the spec is missing information needed to implement a function, the skill stops and asks rather than improvising.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 argument-hint: <ModuleName | --all [--force]>
 ---
@@ -146,7 +146,7 @@ When the target file already exists from a prior generation run, read it before 
 specdev-analyzer manifest --write
 ```
 
-The analyzer renders the project's build manifest deterministically from the spec, dispatching on `[project].language` and writing the language's canonical filename in the project root — `Cargo.toml` for rust (from `spec.toml [project]` + `architecture.toml` `[platform]`/`[runtime]`/`[logger]`/`[[external_deps]]`/`[msrv]`/`[[features]]` + per-module `external_deps[]`), `pubspec.yaml` for dart (from `[project]` + `architecture.toml` `[environment]`/`[[external_deps]]`/`[[dependency_overrides]]` + per-module `external_deps[]`). Lex-sorted; byte-stable.
+The analyzer renders the project's build manifest deterministically from the spec, dispatching on `[project].language` and writing the language's canonical filename in the project root — `Cargo.toml` for rust (from `spec.toml [project]` + `architecture.toml` `[platform]`/`[runtime]`/`[logger]`/`[[external_deps]]`/`[msrv]`/`[[features]]` + per-module `external_deps[]`), `pubspec.yaml` for dart (from `[project]` + `architecture.toml` `[environment]`/`[[external_deps]]`/`[[dependency_overrides]]` + per-module `external_deps[]`), `package.json` for typescript (from `[project]` + `architecture.toml` `version`/`[environment]`/`[scripts]`/`[[external_deps]]` + per-module `external_deps[]`). Lex-sorted; byte-stable. A typescript workspace root also writes `pnpm-workspace.yaml` beside `package.json`; it is gen-owned and overwritten on every write — record it in Step 6.5 with the manifest.
 
 If stderr has `warning:` lines (typically version conflicts when two spec locations declare the same dependency at different versions), surface them in the report. The user reconciles by editing the spec, not the generated manifest.
 
@@ -158,7 +158,8 @@ Record every file this run emitted, so later runs can detect hand-edits:
 
 ```sh
 specdev-analyzer gen-record --accept-edits --module <Name> <source files written in Step 5>
-specdev-analyzer gen-record --accept-edits Cargo.toml   # or pubspec.yaml — whichever manifest Step 6 wrote
+specdev-analyzer gen-record --accept-edits Cargo.toml   # or pubspec.yaml / package.json — whichever manifest Step 6 wrote
+specdev-analyzer gen-record --accept-edits package.json pnpm-workspace.yaml   # typescript workspace root: both files
 ```
 
 **Why `--accept-edits` here, and only here.** On a re-run the emitted bytes differ from the previous recording, and byte-difference alone cannot tell a fresh emission from a hand-edit — so `gen-record` refuses to move the baseline unless the caller states that the current bytes are the intended one. This step is that statement: you just wrote these files, so their bytes are the new baseline by definition.
@@ -249,7 +250,7 @@ Then one paragraph per module **generated** (skipped modules need no paragraph; 
 ## What this skill does NOT do
 
 - **Multi-package coordination outside `rust-workspace`.** If members are independent (no `[workspace]` in spec.toml), invoke `/spec-gen` per member from the member's directory.
-- **Manifest editing.** The analyzer's `manifest` subcommand is the only path to write the build manifest (Cargo.toml / pubspec.yaml). If a dep is missing, edit the spec.
+- **Manifest editing.** The analyzer's `manifest` subcommand is the only path to write the build manifest (Cargo.toml / pubspec.yaml / package.json, plus `pnpm-workspace.yaml` at a typescript workspace root). If a dep is missing, edit the spec.
 - **Auto-fix build errors.** Report and stop; the user fixes (likely by editing the spec).
 - **Generate placeholder bodies.** No `todo!()` / stubs — stop and ask if the spec is incomplete. The audio-plugin profile's audio-thread methods are the one structured exception, and the silence-and-log emit template for those methods lives in the audio-plugin codegen prose (`codegen/rust/module.conventions.md` § "Audio-thread method bodies"); the prompt assembled in Step 4 already includes it for audio-plugin modules.
 
