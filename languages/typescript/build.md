@@ -43,32 +43,60 @@ The package manifest. Minimal library package:
 
 ### Dependency shapes
 
-Every `npm:` dependency a spec names lands in one of these forms:
+A package.json dependency value is one string. Each spec reference therefore
+carries exactly one shape — a registry range in `version`, or one source key
+that owns the whole value — and the emitter renders it as follows:
+
+| Spec reference | Emitted value |
+|---|---|
+| `version = "^1.2.3"` (no source key) | `"^1.2.3"` — the range verbatim |
+| `git = { url = "git+https://…/x.git", ref = "v1.4.0" }` | `"git+https://…/x.git#v1.4.0"` |
+| `git = { url = "github:acme/x" }` | `"github:acme/x"` |
+| `path = "../x"` | `"file:../x"` — copied, and its own deps installed |
+| `link = "../x"` | `"link:../x"` — symlinked, nothing installed for it |
+| `workspace = "*"` | `"workspace:*"` — a member of the enclosing pnpm workspace |
 
 ```json
 {
   "dependencies": {
-    "hosted_caret": "^1.2.3",
-    "hosted_exact": "1.2.3",
-    "hosted_range": ">=1.2.0 <2.0.0",
-    "hosted_tag": "next",
-    "scoped": "^2.0.0",
-    "from_git": "github:acme/from_git#v1.4.0",
-    "from_git_url": "git+https://github.com/acme/from_git.git#semver:^1.4.0",
+    "@scope/widgets": "^2.0.0",
+    "from_git": "git+https://github.com/acme/from_git.git#v1.4.0",
+    "linked_tool": "link:../linked_tool",
     "local_sibling": "file:../local_sibling",
-    "workspace_member": "workspace:*",
-    "aliased": "npm:real-package@^3.0.0"
+    "next": "^16.3.0",
+    "shared": "workspace:*"
   }
 }
 ```
 
-- `dependencies` — shipped at runtime. `devDependencies` — build, test, lint
-  and codegen tooling. `peerDependencies` — for libraries that expect the host
-  to provide a package (a component library and its UI framework).
-- `optionalDependencies` and `overrides` are escape hatches; do not commit
-  overrides that generated manifests would fight over.
+- A `version` beside a source key is an error: there is no sibling-version slot.
+  Put a git range in the ref (`ref = "semver:^1.4.0"`) and a workspace range in
+  the value (`workspace = "^1.0.0"`). The git url is emitted verbatim — write the
+  form the package manager accepts.
+- `test_only = true` routes a reference to `devDependencies` (build, test, lint
+  and codegen tooling). Everything else is `dependencies`, shipped at runtime.
+- **Not spec input:** package aliases (`"npm:real-package@^3.0.0"` values),
+  dist-tag protocols in the source slot, `peerDependencies`,
+  `optionalDependencies` and `overrides`. An unknown key in a reference is an
+  error, never a silent registry fallback. A library that needs a peer
+  dependency states it in prose until a driver project needs the key.
 - Scoped packages (`@scope/name`) sort with their scope; the emitter sorts keys
   lexically so the file is byte-stable.
+
+### What the spec carries
+
+- `[project].name` → `name` (verbatim; a name the registry would reject is a
+  warning, never a rewrite), `[project].description` → `description`.
+- `architecture.toml`: `version`; `[environment] node` and `package_manager`
+  (override the profile's `engines.node` and `packageManager` defaults);
+  `[scripts]` (overrides the profile's default scripts key by key);
+  `[[external_deps]]`. Module files carry `external_deps[]`. Blocks and bridges
+  contribute `npm:` entries from their `deps.yaml`.
+- Merge order: user (architecture, then modules) > blocks > bridges. The first
+  entry for a package wins; two versions or two sources for one package warn.
+- Fixed key order: `name, version, description, private, packageManager, type,
+  engines, scripts, dependencies, devDependencies`. Two-space indent, trailing
+  newline, empty maps omitted. An `app`-shaped profile emits `"private": true`.
 
 ---
 
@@ -86,15 +114,27 @@ lockfile staleness is the thing under test, not in the per-module gate.
 ## pnpm Workspaces
 
 Multi-package repos use `pnpm-workspace.yaml` at the root and one lockfile for
-every member:
+every member. The root `spec.toml` `[workspace].members[]` is the source; the
+manifest step emits **both** the root `package.json` (`"private": true`, root
+tooling deps, root scripts) and the workspace file, members in declaration
+order:
 
 ```yaml
 packages:
-  - "packages/*"
+  - "app"
+  - "packages/shared"
 ```
 
-Members depend on each other with `"workspace:*"`. Run `pnpm install` once at
-the root.
+- `pnpm-workspace.yaml` is **gen-owned**: written beside `package.json` on
+  every `manifest --write` and overwritten each time, recorded like the
+  manifest. pnpm also reads `overrides` and `catalog` from this file; the
+  emitter writes `packages:` only, so a hand-added key does not survive the
+  next write. Put overrides in the spec when a key exists for them; until then
+  they are not supported.
+- Members depend on each other with `workspace = "*"` in the spec
+  (`"workspace:*"` in the manifest). A member `package.json` carries no
+  workspace marker. Run `pnpm install` once at the root; members have no
+  lockfile.
 
 ---
 
