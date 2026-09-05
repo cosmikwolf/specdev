@@ -14,6 +14,7 @@ For each language `<lang>`:
 - `rust/items.schema.yaml` — used by `extract-items` and by Rust profile module schemas.
 - `c/`, `cpp/` — `items.schema.yaml` for C is on the roadmap; current artifacts cover the existing tree-sitter-backed adapters.
 - `dart/` — full tier: `audit.scm`, `items.schema.yaml`, `items.scm`, `syntax.md`, `build.md` (pub/flutter toolchain). Used by `extract-items` and (once a Dart profile ships) by Dart profile module schemas.
+- `typescript/` — engine admission: `audit.scm`, `syntax.md`, `build.md` (Node/pnpm toolchain). One language, two extensions (`.ts`, `.tsx`) and two grammars; the adapter picks the grammar per resolved file. `items.schema.yaml` + `items.scm` (the items vocabulary) are not shipped yet, so `extract-items` refuses TypeScript until they land.
 
 ## Sparseness rule
 
