@@ -77,7 +77,7 @@ Your **re-gate set** is every module with `category: unchanged` and `verified: f
 
 The report may also carry a `batch:` list — the whole-tree result of the last gate per label, with `current: true` when it was recorded against today's lockfile. A `pass: false` batch row means the tree did not build the last time a gate ran, even if every module you are about to skip reads `verified: true` (a later module broke it). Surface it in Step 9.
 
-**Exit rule.** If the regenerate set is empty, skip Steps 4–7. If the re-gate set is *also* empty, skip Step 8 too and go straight to Step 9 to report what was skipped. Otherwise run Step 8 (and 8.5) for the re-gate set alone.
+**Exit rule.** If the regenerate set is empty, skip Steps 4, 5 and 7. Steps 6 (manifest), 6.2 (derive) and 6.5 (record — the manifest line only, no `--module`) **always run**. Run Step 8 (and 8.5) for the re-gate set; skip it only when that set is also empty, then go to Step 9 to report what was skipped. The manifest and the derived files are deterministic, so an unchanged tree writes identical bytes; derive needs the full module set to find a stale file, and a deleted module has no `gen-plan` row at all.
 
 ## Step 4 — assemble the prompt: shared preamble once, then per-module tails
 
@@ -152,6 +152,24 @@ If stderr has `warning:` lines (typically version conflicts when two spec locati
 
 **Do not edit the generated manifest by hand.** If you need a dep that isn't there, add it to the spec — `[[external_deps]]` in `architecture.toml` for project-wide infra, or `external_deps[]` in a module file for module-scoped deps — and re-run this step.
 
+## Step 6.2 — derive the profile's derived files
+
+```sh
+specdev-analyzer derive --write
+```
+
+When `specs/specdev/profile.yaml` declares `derived_files:` rules (nextjs-app: the route files under `app/` that re-export each module body), the analyzer derives one file per matching module, deterministically, and records each as a `derived` row in `gen-lineage.toml`. A profile without rules prints nothing. Run it for **every module on every gen**, an incremental `--all` included — a stale file (module deleted, `app_path` changed) is found only against the full module set. Run it after Step 5's formatter pass and before Step 6.5.
+
+One line per path on stdout:
+
+- `wrote <path>` / `kept <path>` — normal.
+- `skipped <Module>: no body` — the module has no source file yet (a Step 4 refusal, a Step 5 stop). Its derived file is not written, and an old one is deleted; it returns on the run that writes the body.
+- `edited <path>` — the derived file was hand-edited. Kept, not overwritten. **Action item for Step 9.**
+- `conflict <path>: unrecorded file at target` — a file the spec did not produce sits at the target. Kept, nothing recorded. **Action item for Step 9.**
+- `deleted <path>` — a stale derived file and its row removed.
+
+**Never pass `--accept-edits` from this skill.** A derived file is never a legitimate hand-edit target (route segment config belongs in the body, where `export *` carries it); the user runs `specdev-analyzer derive --write --accept-edits` by hand after an `edited` or `conflict` line. A non-zero exit is a refusal — two modules on one target, a page and a route handler in one segment, an unreachable rule set, a stale inlined profile (the message carries the block to paste) — surface it verbatim and stop.
+
 ## Step 6.5 — record generation lineage
 
 Record every file this run emitted, so later runs can detect hand-edits:
@@ -161,6 +179,8 @@ specdev-analyzer gen-record --accept-edits --module <Name> <source files written
 specdev-analyzer gen-record --accept-edits Cargo.toml   # or pubspec.yaml / package.json — whichever manifest Step 6 wrote
 specdev-analyzer gen-record --accept-edits package.json pnpm-workspace.yaml   # typescript workspace root: both files
 ```
+
+**Never list a derived file** — anything Step 6.2 printed. `gen-record` refuses such a path; a plain record would drop its `derived` flag and stale deletion would stop for that file. Derive records its own files.
 
 **Why `--accept-edits` here, and only here.** On a re-run the emitted bytes differ from the previous recording, and byte-difference alone cannot tell a fresh emission from a hand-edit — so `gen-record` refuses to move the baseline unless the caller states that the current bytes are the intended one. This step is that statement: you just wrote these files, so their bytes are the new baseline by definition.
 
@@ -172,7 +192,7 @@ For a module record (`--module <Name>`), `gen-record` also captures the SHA-256 
 
 Re-running gen and re-recording replaces the entries; there is nothing else to manage. Do not hand-edit `gen-lineage.toml`.
 
-**Ordering trap (formatters).** Run any formatter — `dart format`, `rustfmt` — on the emitted files *before* this step, not after. A formatter pass after recording changes the bytes, so `/spec-drift` reports gen-owned files as `edited`, and the only clean-looking fix is exactly the re-record this section forbids. Formatting is part of emission; record what you are going to keep.
+**Ordering trap (formatters).** Run any formatter — `dart format`, `rustfmt`, `prettier` — on the **Step-5 file list only**, the source files you wrote, and before this step. Never run it on `app/` or on any derived file: derived files are written in the formatter's default shape and are not this skill's output. A formatter pass after recording changes the bytes, so `/spec-drift` reports gen-owned files as `edited`, and the only clean-looking fix is exactly the re-record this section forbids. Formatting is part of emission; record what you are going to keep.
 
 Do **not** record `memory.x` — firmware post-processing (Step 7) may preserve a hand-authored version, and recording it would flag legitimate hand-authorship as drift.
 
@@ -234,6 +254,8 @@ Do not hand-edit the `[[gates]]` rows in `gen-lineage.toml`.
 ## Step 9 — report
 
 For an incremental `--all`, open with a one-line summary of the plan from Step 3.5: `N unchanged + verified (skipped), R re-gated (unchanged, gate re-run), M regenerated, K edited (skipped — reconcile via /spec-drift)`, naming the `edited` modules and their files so the user can act on them. If the plan carried a `batch:` row with `pass: false`, say so on its own line: the tree did not build the last time a gate ran. A `--force` or single-module run has no plan summary.
+
+Every `edited` and `conflict` line Step 6.2 printed is an **action item**, one line each: the path, what stands there (a hand edit in a derived file; an unrecorded file at a derived target), and the exit — `specdev-analyzer derive --write --accept-edits`, or move the file. A `conflict` records nothing, so the module reads `unchanged` and this line is the only signal that its route file is not the spec's.
 
 "Verified" in this report is the **recorded** fact from Step 8.5 — a module is verified when `gen-plan` says `verified: true`, and not otherwise. Do not call a module verified from memory of having seen the gate pass; if you did not record it, it is not verified.
 
