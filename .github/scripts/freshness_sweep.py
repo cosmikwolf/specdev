@@ -120,14 +120,38 @@ def _version_key(v: str) -> tuple:
     return (parts[0], parts[1], parts[2], 1 if not pre else 0, pre)
 
 
+def _index_name_candidates(name: str) -> list[str]:
+    """The names to try in the sparse index, in order.
+
+    The index stores a crate under the name it was **published** with, but a
+    manifest may spell it the other way round and cargo still resolves it:
+    measured, `cargo add static-cell` adds `static_cell v2.1.1`. Asking the
+    index verbatim therefore 404s on a legal pin — `profiles/firmware-layered`
+    offers `crate = "static-cell"`, which is correct for cargo and absent from
+    `st/at/static-cell` (#125). Try the spelling as written first, then the
+    two separator swaps.
+    """
+    lowered = name.lower()
+    out = [lowered]
+    for swapped in (lowered.replace("-", "_"), lowered.replace("_", "-")):
+        if swapped not in out:
+            out.append(swapped)
+    return out
+
+
 def latest_crates_io(name: str) -> str | None:
     """Highest non-yanked, non-prerelease version on crates.io."""
-    try:
-        body = _get(f"https://index.crates.io/{_index_path(name)}")
-    except urllib.error.HTTPError as e:
-        if e.code == 404:
-            return None
-        raise
+    body = None
+    for candidate in _index_name_candidates(name):
+        try:
+            body = _get(f"https://index.crates.io/{_index_path(candidate)}")
+            break
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                continue
+            raise
+    if body is None:
+        return None
     versions = []
     for line in body.splitlines():
         line = line.strip()
@@ -297,7 +321,9 @@ def read_profile_pins(root: Path) -> list[Pin]:
 
     Templates are prose to the analyzer but are valid TOML, so they are parsed
     rather than pattern-matched. Any table carrying a name key and `version`
-    is a pin, wherever it sits.
+    is a pin, wherever it sits — including inside the template's own comments,
+    which is where the optional ready-to-uncomment blocks live. See
+    `commented_toml`; those pins carry a `(commented)` unit label.
 
     The name key is language-specific and there is no way around that: Rust
     manifests say `crate`, pub manifests say `package` (`pub_reference.schema.yaml`),
@@ -321,6 +347,17 @@ def read_profile_pins(root: Path) -> list[Pin]:
             continue
         for name, version in _walk_dep_refs(doc):
             pins.append(Pin(profile, language, name, version, "registry"))
+
+        # The same template's commented-out optional blocks. These are shipped
+        # content — a project author uncomments one and gets whatever it says
+        # — but `tomllib` sees a comment, so they were never swept, and two
+        # had gone a major version stale before anyone read them by hand
+        # (#111). Labelled `(commented)` because the row is about an inert
+        # pin: nothing is broken until someone uncomments it.
+        hidden = commented_toml(template.read_text())
+        if hidden:
+            for name, version in _walk_dep_refs(tomllib.loads(hidden)):
+                pins.append(Pin(f"{profile} (commented)", language, name, version, "registry"))
     pins.extend(read_profile_sdks(root))
     return pins
 
@@ -389,6 +426,64 @@ def _walk_sdk_constraints(node) -> list[tuple[str, str]]:
     return found
 
 
+def _is_path_source(source) -> bool:
+    """Does this `source` point at the local filesystem?
+
+    Two shapes reach here: the string form (`source = "path"`) and the table
+    form (`source = { path = "../x" }`). `"workspace"`, `"crates-io"` and a
+    git table are all still registry-or-remote and stay swept.
+    """
+    if isinstance(source, str):
+        return source == "path"
+    if isinstance(source, dict):
+        return "path" in source
+    return False
+
+
+# A commented line is kept only if it looks like TOML: a table header, or a
+# `key =` assignment. Prose inside the same comment run ("Optional: enable an
+# allocator only when modules need `alloc`.") matches neither and drops out.
+_TOML_HEADER = re.compile(r"^\[\[?[A-Za-z_][A-Za-z0-9_.\-\"']*\]\]?$")
+_TOML_KEYLINE = re.compile(r"^[A-Za-z_][A-Za-z0-9_.-]*\s*=")
+
+
+def commented_toml(text: str) -> str:
+    """The TOML hiding inside a template's comments.
+
+    Profile templates offer optional dependency blocks as ready-to-uncomment
+    comments. `tomllib` sees a comment, so those pins were invisible to this
+    sweep for its whole life, and two of them had gone a major version stale
+    before anyone read them by hand (#111).
+
+    Uncommenting is not enough on its own. Prose sits in the same comment run
+    as the pin it introduces, and some prose looks like a key —
+    `source = "workspace"   — <dep>.workspace = true inheritance` passes any
+    reasonable line filter and then fails the parse, which would throw away
+    the real pins beside it. So lines are added one at a time and a line that
+    breaks the document is dropped. Slow in principle, invisible in practice:
+    the templates are a few dozen comment lines each.
+
+    Returns a TOML document, possibly empty. The caller parses it.
+    """
+    kept: list[str] = []
+    for raw in text.splitlines():
+        stripped = raw.strip()
+        if not stripped.startswith("#"):
+            continue
+        body = stripped[1:]
+        body = body[1:] if body.startswith(" ") else body
+        body = body.strip()
+        if not (_TOML_HEADER.match(body) or _TOML_KEYLINE.match(body)):
+            continue
+        candidate = kept + [body]
+        try:
+            tomllib.loads("\n".join(candidate))
+        except tomllib.TOMLDecodeError:
+            continue
+        kept = candidate
+    return "\n".join(kept)
+
+
 def _walk_dep_refs(node) -> list[tuple[str, str]]:
     """Every `<name key> + version` pair in a parsed manifest.
 
@@ -396,12 +491,20 @@ def _walk_dep_refs(node) -> list[tuple[str, str]]:
     key but no `version` (a path, git or sdk dep) is not a pin and is skipped
     by the `version` requirement alone — which is also what keeps pubspec's
     `{ package = "flutter", sdk = "flutter" }` out of the registry pins.
+
+    A table that carries BOTH a `version` and a path source is skipped too.
+    No registry has ever heard of it: the commented examples this function
+    now reads are full of placeholders like
+    `{ crate = "my-core", version = "0.1.0", source = { path = "crates/my-core" } }`,
+    and looking those up produces an `unswept` row about a name that was
+    never meant to resolve.
     """
     found: list[tuple[str, str]] = []
     if isinstance(node, dict):
         for name_key in ("crate", "package"):
             if isinstance(node.get(name_key), str) and isinstance(node.get("version"), str):
-                found.append((node[name_key], node["version"]))
+                if not _is_path_source(node.get("source")):
+                    found.append((node[name_key], node["version"]))
                 break
         for value in node.values():
             found.extend(_walk_dep_refs(value))
@@ -602,6 +705,42 @@ AHEAD_CASES = [
 ]
 
 
+# `commented_toml` has to survive the shapes that actually ship: prose in the
+# same comment run as the pin it introduces, prose that looks like a key, and
+# path placeholders that no registry has heard of. Each case is
+# (label, template text, expected [(name, version)]).
+COMMENTED_CASES = [
+    (
+        "prose above a pin does not take the pin with it",
+        '# Optional: enable an allocator only when modules need `alloc`.\n'
+        '# [runtime.allocator]\n# crate = "embedded-alloc"\n# version = "^0.7"\n',
+        [("embedded-alloc", "^0.7")],
+    ),
+    (
+        "prose that looks like a key is dropped, the pin beside it survives",
+        '# [[external_deps]]\n# crate = "rtrb"\n# version = "^0.4"\n'
+        '#   source = "workspace"   — `<dep>.workspace = true` inheritance\n',
+        [("rtrb", "^0.4")],
+    ),
+    (
+        "a path placeholder is not a registry pin",
+        '# [[workspace_dependencies]]\n# crate = "my-core"\n# version = "0.1.0"\n'
+        '# source = { path = "crates/my-core" }\n',
+        [],
+    ),
+    (
+        "uncommented lines are not this pass's business",
+        '[logger.provider]\ncrate = "defmt"\nversion = "^1"\n',
+        [],
+    ),
+    (
+        "a bare version with no name key is not a pin",
+        '# [package]\n# version = "0.1.0"\n',
+        [],
+    ),
+]
+
+
 def self_test() -> int:
     bad = 0
     for req, ver, want, why in SATISFIES_CASES:
@@ -615,7 +754,14 @@ def self_test() -> int:
         if got != want:
             bad += 1
         print(f"{'ok  ' if got == want else 'FAIL'} ahead_of({req!r}, {ver!r}) = {got} — {why}")
-    total = len(SATISFIES_CASES) + len(AHEAD_CASES)
+    print()
+    for label, text, want in COMMENTED_CASES:
+        got = _walk_dep_refs(tomllib.loads(commented_toml(text)))
+        ok = got == want
+        if not ok:
+            bad += 1
+        print(f"{'ok  ' if ok else 'FAIL'} commented_toml -> {got} — {label}")
+    total = len(SATISFIES_CASES) + len(AHEAD_CASES) + len(COMMENTED_CASES)
     print(f"\n{total - bad}/{total} passed")
     return 1 if bad else 0
 
