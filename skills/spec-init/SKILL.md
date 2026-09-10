@@ -63,10 +63,10 @@ For each profile name returned, read `${CLAUDE_PLUGIN_ROOT}/profiles/<name>/READ
 Ask all of these in one message. Show defaults from Step 2 in parentheses:
 
 1. **Project name** — lowercase, digits, underscores, hyphens; must start with a letter; ≤64 chars. (default: detected `[package].name` or directory name)
-2. **Profile** — one of the names listed in Step 3. Default heuristics for shipped profiles, in this order (first match wins): `rust-workspace` if `[workspace]` was detected; `firmware-layered` if a `Cargo.toml` with `cortex-m`/`embassy`/`stm32*`/`nrf*`/`esp*` deps was detected; `audio-plugin` if a `nih-plug` / `vst3-sys` / `clack-host` dep was detected; `rust-app` if a `src/main.rs`, a `[[bin]]` section, or a `src/bin/` directory was detected (a standalone executable that is none of the above); `library-api` if a `Cargo.toml` with no binary target was detected. Otherwise ask.
+2. **Profile** — one of the names listed in Step 3. Default heuristics for shipped profiles, in this order (first match wins): `rust-workspace` if `[workspace]` was detected; `firmware-layered` if a `Cargo.toml` with `cortex-m`/`embassy`/`stm32*`/`nrf*`/`esp*` deps was detected; `audio-plugin` if a `nih-plug` / `vst3-sys` / `clack-host` dep was detected; `rust-app` if a `src/main.rs`, a `[[bin]]` section, or a `src/bin/` directory was detected (a standalone executable that is none of the above); `library-api` if a `Cargo.toml` with no binary target was detected; `nextjs-app` if a `package.json` with a `next` dependency was detected; `flutter-app` if a `pubspec.yaml` with a `flutter` SDK dependency was detected. Otherwise ask.
 
 When the choice is between `rust-app` and `library-api` and the detection is ambiguous, ask rather than guessing — the distinguishing question is "is this crate consumed by other crates, or does it run on its own?", and it decides whether the API surface or the layering is the load-bearing concern. For user-authored profiles no default is inferred — ask.
-3. **Language** — `rust` or `dart`. The profile decides: each profile's `profile.yaml` declares its `language:`, so offer the language matching the chosen profile (`dart` for `flutter-app`, `rust` for the Rust profiles); a mismatch fails at bootstrap. C-language support is on the roadmap. (default: the chosen profile's declared language)
+3. **Language** — `rust`, `dart` or `typescript`. The profile decides: each profile's `profile.yaml` declares its `language:`, so offer the language matching the chosen profile (`dart` for `flutter-app`, `typescript` for `nextjs-app`, `rust` for the Rust profiles); a mismatch fails at bootstrap. `c` and `cpp` are in the schema enum and have an audit tier, but no profile generates them yet. (default: the chosen profile's declared language)
 4. **Bootstrap directory** — usually the current working directory, but the analyzer creates it if absent and refuses if `specs/specdev/` is already present. (default: `.`)
 
 These four questions are all the schema requires. Profile-specific decisions (target triple, MCU part, license, MSRV, …) live in `architecture.toml` / optional `[project]` fields and are filled in Step 6, after the analyzer has emitted templates.
@@ -92,6 +92,32 @@ If the analyzer fails:
 
 Do not attempt to repair these errors by hand-writing files.
 
+## Step 5.5 — the compile-gate registry the project just inherited
+
+Bootstrap copies the profile's `profile.yaml` byte-faithfully, so the new `specs/specdev/profile.yaml` already carries the profile's **`gates:`** block — the compile gates as data, one `label` + `scope` + `steps` (argv lists) per gate. Read the block back and show the user what the project inherited:
+
+```sh
+awk '/^gates:/{f=1;print;next} f&&/^[^[:space:]]/{exit} f' specs/specdev/profile.yaml
+```
+
+Three facts the user needs now, not at their first `/spec-gen`:
+
+- **`/spec-gen` refuses to generate anything when the registry declares no gate with `scope: module`.** Not a warning, not a skip. `specdev-analyzer gen --module <M> --tail` aborts non-zero and prints the block to paste. A project that verifies nothing has nothing to verify with.
+- **The block is the project's now.** Editing a step, adding a gate or changing a label is a normal edit to `specs/specdev/profile.yaml`. Deleting the last `scope: module` gate stops codegen.
+- **The registry is in the gate key.** Changing it flips every module to `verified: false`, which is correct — the old passes proved a different check.
+
+If the chosen profile is **user-authored and ships no `gates:` block**, say so here and give the shape to write before the first `/spec-gen`:
+
+```yaml
+gates:
+  - label: fast
+    scope: module
+    steps:
+      - [<program>, <arg>, <arg>]
+```
+
+`steps` is a list of **argv lists**, never a shell string: one exit code per step, and no second quoting grammar. A `${root.<table>.<field>}` token in an argument resolves against `specs/architecture.toml` at run time. `/spec-create-profile` § "Step 1 — interview the project shape" is the authoring reference.
+
 ## Step 6 — confirm or fill architecture defaults
 
 Read the emitted `specs/architecture.toml`. The template ships pre-filled with sane defaults; bootstrap-emitted architecture is valid as-is. This step is interview-driven refinement, not error recovery — only edit fields the user actually wants to change.
@@ -112,7 +138,8 @@ Expect a clean report — bootstrap emits valid templates, and Step 6's optional
 
 Summarize:
 - Files created (one line each, with paths).
-- The selected profile and a one-line reminder of what it shapes (firmware-layered → layered embedded; library-api → Rust library; rust-app → standalone Rust application, testable core plus thin entry point; flutter-app → Flutter application).
+- The selected profile and a one-line reminder of what it shapes (firmware-layered → layered embedded; library-api → Rust library; rust-app → standalone Rust application, testable core plus thin entry point; audio-plugin → VST3/CLAP/standalone audio plugin; rust-workspace → workspace root that walks per-member crates; flutter-app → Flutter application; nextjs-app → Next.js App Router application). For a user-authored profile, quote its README's first line.
+- The gate registry the project inherited (Step 5.5): the labels and their scopes, or the shape to write when the profile ships none.
 - Validate result.
 - **Suggested next steps**: render per-profile guidance from `${CLAUDE_PLUGIN_ROOT}/shared/profile-next-steps.md` (it has a section per shipped profile plus a fallback for user-authored ones).
 

@@ -85,9 +85,10 @@ orchestration; that file is the material.
      a bridge. (Naming a companion block in the *author-facing README* is fine;
      reaching in *codegen prose* is a leg-3 violation.)
 
-5. **Language.** `rust` or `dart`; default to the language of the profile the
-   block targets. One language per invocation (the common case); re-invoke for
-   a second language's codegen + reference.
+5. **Language.** `rust`, `dart` or `typescript`; default to the language of the
+   profile the block targets. One language per invocation (the common case);
+   re-invoke for a second language's codegen + reference. (`c` and `cpp` have an
+   audit tier but no codegen adapter — a block cannot target them.)
 
 6. **Read the precedents.** Read `references/block-artifact-templates.md` and an
    existing shipped block whose shape matches: `<root>/blocks/embassy/`
@@ -112,9 +113,16 @@ Batch these; show precedent answers as defaults.
   generated code needs, with features. Plus any `recommended_external_deps`
   (surfaced to the user, not auto-injected).
 
+  `deps.yaml` names its ecosystem — `crates:`, `pub:` or `npm:` — and the
+  analyzer merges each into the matching build manifest when the block is
+  inlined. A block's contributions land in runtime dependencies; `test_only`
+  routing is a spec-side `external_deps` concern, not a block one.
+
   ⚠️ **Never take the version from the user's memory or your own — resolve it.**
-  Ask the registry what the current release is (crates.io `/api/v1/crates/<name>`,
-  pub.dev `/api/packages/<name>`, or the context7 docs tool), and pin *that*. This
+  Ask the registry what the current release is — crates.io
+  `/api/v1/crates/<name>` (it returns 403 without a `User-Agent` header; send
+  one), pub.dev `/api/packages/<name>`, npm `https://registry.npmjs.org/<name>`
+  (read `dist-tags.latest`) — or the context7 docs tool, and pin *that*. This
   is the one fact Step 2's API research cannot check: everything there is verified
   *against* the pin, so a pin recalled from training data anchors all of it to a
   guess. Blocks have shipped wrong this exact way — a library went 1.0 and renamed
@@ -213,10 +221,24 @@ nested — inline never copies `reference/`, so it is CI-only):
    ```
    (use `flutter pub get && flutter analyze` when the reference's pubspec depends
    on the Flutter SDK; the analyzer is the type-check gate — no binary build is
-   needed). In either language a wrong type / arity / constructor fails on a
+   needed). TypeScript:
+   ```sh
+   cd <root>/blocks/<name>/reference/typescript && pnpm install && pnpm exec tsc --noEmit
+   ```
+   (the reference ships its own `package.json` — `"private": true`,
+   `"type": "module"`, the block's pins in `dependencies`, `typescript` in
+   `devDependencies` — and a `tsconfig.json` with `"strict": true` and
+   `"noEmit": true`. `tsc --noEmit` exiting 0 is the TypeScript analog of
+   `cargo check`; there is no binary to build. **Limit:** `REF-ARITY-001` and
+   the `REF-PIN-00x` deps-vs-reference pin comparison are Rust-effective and
+   yield nothing for a TypeScript or Dart reference; only `REF-COVERAGE-001`
+   runs, so the type check above is the whole correctness gate here — do not
+   read a clean `plugin-lint` as pin agreement.)
+   In every language a wrong type / arity / constructor fails on a
    *type error* — fix the prose **and** the reference against the real API
-   (Step 2); do not `#[allow]` / `// ignore:` it green. Distinguish a type-check
-   failure (the gate working) from a toolchain-missing failure.
+   (Step 2); do not `#[allow]` / `// ignore:` / `// @ts-expect-error` it green.
+   Distinguish a type-check failure (the gate working) from a
+   toolchain-missing failure.
 
 2. **Run plugin-lint:**
    ```sh
