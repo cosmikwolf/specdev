@@ -9,6 +9,13 @@
 //!
 //! It is a `no_std` LIB (not a bin): a lib type-checks every example without
 //! linking, so no `memory.x` / entry point / panic handler / runner is needed.
+// A dependency declared but never imported is one the unit contributes to user
+// projects with no compiled witness that it is needed or that its version is
+// right. `deny` rather than `warn` so the build fails wherever it runs -- the
+// reference-crate CI script uses a plain `cargo build`, and a warning nobody
+// reads catches nothing. If a dep is genuinely used only under a cfg, add
+// `use <crate> as _;` here rather than downgrading this.
+#![deny(unused_crate_dependencies)]
 #![no_std]
 
 // One shared interrupt binding for the whole crate. (Per-module `bind_interrupts!`

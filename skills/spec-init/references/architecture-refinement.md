@@ -2,7 +2,7 @@
 
 Step 6 in `/spec-init` reads `specs/architecture.toml` after bootstrap and offers per-profile refinements. The bootstrap-emitted templates are valid as-is; this is **interview-driven refinement, not error recovery** — only edit fields the user actually wants to change.
 
-The shapes below cover **shipped profiles**. For any other profile (including user-authored), read `${CLAUDE_PLUGIN_ROOT}/profiles/<profile>/README.md` and the emitted `specs/architecture.toml` together — the README enumerates which architecture-template fields the profile considers required vs optional, and the emitted template carries commented hints. Apply the same "only edit what the user actually wants to change" rule.
+The shapes below are **illustrative, not exhaustive** — only `firmware-layered` and `library-api` have a section here, because those two have refinement shapes worth spelling out. For **every other profile** — `rust-app`, `audio-plugin`, `rust-workspace`, `flutter-app`, `nextjs-app`, and any user-authored one — read `${CLAUDE_PLUGIN_ROOT}/profiles/<profile>/README.md` and the emitted `specs/architecture.toml` together — the README enumerates which architecture-template fields the profile considers required vs optional, and the emitted template carries commented hints. Apply the same "only edit what the user actually wants to change" rule.
 
 ## firmware-layered
 

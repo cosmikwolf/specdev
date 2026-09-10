@@ -1,0 +1,6 @@
+# egui_plot 0.37 and the egui 0.36 tree declare `rust-version = "1.95"` and
+# `edition = "2024"`. A toolchain below that fails during resolution, before
+# any code is parsed -- which reads as a broken reference rather than an
+# environment gap. Same pin as both endpoint blocks' references.
+[toolchain]
+channel = "stable"

@@ -1,0 +1,20 @@
+# CI-only reference crate for the probe-rs block codegen prose.
+# Type-checks the session / sampler / trace-source worked examples in
+# ../../codegen/rust/README.md against the pinned probe-rs API. A std
+# host-target lib: every call type-checks without a probe attached and
+# without linking a USB backend. NOT inlined — this dir is a sibling to
+# codegen/.
+#
+# The pin must match codegen/rust/deps.yaml. Bump both together, never
+# one alone: the reference is the only thing standing between a prose
+# example and a signature that changed upstream.
+[package]
+name = "probe-rs-reference"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[lib]
+
+[dependencies]
+probe-rs = "0.32"

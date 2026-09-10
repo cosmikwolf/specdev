@@ -1,0 +1,83 @@
+metaschema_version: "v1"
+
+# probe-rs block reduction. Three entity kinds — Session, Sampler and
+# TraceSource — all extending Module, since each is a declarative
+# sub-unit of a host-side debugger module.
+#
+# Two intra-block relations, both Sampler/TraceSource -> Session. They
+# exist so the existing reference_exists / REDUCE_UNRESOLVED pre-graph-
+# check machinery flags a sampler or trace source naming a session that
+# was never declared. No new graph-check primitive is needed.
+#
+# Kinds are written bare here, not qualified. File location establishes
+# the `probe-rs` namespace for an INTRA-block relation; the hyphenated
+# qualifier (`probe-rs.Session`) is what a BRIDGE writes when it reaches
+# these kinds from outside.
+#
+# Cross-block relations live in bridges, never here:
+#   * variable address -> sampler read  ->  the elf-dwarf+probe-rs bridge
+#   * trace bytes -> decoded packets    ->  the itm+probe-rs bridge
+#
+# Qualified entity names combine the parent module name with the local
+# id, so several modules may each declare a session without colliding.
+
+entities:
+  - kind: Session
+    extends: Module
+    from: "specs/modules/*.toml"
+    for_each: "probe_rs.sessions[]"
+    name: "${root.name}.${.id}"
+    attrs:
+      chip:            ".chip"
+      attach_mode:     ".attach_mode"
+      probe_selector:  ".probe_selector"
+      speed_khz:       ".speed_khz"
+      allow_erase_all: ".allow_erase_all"
+
+  - kind: Sampler
+    extends: Module
+    from: "specs/modules/*.toml"
+    for_each: "probe_rs.samplers[]"
+    name: "${root.name}.${.id}"
+    attrs:
+      session:       ".session"
+      core:          ".core"
+      interval_ms:   ".interval_ms"
+      default_width: ".default_width"
+      max_batch:     ".max_batch"
+      on_error:      ".on_error"
+
+  - kind: TraceSource
+    extends: Module
+    from: "specs/modules/*.toml"
+    for_each: "probe_rs.trace_sources[]"
+    name: "${root.name}.${.id}"
+    attrs:
+      session:               ".session"
+      core:                  ".core"
+      sink:                  ".sink"
+      tpiu_clk_hz:           ".tpiu_clk_hz"
+      baud:                  ".baud"
+      mode:                  ".mode"
+      continuous_formatting: ".continuous_formatting"
+
+relations:
+  - kind: sampler_on_session
+    extends: depends_on
+    from_kind: Sampler
+    to_kind: Session
+    from_spec: "specs/modules/*.toml"
+    for_each: "probe_rs.samplers[]"
+    endpoints:
+      from: "${root.name}.${.id}"
+      to:   "${root.name}.${.session}"
+
+  - kind: trace_on_session
+    extends: depends_on
+    from_kind: TraceSource
+    to_kind: Session
+    from_spec: "specs/modules/*.toml"
+    for_each: "probe_rs.trace_sources[]"
+    endpoints:
+      from: "${root.name}.${.id}"
+      to:   "${root.name}.${.session}"

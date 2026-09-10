@@ -1,0 +1,206 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://specdev.dev/blocks/itm.v1"
+title: "itm block (v1)"
+description: >
+  Schema fragment contributed by the `itm` block. Adds a namespaced
+  `[itm]` table to `Module` describing how to read an ARM CoreSight
+  **ITM/DWT packet stream**: which stimulus ports carry what, which DWT
+  comparators mean what, and how the stream is timestamped.
+
+  This block targets the [itm](https://github.com/rtic-scope/itm) crate,
+  a decoder for the ARMv7-M / ARMv8-M ITM and DWT packet protocol
+  (ARM Appendix D4). It models the **protocol**, not the transport: the # PLANNING-OK: ARM architecture manual appendix, not a D-entry
+  decoder takes any `std::io::Read` and does not care whether the bytes
+  arrived over a debug probe's trace pin, from a capture file, or from a
+  socket.
+
+  v1 covers three concerns:
+
+    decoder         — iterator mode, timestamp clock, EOF policy
+    stimulus_ports  — software instrumentation channels and their payloads
+    data_watches    — DWT comparators and how to read their payloads
+
+  A stimulus port is written by firmware (an `ITM_SendChar`-style call).
+  A DWT comparator is armed by the debugger and emits packets with no
+  firmware involvement at all. Both arrive interleaved on one stream,
+  which is why one block owns both.
+
+  This schema is self-contained: identifier patterns are inlined rather
+  than $ref'd against profile-shipped enums.schema.yaml so the block
+  composes against any profile that exposes `Module`.
+type: object
+properties:
+  itm:
+    type: object
+    additionalProperties: false
+    properties:
+      decoder:
+        description: >
+          Decoder configuration. A nameless singleton: it carries
+          settings rather than identity, so it is read directly by
+          codegen and is not materialized as a graph entity.
+        type: object
+        additionalProperties: false
+        properties:
+          mode:
+            description: |
+              Which iterator the decoder is driven through:
+
+                singles     — yields one packet at a time, in arrival
+                              order, with no timestamp reconstruction.
+                              Correct when the firmware carries its own
+                              notion of time, or when only the ordering
+                              of events matters.
+                timestamped — groups packets under a reconstructed
+                              wall-clock offset built from the local and
+                              global timestamp packets. Needed for any
+                              view with a real time axis. Requires
+                              `clock_hz`.
+            type: string
+            enum: [singles, timestamped]
+            default: singles
+          clock_hz:
+            description: >
+              Frequency in Hz of the ITM timestamp clock. Required when
+              `mode = "timestamped"`: reconstructed times are counted in
+              ticks of this clock, so a wrong value yields a stream whose
+              packets are all correct and whose times are all wrong.
+            type: integer
+            minimum: 1
+          lts_prescaler:
+            description: >
+              Local timestamp prescaler the **target** was configured
+              with. This is not a request — it must match what the
+              firmware or debugger programmed into the ITM, or every
+              reconstructed timestamp is off by the ratio between them.
+              `enabled` means a prescaler of 1.
+            type: string
+            enum: [disabled, enabled, div4, div16, div64]
+            default: enabled
+          ignore_eof:
+            description: >
+              Keeps the decoder reading after a temporary end-of-input.
+              A live stream is idle whenever the target has nothing to
+              say, and that idleness is not the end of the trace, so
+              this defaults to true. Set it false when decoding a
+              finite capture, or iteration will never return.
+            type: boolean
+            default: true
+          expect_malformed:
+            description: >
+              Collects malformed packets alongside the good ones instead
+              of ending iteration with an error. Defaults to true: a
+              real trace link drops bytes when the target outruns the
+              probe, and one corrupt packet should cost one packet, not
+              the whole session. Only meaningful when
+              `mode = "timestamped"`.
+            type: boolean
+            default: true
+      stimulus_ports:
+        description: >
+          Software instrumentation channels. Each entry declares what
+          the firmware writes to one ITM stimulus port, so the decoder
+          can turn `Instrumentation` payload bytes into a typed value.
+        type: array
+        items: { $ref: "#/$defs/StimulusPort" }
+      data_watches:
+        description: >
+          DWT comparators. Each entry declares what one comparator was
+          armed to watch, so the decoder can attribute a data-trace
+          packet to a signal and read its payload at the right width.
+        type: array
+        items: { $ref: "#/$defs/DataWatch" }
+
+$defs:
+  Identifier:
+    description: snake_case or PascalCase identifier usable as a Rust ident.
+    type: string
+    pattern: "^[A-Za-z_][A-Za-z0-9_]*$"
+
+  StimulusPort:
+    description: >
+      One ITM stimulus port. Firmware writes to it; the decoder sees an
+      `Instrumentation` packet carrying the port number and a payload.
+    type: object
+    additionalProperties: false
+    required: [id, port, payload]
+    properties:
+      id:
+        $ref: "#/$defs/Identifier"
+      port:
+        description: >
+          Stimulus port number. ARMv7-M implements 32 ports directly.
+          Numbers above 31 are reachable only through the `Extension`
+          packet's page mechanism, which not every implementation
+          emits — prefer 0-31 unless the target is known to page.
+        type: integer
+        minimum: 0
+        maximum: 255
+      payload:
+        description: |
+          How to read the payload bytes of this port's packets:
+
+            text  — accumulate bytes into a UTF-8 string, split on
+                    newlines. The `printf`-style case; a payload can
+                    split across packets, so a decoder must buffer.
+            u8 / u16 / u32 / i8 / i16 / i32 / f32
+                  — a single little-endian scalar per packet.
+            bytes — hand the payload out undecoded.
+        type: string
+        enum: [text, u8, u16, u32, i8, i16, i32, f32, bytes]
+      label:
+        description: >
+          Optional human-readable name for the channel, used where the
+          port is displayed or logged. Free text, not an identifier.
+        type: string
+        minLength: 1
+
+  DataWatch:
+    description: >
+      One DWT comparator. Armed by the debugger against an address; the
+      target then emits a packet on every matching access with no
+      firmware involvement.
+    type: object
+    additionalProperties: false
+    required: [id, comparator, emits]
+    properties:
+      id:
+        $ref: "#/$defs/Identifier"
+      comparator:
+        description: >
+          DWT comparator unit number. Hardware provides four at most and
+          typically fewer; the number here must match the unit the
+          debugger actually armed, since it is how a packet is
+          attributed back to a signal.
+        type: integer
+        minimum: 0
+        maximum: 3
+      emits:
+        description: |
+          Which data-trace packet this comparator produces:
+
+            value   — the accessed data. The variable-watching case:
+                      every read or write of the address emits its
+                      value, with the access direction included.
+            address — the accessed address, for a comparator matching a
+                      range rather than one location.
+            pc      — the program counter of the accessing instruction,
+                      which answers "who touched this" rather than
+                      "what did it become".
+        type: string
+        enum: [value, address, pc]
+      value_type:
+        description: >
+          How to read the payload of a `value` packet. The payload
+          arrives as bytes whose width the packet itself does not
+          describe, so this must match the width the comparator was
+          armed with. Ignored when `emits` is `address` or `pc`.
+        type: string
+        enum: [u8, u16, u32, i8, i16, i32, f32]
+        default: u32
+      label:
+        description: >
+          Optional human-readable name for the watched signal, used
+          where it is displayed or logged. Free text, not an identifier.
+        type: string
+        minLength: 1

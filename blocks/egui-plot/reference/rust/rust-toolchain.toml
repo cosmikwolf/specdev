@@ -1,0 +1,8 @@
+# egui_plot 0.37 and the egui 0.36 tree declare `rust-version = "1.95"` and
+# `edition = "2024"`. A toolchain below that fails during resolution, before
+# any code is parsed -- which reads as a broken reference rather than an
+# environment gap. Pin to stable so `cargo build` here works regardless of
+# the ambient default toolchain (often an older nightly on a dev box).
+# Same pin as the egui and eframe references, which compile the same egui.
+[toolchain]
+channel = "stable"

@@ -1,11 +1,16 @@
-//! `panels` — the five `[[egui.panels]]` kinds, each mapping to its egui panel
-//! type (the README panel table). Side/top panels emit before central.
-use nih_plug_egui::egui;
+//! `panels` — the five `[[egui.panels]]` kinds against the MODERN egui panel
+//! API (0.35+): unified `egui::Panel`, `show` taking a `&mut Ui`, sizes via
+//! `default_size`. This is the form the `eframe` host supplies.
+//!
+//! The emitted function takes the `&mut Ui` the host hands its paint
+//! callback (eframe's `App::ui` does exactly this). Side/top/bottom panels
+//! emit before central.
+use crate::egui;
 
-pub fn show(ctx: &egui::Context) {
-    egui::TopBottomPanel::top("header").default_height(40.0).show(ctx, |_ui| {});
-    egui::TopBottomPanel::bottom("status").default_height(20.0).show(ctx, |_ui| {});
-    egui::SidePanel::left("nav").default_width(120.0).show(ctx, |_ui| {});
-    egui::SidePanel::right("inspector").default_width(120.0).show(ctx, |_ui| {});
-    egui::CentralPanel::default().show(ctx, |_ui| {});
+pub fn draw(ui: &mut egui::Ui) {
+    egui::Panel::top("header").default_size(40.0).show(ui, |_ui| {});
+    egui::Panel::bottom("status").default_size(20.0).show(ui, |_ui| {});
+    egui::Panel::left("nav").default_size(120.0).show(ui, |_ui| {});
+    egui::Panel::right("inspector").default_size(120.0).show(ui, |_ui| {});
+    egui::CentralPanel::default().show(ui, |_ui| {});
 }

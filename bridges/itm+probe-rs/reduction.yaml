@@ -1,0 +1,51 @@
+metaschema_version: "v1"
+
+# itm+probe-rs bridge reduction. Each armed_watches[] binding
+# materializes one `watch_armed_on` relation from the itm DataWatch
+# entity to the probe-rs TraceSource entity that carries its packets.
+#
+# The relation extends `depends_on` (a canonical relation) so layer-
+# dependency / acyclic / reachability primitives can run against bridge-
+# contributed wiring with zero domain knowledge.
+#
+# REDUCE_UNRESOLVED handles the load-bearing referential checks at
+# validate time:
+#   * data_watch must resolve to a DataWatch entity on the same module.
+#     Surfaces as `unresolved DataWatch endpoint <id>`.
+#   * trace_source must resolve to a TraceSource entity on the same
+#     module. Surfaces as `unresolved TraceSource endpoint <id>`.
+#
+# The comparator-agreement invariant (ITMPR-001: the DataWatch's
+# `comparator` must appear in the TraceSource's `data_watch_units`) is
+# NOT expressible as a relation — it compares an attribute on one
+# endpoint against a LIST-valued attribute on the other, and attrs carry
+# scalars. It lives in the bridge's codegen prose as a discipline rule
+# that emission enforces. Promotion to a graph-check primitive is a
+# bounded follow-up; the trigger is the first dogfood that lands a
+# mismatch the codegen check does not catch.
+#
+# The decoder itself is deliberately NOT an endpoint. `[itm.decoder]` is
+# a nameless singleton and materializes no entity, so the clock
+# reconciliation is carried as a relation ATTRIBUTE (timestamp_clock)
+# rather than as a second relation.
+#
+# Bridges declare relations only — the metaschema rejects bridge-
+# qualified entity kinds. Both endpoint kinds (itm.DataWatch and
+# probe-rs.TraceSource) live in their respective blocks; this bridge
+# just wires them.
+
+entities: []
+
+relations:
+  - kind: watch_armed_on
+    extends: depends_on
+    from_kind: itm.DataWatch
+    to_kind: probe-rs.TraceSource
+    from_spec: "specs/modules/*.toml"
+    for_each: 'bindings."itm+probe-rs".armed_watches[]'
+    endpoints:
+      from: "${root.name}.${.data_watch}"
+      to:   "${root.name}.${.trace_source}"
+    attrs:
+      timestamp_clock: ".timestamp_clock"
+      arm:             ".arm"

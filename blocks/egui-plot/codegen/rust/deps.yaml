@@ -1,0 +1,30 @@
+# Manifest — Cargo deps the egui-plot block contributes.
+# Schema: specdev-analyzer/src/embedded/block_deps.schema.yaml.
+#
+# Inlined alongside codegen/rust/README.md during `specdev inline egui-plot`;
+# participates in the block's per-unit content_hash.
+#
+# This block contributes `egui_plot` but NOT `egui`. egui always arrives
+# from whichever unit supplies the crate-root `pub use ...::egui;` alias,
+# and adding a second, independently-versioned egui here would put two of
+# them in the graph whose `Ui` types do not unify -- a confusing failure
+# well downstream of its cause.
+#
+# The version pairing is load-bearing rather than incidental: egui_plot
+# 0.37 depends on egui ^0.36, so a host supplying an older egui will not
+# unify with it. That is a compile error at the seam, which is the right
+# place for it, but the block README explains it so the error is legible.
+
+crates:
+  - name: egui_plot
+    version: "0.37"
+    features: []
+    source: crates-io
+
+# Both of these are about getting data INTO a plot, which this block does
+# not model. They are suggested, not injected.
+recommended_external_deps:
+  - crate: egui_extras
+    purpose: "Tables and loaders for views that pair a plot with a grid."
+  - crate: web-time
+    purpose: "A monotonic clock that also works on wasm, for time axes."

@@ -1,0 +1,25 @@
+# Manifest — Cargo deps the probe-rs block contributes.
+# Schema: specdev-analyzer/src/embedded/block_deps.schema.yaml.
+#
+# Inlined alongside codegen/rust/README.md during `specdev inline probe-rs`;
+# participates in the block's per-unit content_hash.
+#
+# probe-rs is on crates.io and its USB transport is pure Rust (nusb), so no
+# system libusb is required on any host. Version pinned to the release the
+# reference crate compiles against; bump this and reference/rust/Cargo.toml
+# together, never one alone.
+
+crates:
+  - name: probe-rs
+    version: "0.32"
+    features: []
+    source: crates-io
+
+# A Session is not Sync and must stay on one thread, so a channel is the
+# normal way to get sampled values out to a consumer; probe-rs reports its
+# own diagnostics through `tracing`, which makes attach failures readable.
+recommended_external_deps:
+  - crate: crossbeam-channel
+    purpose: "Moves sampled values off the sampling thread without blocking it."
+  - crate: tracing
+    purpose: "Surfaces probe-rs diagnostics; turns opaque attach errors readable."

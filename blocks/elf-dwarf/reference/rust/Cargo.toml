@@ -1,0 +1,22 @@
+# CI-only reference crate for the elf-dwarf block codegen prose.
+# Type-checks the image / selection / type-resolution worked examples in
+# ../../codegen/rust/README.md against the pinned gimli and object APIs.
+# A std host-target lib. NOT inlined -- this dir is a sibling to codegen/.
+#
+# The pins must match codegen/rust/deps.yaml. Bump both together, never
+# one alone: gimli reshaped its DIE-access API within the 0.3x series, so
+# a version drift here changes whether the prose compiles at all.
+[package]
+name = "elf-dwarf-reference"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[lib]
+
+[dependencies]
+gimli = "0.34"
+# `compression` is not optional in practice: CompressedData::decompress
+# only handles zlib/zstd behind that feature, so an ELF built with
+# --compress-debug-sections fails to load without it.
+object = { version = "0.40", features = ["read", "std", "compression"] }

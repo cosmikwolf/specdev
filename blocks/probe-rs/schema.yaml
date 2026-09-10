@@ -1,0 +1,265 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://specdev.dev/blocks/probe-rs.v1"
+title: "probe-rs block (v1)"
+description: >
+  Schema fragment contributed by the `probe-rs` block. Adds a namespaced
+  `[probe_rs]` table to `Module` carrying the HOST side of a debug-probe
+  connection: which target chip to attach to, which memory to sample
+  periodically while the target runs, and how to configure the on-chip
+  trace sink.
+
+  This block targets [probe-rs](https://probe.rs) — the pure-Rust debug
+  probe library that speaks to ST-Link, J-Link, CMSIS-DAP and FTDI
+  probes over SWD/JTAG. It models the *debugger*, never the firmware:
+  a module carrying `[probe_rs]` runs on a workstation and talks to a
+  separate device.
+
+  v1 covers three concerns:
+
+    sessions[]      — probe selection, target chip, attach mode, wire speed
+    samplers[]      — periodic memory reads against a running core
+    trace_sources[] — SWO / TPIU / trace-memory sink configuration
+
+  The block is deliberately silent about WHAT the sampled addresses
+  mean and about the CONTENT of the trace byte stream. Address
+  discovery from debug info is a separate concern and belongs in a
+  bridge against whichever unit owns symbol resolution; ITM/DWT packet
+  decoding likewise belongs in a bridge against whichever unit owns
+  the packet protocol. This block hands out raw addresses in and raw
+  bytes out, which is exactly what probe-rs itself does.
+
+  This schema is self-contained: identifier patterns are inlined rather
+  than $ref'd against profile-shipped enums.schema.yaml so the block
+  composes against any profile that exposes `Module`.
+type: object
+properties:
+  probe_rs:
+    type: object
+    additionalProperties: false
+    properties:
+      sessions:
+        description: >
+          Debug sessions. Each becomes one attach path: list probes,
+          open one, optionally set wire speed, then attach to the named
+          chip. A module normally declares exactly one; more than one is
+          allowed for a tool that drives several targets at once.
+        type: array
+        items: { $ref: "#/$defs/Session" }
+        minItems: 1
+      samplers:
+        description: >
+          Periodic memory-read groups. Each becomes a polling loop that
+          reads a set of addresses from a running core at a fixed
+          interval. Addresses are supplied at runtime — this block does
+          not model where they come from.
+        type: array
+        items: { $ref: "#/$defs/Sampler" }
+      trace_sources:
+        description: >
+          On-chip trace sink configuration. Each becomes a
+          `setup_tracing` call plus the reader that drains the sink.
+          The bytes are handed out undecoded.
+        type: array
+        items: { $ref: "#/$defs/TraceSource" }
+
+$defs:
+  Identifier:
+    description: snake_case or PascalCase identifier usable as a Rust ident.
+    type: string
+    pattern: "^[A-Za-z_][A-Za-z0-9_]*$"
+
+  Session:
+    description: >
+      One debug session. `chip` is a probe-rs target name from its
+      built-in registry (e.g. "STM32H563ZITx", "nRF52840_xxAA"); the
+      generic family name ("STM32H5") also resolves but attaches with
+      less specific memory information.
+    type: object
+    additionalProperties: false
+    required: [id, chip]
+    properties:
+      id:
+        $ref: "#/$defs/Identifier"
+      chip:
+        description: >
+          probe-rs target name passed to `attach`. Not validated here —
+          the registry is a runtime artifact of the pinned probe-rs
+          version, so a wrong name surfaces as a clear attach-time error
+          rather than a schema error.
+        type: string
+        minLength: 1
+      attach_mode:
+        description: >
+          `attach` connects to a running core and leaves it running.
+          `attach_under_reset` asserts reset while connecting, which is
+          the only way onto a target whose firmware disables the debug
+          pins or sleeps immediately after boot. Defaults to `attach`,
+          because a viewer that resets the target it is meant to observe
+          is a surprising default.
+        type: string
+        enum: [attach, attach_under_reset]
+        default: attach
+      probe_selector:
+        description: >
+          Optional probe selector, `VID:PID` or `VID:PID:Serial`. When
+          absent, codegen emits first-probe-found selection. Set this
+          for a workstation with more than one probe plugged in.
+        type: string
+        minLength: 1
+      speed_khz:
+        description: >
+          Optional wire speed in kHz applied before attach. When absent,
+          the probe's default stands. Lower it when SWD is unreliable on
+          long leads; raise it to widen sampling bandwidth.
+        type: integer
+        minimum: 1
+      allow_erase_all:
+        description: >
+          Grants the session permission to mass-erase the chip. Defaults
+          to false, and an observability tool should leave it false —
+          the permission exists for flashing workflows.
+        type: boolean
+        default: false
+
+  Sampler:
+    description: >
+      One periodic memory-read group. Codegen emits a loop that reads
+      each requested address at `interval_ms` and publishes the raw
+      bytes. The address list is a runtime input.
+    type: object
+    additionalProperties: false
+    required: [id, session, interval_ms]
+    properties:
+      id:
+        $ref: "#/$defs/Identifier"
+      session:
+        description: >
+          Id of the `[[probe_rs.sessions]]` this sampler reads through.
+          The `sampler_on_session` reduction relation surfaces an
+          unresolved reference at validate time.
+        $ref: "#/$defs/Identifier"
+      core:
+        description: Core index within the session. Defaults to 0.
+        type: integer
+        minimum: 0
+        default: 0
+      interval_ms:
+        description: >
+          Target period between sampling passes, in milliseconds. This
+          is a floor, not a guarantee: a pass that takes longer than the
+          interval simply runs late. Codegen emits the deadline
+          bookkeeping, never a busy-wait.
+        type: integer
+        minimum: 1
+      default_width:
+        description: >
+          Default access width for a read whose width is not otherwise
+          specified. `u32` matches the natural word size of the Cortex-M
+          targets probe-rs is most used against and is the default.
+          `bytes` selects the byte-slice read, which is the only correct
+          choice for an aggregate (struct or array).
+        type: string
+        enum: [u8, u16, u32, u64, bytes]
+        default: u32
+      max_batch:
+        description: >
+          Maximum number of addresses read in one pass. Codegen emits a
+          chunking loop at this size so one oversized request cannot
+          stall the interval. Defaults to 64.
+        type: integer
+        minimum: 1
+        default: 64
+      on_error:
+        description: |
+          Policy when a read fails mid-pass:
+
+            skip      — drop the failed read, keep the pass going, keep
+                        the session. The right default for a viewer:
+                        one bad address must not stop the other signals.
+            reconnect — tear the session down and re-attach. For a
+                        target that resets or power-cycles under
+                        observation.
+            abort     — propagate the error and stop the loop.
+        type: string
+        enum: [skip, reconnect, abort]
+        default: skip
+
+  TraceSource:
+    description: >
+      One on-chip trace sink. `swo` and `tpiu` both carry a clock and
+      baud configuration; `trace_memory` buffers on-chip and is drained
+      by polling instead of streaming.
+    type: object
+    additionalProperties: false
+    required: [id, session, sink]
+    properties:
+      id:
+        $ref: "#/$defs/Identifier"
+      session:
+        description: >
+          Id of the `[[probe_rs.sessions]]` this trace source is set up
+          on. The `trace_on_session` reduction relation surfaces an
+          unresolved reference at validate time.
+        $ref: "#/$defs/Identifier"
+      core:
+        description: Core index whose trace unit is configured. Defaults to 0.
+        type: integer
+        minimum: 0
+        default: 0
+      sink:
+        description: >
+          Where the core sends trace data. `swo` is the single-pin
+          output every Cortex-M3/M4/M7/M33 with a trace unit exposes.
+          `tpiu` is the same configuration on parts that distinguish the
+          two. `trace_memory` writes to the on-chip ETB and is read back
+          in blocks.
+        type: string
+        enum: [swo, tpiu, trace_memory]
+      tpiu_clk_hz:
+        description: >
+          Frequency in Hz of the clock feeding the trace unit — on most
+          parts the core clock. Required for `swo` and `tpiu`: the
+          prescaler that produces the requested baud is computed from
+          it, so a wrong value yields a garbled stream rather than an
+          error. Ignored for `trace_memory`.
+        type: integer
+        minimum: 1
+      baud:
+        description: >
+          Requested SWO baud rate. Omit to take the probe-rs default.
+          The achievable ceiling is a property of the probe: an
+          ST-Link V2 tops out far below a V3 or a J-Link, and asking
+          for more than the probe can carry drops packets silently.
+        type: integer
+        minimum: 1
+      mode:
+        description: >
+          SWO line encoding. `uart` (NRZ) is what essentially every
+          probe supports and is the default. `manchester` is available
+          on some probes and halves the effective data rate.
+        type: string
+        enum: [uart, manchester]
+        default: uart
+      continuous_formatting:
+        description: >
+          Enables the TPIU formatter, which wraps trace data in frames
+          carrying a source id. Required only when several trace
+          sources share one pin. Defaults to false, because a formatted
+          stream must be de-framed before packet decoding and single-
+          source is the common case.
+        type: boolean
+        default: false
+      data_watch_units:
+        description: >
+          DWT comparator units to arm for data-address watching. Each
+          entry becomes one comparator that emits a trace packet
+          whenever the watched address is accessed. Hardware provides
+          four at most, and typically fewer. An empty or absent list
+          arms none, which is correct for a source carrying only
+          software-written instrumentation.
+        type: array
+        items:
+          type: integer
+          minimum: 0
+          maximum: 3
+        uniqueItems: true

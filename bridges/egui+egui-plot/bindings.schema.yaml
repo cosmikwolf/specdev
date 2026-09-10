@@ -1,0 +1,77 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://specdev.dev/bridges/egui+egui-plot.v1"
+title: "egui+egui-plot bridge (v1)"
+description: |
+  Schema fragment contributed by the `egui+egui-plot` bridge. Adds shape
+  under bindings."egui+egui-plot" on `Module`.
+
+  Wires interface topology to plot topology: each entry says "this
+  region draws this plot".
+
+  The `egui` block describes panels and regions and is deliberately
+  silent about what fills a region's body; the `egui-plot` block
+  describes plots and series and is deliberately silent about where a
+  plot is drawn. Neither can express the placement, because doing so
+  would mean one naming the other's types. The binding is where they
+  meet.
+
+  The bridge does NOT introduce new entity kinds — it contributes a
+  relation materialized from each region_plots[] entry. See
+  `reduction.yaml`.
+type: object
+properties:
+  bindings:
+    type: object
+    properties:
+      "egui+egui-plot":
+        type: object
+        additionalProperties: false
+        properties:
+          region_plots:
+            description: |
+              Each entry declares that one region's body draws one plot.
+            type: array
+            items: { $ref: "#/$defs/RegionPlot" }
+
+$defs:
+  RegionPlot:
+    type: object
+    additionalProperties: false
+    required: [region, plot]
+    properties:
+      region:
+        description: |
+          References an `egui.regions[].id` declared on this SAME
+          module. Cross-module wiring is not supported in v1
+          (co-residency).
+        type: string
+        pattern: "^[A-Za-z_][A-Za-z0-9_]*$"
+      plot:
+        description: |
+          References an `egui_plot.plots[].id` declared on this SAME
+          module. Cross-module wiring is not supported in v1
+          (co-residency).
+        type: string
+        pattern: "^[A-Za-z_][A-Za-z0-9_]*$"
+      fill:
+        description: |
+          How the plot is sized inside the region:
+
+            available — the plot takes the region's full available
+                        space. The default, and what a single plot in a
+                        panel wants.
+            plot_height — the plot keeps its own declared `height` and
+                        the region lays it out at that size. Required
+                        for a region stacking several plots, where
+                        "available" would give the first one everything.
+        type: string
+        enum: [available, plot_height]
+        default: available
+      order:
+        description: |
+          Draw order within the region, ascending, for a region holding
+          more than one plot. Entries without an order draw after those
+          with one, in declaration order. Ignored for a region with a
+          single plot.
+        type: integer
+        minimum: 0
