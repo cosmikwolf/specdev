@@ -1,0 +1,45 @@
+metaschema_version: "v1"
+
+# itm block reduction. Two entity kinds — StimulusPort and DataWatch —
+# both extending Module, since each is a declarative sub-unit of a module
+# that consumes a trace stream.
+#
+# `[itm.decoder]` is intentionally NOT materialized as an entity. It
+# carries no name (singleton attributes only) and no graph check reaches
+# into it; codegen prose reads it directly from the module's TOML. This
+# follows the nih-plug block's treatment of its ProcessConfig table.
+#
+# v1 declares no relations. A stimulus port and a data watch are
+# independent sources that happen to share a stream — neither references
+# the other, and the stream itself is not modelled here.
+#
+# Cross-block relations live in bridges, never here. In particular, the
+# binding from a comparator declared here to the debugger call that arms
+# it belongs in the itm+probe-rs bridge.
+#
+# Qualified entity names combine the parent module name with the local
+# id, so several modules may each declare a port without colliding.
+
+entities:
+  - kind: StimulusPort
+    extends: Module
+    from: "specs/modules/*.toml"
+    for_each: "itm.stimulus_ports[]"
+    name: "${root.name}.${.id}"
+    attrs:
+      port:    ".port"
+      payload: ".payload"
+      label:   ".label"
+
+  - kind: DataWatch
+    extends: Module
+    from: "specs/modules/*.toml"
+    for_each: "itm.data_watches[]"
+    name: "${root.name}.${.id}"
+    attrs:
+      comparator: ".comparator"
+      emits:      ".emits"
+      value_type: ".value_type"
+      label:      ".label"
+
+relations: []

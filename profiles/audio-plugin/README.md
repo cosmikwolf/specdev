@@ -232,7 +232,14 @@ bindings) belong in the schema-driven tables.
 Add blocks via `specdev inline <block>`. v1 ships `nih-plug`
 (`[nih_plug]` table on the plugin shell module) and `egui` (`[egui]`
 table for editor topology). Bridges via `specdev inline-bridge <a>+<b>`;
-v1 ships `egui+nih-plug` (parameter → widget bindings).
+v1 ships `egui+nih-plug` (parameter → widget bindings, plus the egui
+host binding).
+
+> **An egui editor needs the bridge.** The `egui` block is host-neutral
+> and contributes no crates — `nih_plug_egui` comes from the
+> `egui+nih-plug` bridge, which is this stack's egui host. Inline the
+> bridge whenever the plugin ships an editor, even before any
+> `parameter_widgets` entries exist.
 
 > **Bridge co-residency rule (v1).** When you inline a bridge whose
 > two endpoint blocks both contribute tables on a module

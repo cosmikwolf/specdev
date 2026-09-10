@@ -1,0 +1,5 @@
+# eframe 0.36 requires rustc 1.95+. Pin the reference crate to stable so
+# `cargo build` here works regardless of the ambient default toolchain
+# (which on a dev box is often an older nightly).
+[toolchain]
+channel = "stable"

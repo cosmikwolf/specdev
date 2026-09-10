@@ -1,0 +1,49 @@
+# Weekly check that the versions our units pin are still what upstream ships.
+#
+# Separate from reference-crates.yml on purpose. That workflow answers "is our
+# prose correct against the version we pinned" and must stay green on every
+# push. This one answers "has the world moved past that pin", which is a
+# question about the outside world — it can change with no commit, and it must
+# never turn a pull request red for something no one in the diff did.
+#
+# Scheduled, plus manual dispatch. It reports:
+#
+#   current            pinned version is still the latest      silent
+#   held               behind on purpose, reason on file       silent
+#   behind, compiles   newer exists, the reference builds      informational
+#   behind, BREAKS     newer exists, the reference fails       fails the job
+#
+# Only the last fails. A report that cries wolf gets muted, and a muted gate is
+# worse than no gate.
+name: freshness-sweep
+
+on:
+  schedule:
+    # Mondays, 06:00 UTC. Weekly is the right cadence: a version bump is not
+    # urgent, and a daily run trains people to ignore it.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install PyYAML
+        # Pinned explicitly rather than relying on what the runner image
+        # happens to ship — the sweep reads every deps.yaml through it.
+        run: pip install --quiet pyyaml
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          # The build-against-latest leg builds reference crates, which
+          # cross-compile per their own .cargo/config.toml. Same targets as
+          # reference-crates.yml; keep the two lists in step.
+          targets: thumbv8m.main-none-eabihf, wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - name: Check the version-satisfaction rule before trusting its verdicts
+        run: python3 .github/scripts/freshness_sweep.py --self-test
+      - name: Sweep
+        run: python3 .github/scripts/freshness_sweep.py

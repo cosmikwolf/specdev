@@ -25,11 +25,14 @@ target_triple = "thumbv8m.main-none-eabihf"
 [platform.mcu_core]
 crate = "cortex-m"
 version = "^0.7"
-# If you inline an async runtime that needs a critical-section impl (e.g.
-# embassy), uncomment the line below: single-core Cortex-M uses cortex-m's
-# own impl, which is NOT on by default. Without it the link fails late with
+# The default logger backend (defmt-rtt) needs a critical-section
+# impl, and so does any async runtime you inline (embassy, rtic).
+# Single-core Cortex-M uses cortex-m's own impl, which is NOT on by
+# default. Without this the link fails late with
 # `undefined symbol: _critical_section_1_0_acquire`.
-# features = ["critical-section-single-core"]
+# Remove it only if another crate provides an impl — two impls are a
+# duplicate-symbol link error.
+features = ["critical-section-single-core"]
 
 [platform.mcu_runtime]
 crate = "cortex-m-rt"
@@ -40,30 +43,30 @@ version = "^0.7"
 # ---------------------------------------------------------------------------
 [runtime.panic_handler]
 crate = "panic-probe"
-version = "^0.3"
+version = "^1"
 features = ["print-defmt"]
 
 # Optional: enable an allocator only when modules need `alloc`.
 # [runtime.allocator]
 # crate = "embedded-alloc"
-# version = "^0.5"
+# version = "^0.7"
 
 # Optional: most cortex-m projects rely on the impl bundled with
 # `cortex-m`; supply this only when overriding.
 # [runtime.critical_section_impl]
 # crate = "critical-section"
-# version = "^1.1"
+# version = "^1.2"
 
 # ---------------------------------------------------------------------------
 # Logger — defmt is the de-facto standard for embedded Rust.
 # ---------------------------------------------------------------------------
 [logger.provider]
 crate = "defmt"
-version = "^0.3"
+version = "^1"
 
 [logger.backend]
 crate = "defmt-rtt"
-version = "^0.4"
+version = "^1"
 
 # default_level: trace | debug | info | warn | error | off
 # logger.default_level = "info"
@@ -74,12 +77,48 @@ version = "^0.4"
 # ---------------------------------------------------------------------------
 # [[external_deps]]
 # crate = "heapless"
-# version = "^0.8"
+# version = "^0.9"
 # features = ["serde"]
 
 # [[external_deps]]
 # crate = "static-cell"
 # version = "^2"
+
+# ---------------------------------------------------------------------------
+# Cargo features the binary exposes. Each [[features]] entry renders one
+# line of Cargo.toml [features]; `default = true` puts it in the
+# synthesized `default = [...]` line. `cargo_deps` carries Cargo's
+# feature-dep strings: `dep:<crate>` enables a dep whose CrateReference
+# carries `optional = true`. A feature with no deps is a plain cfg switch.
+# ---------------------------------------------------------------------------
+# EXAMPLE: an optional dep enabled by a default feature. Mark the dep
+# `optional = true` on its CrateReference (here [runtime.panic_handler]),
+# then declare the feature that enables it:
+# [[features]]
+# name = "panic-probe"
+# description = "Link panic-probe; drop it for a size-constrained build."
+# default = true
+# cargo_deps = ["dep:panic-probe"]
+
+# EXAMPLE: a cfg-only feature.
+# [[features]]
+# name = "debug-memory"
+# description = "Enable the heap/stack usage report on the debug menu."
+
+# ---------------------------------------------------------------------------
+# Cargo [[test]] targets that need a non-default setting. Cargo
+# auto-discovers tests/<name>.rs by itself; list a target here only when
+# it must run without the standard harness (embedded-test, defmt-test)
+# or lives at a non-default path. Each entry renders one [[test]] row.
+# ---------------------------------------------------------------------------
+# [[test_targets]]
+# name = "hw_integration"
+# harness = false
+
+# [[test_targets]]
+# name = "smoke"
+# path = "tests/on_target/smoke.rs"
+# harness = false
 
 # ---------------------------------------------------------------------------
 # Cross-module port connections.
@@ -104,3 +143,16 @@ version = "^0.4"
 # from = "RotaryEncoder.event_out"
 # to = "MainController.encoder_event_in"
 # flow_type = "encoder_event"
+
+# ---------------------------------------------------------------------------
+# Cargo build profiles ([profile.*]) — for a STANDALONE crate only. In a
+# workspace, profiles live in the workspace root's architecture.toml;
+# Cargo ignores them in a member manifest and validate rejects them here.
+# Closed subset: opt-level, debug, lto, codegen-units, panic, strip,
+# overflow-checks, debug-assertions, incremental, plus package.<crate>
+# overrides (no panic / lto there).
+# ---------------------------------------------------------------------------
+# EXAMPLE: keep DWARF in release builds so the debug probe finds RTT.
+# [profiles.release]
+# debug = 2
+# opt-level = "s"

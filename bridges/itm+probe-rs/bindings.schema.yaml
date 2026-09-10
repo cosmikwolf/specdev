@@ -1,0 +1,95 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://specdev.dev/bridges/itm+probe-rs.v1"
+title: "itm+probe-rs bridge (v1)"
+description: |
+  Schema fragment contributed by the `itm+probe-rs` bridge. Adds shape
+  under bindings."itm+probe-rs" on `Module`.
+
+  Wires trace transport to trace decoding: each entry says "this DWT
+  data watch is armed on this trace source, and decoded from the bytes
+  that source produces".
+
+  The pairing carries two decisions neither block can make alone:
+
+    * WHICH comparator to arm. The itm block declares that comparator 2
+      carries a signed 16-bit value; the probe-rs block can arm
+      comparator 2 against an address. Neither knows that these are the
+      same comparator, and a mismatch produces a decoder that silently
+      never fires.
+
+    * WHAT the timestamp clock is. The probe-rs block knows the trace
+      unit's input frequency because it configures the prescaler from
+      it; the itm block needs that same frequency to turn timestamp
+      ticks into seconds. Two independently-typed numbers that must
+      agree is exactly what a bridge is for.
+
+  The bridge does NOT introduce new entity kinds — it contributes a
+  relation materialized from each armed_watches[] entry. See
+  `reduction.yaml`.
+type: object
+properties:
+  bindings:
+    type: object
+    properties:
+      "itm+probe-rs":
+        type: object
+        additionalProperties: false
+        properties:
+          armed_watches:
+            description: |
+              Each entry declares that one declared data watch is armed
+              on, and decoded from, one trace source.
+            type: array
+            items: { $ref: "#/$defs/ArmedWatch" }
+
+$defs:
+  ArmedWatch:
+    type: object
+    additionalProperties: false
+    required: [data_watch, trace_source]
+    properties:
+      data_watch:
+        description: |
+          References an `itm.data_watches[].id` declared on this SAME
+          module. Cross-module wiring is not supported in v1
+          (co-residency).
+        type: string
+        pattern: "^[A-Za-z_][A-Za-z0-9_]*$"
+      trace_source:
+        description: |
+          References a `probe_rs.trace_sources[].id` declared on this
+          SAME module. Cross-module wiring is not supported in v1
+          (co-residency).
+        type: string
+        pattern: "^[A-Za-z_][A-Za-z0-9_]*$"
+      timestamp_clock:
+        description: |
+          Where the decoder's timestamp clock frequency comes from:
+
+            trace_source — take the bound trace source's `tpiu_clk_hz`.
+                           The default, and correct on the common part
+                           where the trace unit runs from the core
+                           clock: one number, declared once, used by
+                           both sides.
+            decoder      — take the `[itm.decoder]` table's own
+                           `clock_hz`. For a part whose trace unit is
+                           fed by a different clock than the one the
+                           prescaler is computed against.
+        type: string
+        enum: [trace_source, decoder]
+        default: trace_source
+      arm:
+        description: |
+          Whether this binding actually arms the comparator:
+
+            on_start — arm it when the trace source is set up. The
+                       default: a declared watch that nothing arms
+                       produces a decoder waiting for packets that will
+                       never come.
+            manual   — leave arming to the application, which supplies
+                       the address later. For a watch whose target
+                       address is chosen at runtime — the usual case
+                       when the address comes from a symbol lookup.
+        type: string
+        enum: [on_start, manual]
+        default: on_start

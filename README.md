@@ -1,10 +1,10 @@
 # specdev
 
-A Claude Code plugin for spec-driven development. Describe your project as TOML specs, validate them against a machine-checkable schema, then generate Rust code — or reverse-engineer specs from code you already have.
+A Claude Code plugin for spec-driven development. Describe your project as TOML specs, validate them against a machine-checkable schema, then generate source code — Rust, Dart or TypeScript — or reverse-engineer specs from code you already have.
 
 The plugin models a project as a **profile** (project shape) composed with **blocks** (concrete frameworks, libraries, hardware families) and **bridges** (pairwise wirings between blocks). All three ship in the plugin and are inlined into the project's own `specs/specdev/` tree by deterministic CLI operations; once inlined, the project owns its content.
 
-Pairs with the [`specdev-analyzer`](https://github.com/cosmikwolf/specdev-analyzer) CLI, which does validation, extraction, audit, inline, bootstrap, prompt assembly, and Cargo.toml emission. The plugin provides the interactive authoring workflow; the analyzer provides the mechanical operations.
+Pairs with the [`specdev-analyzer`](https://github.com/cosmikwolf/specdev-analyzer) CLI, which does validation, extraction, audit, inline, bootstrap, prompt assembly, derived-file emission, build-manifest emission (Cargo.toml / pubspec.yaml / package.json), and running the compile gates. The plugin provides the interactive authoring workflow; the analyzer provides the mechanical operations.
 
 ## Install
 
@@ -63,7 +63,7 @@ From an existing codebase:
 | `/spec-decide`         | Record a decision in `decisions.toml`, or supersede an existing one (the chain is kept). |
 | `/spec-question`       | Raise an open question in `open_questions.toml`, downgrade it to a committed default, or close it. |
 | `/spec-validate`       | Run `specdev-analyzer validate` and translate findings into actionable fixes.      |
-| `/spec-gen`            | Assemble a deterministic codegen prompt, emit Rust source, then emit Cargo.toml. Refuses on incomplete specs (no stub bodies). |
+| `/spec-gen`            | Assemble a deterministic codegen prompt, emit source, then emit the build manifest and run the profile's declared compile gates. Refuses on incomplete specs (no stub bodies). |
 | `/spec-reverse`        | One-shot migration: reverse-engineer module specs from an existing codebase. Single-module or `--all`. |
 | `/spec-inline`         | Inline a canonical block from `${CLAUDE_PLUGIN_ROOT}/blocks/<name>/` into `specs/specdev/inlined/blocks/<name>/`. |
 | `/spec-inline-bridge`  | Inline a canonical bridge between two already-inlined blocks. Bridge name is `<a>+<b>` with `a` and `b` lex-ordered. |
@@ -140,14 +140,18 @@ Each entry has its own `README.md` describing what it contributes; read those fo
 What this repo currently ships at HEAD (subject to change as new profiles / blocks / bridges land):
 
 - **Profiles** — project-shape skeletons. One-shot scaffolding at bootstrap; no ongoing dependency.
-  - `firmware-layered` — embedded Rust on Cortex-M, layered architecture (PAC → HAL → driver → middleware → application), ports + connections wiring, hardware ownership, Cargo.toml-emitting platform/runtime/logger sections.
-  - `library-api` — pure Rust library, visibility-driven module boundaries, re-exports, Cargo features.
-  - `audio-plugin` — VST3/CLAP/standalone audio plugins, four-layer (host_interface → plugin_shell → engine → dsp_node), `[plugin]`/`[audio]`/`[runtime]` architecture sections.
-  - `rust-workspace` — workspace root profile that walks per-member crates each carrying their own profile (typically `library-api` or `audio-plugin` or `firmware-layered`).
+  - `firmware-layered` (rust) — embedded Rust on Cortex-M, layered architecture (PAC → HAL → driver → middleware → application), ports + connections wiring, hardware ownership, Cargo.toml-emitting platform/runtime/logger sections.
+  - `library-api` (rust) — pure Rust library, visibility-driven module boundaries, re-exports, Cargo features.
+  - `rust-app` (rust) — standalone Rust executable: a testable core plus a thin entry point.
+  - `audio-plugin` (rust) — VST3/CLAP/standalone audio plugins, four-layer (host_interface → plugin_shell → engine → dsp_node), `[plugin]`/`[audio]`/`[runtime]` architecture sections.
+  - `rust-workspace` (rust) — workspace root profile that walks per-member crates each carrying their own profile (typically `library-api` or `audio-plugin` or `firmware-layered`).
+  - `flutter-app` (dart) — Flutter application, pubspec.yaml-emitting, composition root plus screens and services.
+  - `nextjs-app` (typescript) — Next.js App Router application, nine module roles, package.json-emitting, route files derived from the module specs.
 - **Blocks** — concrete frameworks, libraries, or hardware families. Each ships a schema fragment, reduction rules, per-language codegen prose, and README.
-  - `embassy` (Rust async runtime), `stm32h5-rs` (STM32H5 HAL), `nih-plug` (audio plugin framework), `egui` (immediate-mode UI, topology-only).
+  - Rust: `eframe`, `egui`, `egui-plot`, `elf-dwarf`, `embassy`, `iroh`, `itm`, `mk20dx`, `nih-plug`, `probe-rs`, `rtic`, `stm32h5-rs`.
+  - Dart: `flutter-rust-bridge`, `universal-ble`.
 - **Bridges** — pairwise wirings between two named blocks (`<a>+<b>`, lex-ordered).
-  - `embassy+stm32h5-rs`, `egui+nih-plug`.
+  - `egui+egui-plot`, `egui+nih-plug`, `elf-dwarf+probe-rs`, `embassy+stm32h5-rs`, `itm+probe-rs`.
 
 ### Authoring your own profile / block / bridge
 
@@ -157,8 +161,8 @@ User-contributed blocks and bridges are first-class: `--from <url|path>` works a
 
 ## Scope
 
-- **v1 is single-package** for `firmware-layered`, `library-api`, and `audio-plugin` profiles. The `rust-workspace` profile coordinates multi-member projects; per-member skills (`/spec-design`, `/spec-edit`, `/spec-gen`) run from the member's directory.
-- **Rust only.** C-language support is on the roadmap.
+- **v1 is single-package** for every profile except `rust-workspace`. That profile coordinates multi-member Rust projects; per-member skills (`/spec-design`, `/spec-edit`, `/spec-gen`) run from the member's directory. A typescript package can sit inside a pnpm workspace — the manifest step emits the root `package.json` + `pnpm-workspace.yaml` from `[workspace].members[]` — but no shipped profile declares `package_json.shape: workspace`, so that root needs a user-authored profile.
+- **Codegen languages: `rust`, `dart`, `typescript`.** `c` and `cpp` have an audit tier (`languages/<lang>/audit.scm`) but no profile generates them yet.
 - **`/spec-reverse`** is a one-shot migration tool — moves an existing codebase into the spec-driven world. It is a person-in-the-loop authoring flow against the inlined-block schemas, not a continuous source-vs-spec audit. For ongoing source-vs-spec drift on a module's `[[items]]`, use `/spec-sync-items`.
 
 ## Permissions (optional hardening)

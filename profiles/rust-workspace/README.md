@@ -38,6 +38,25 @@ specdev-analyzer bootstrap \
 #      shared package fields under [workspace_package]
 ```
 
+## Default members and excluded paths
+
+Two optional keys sit beside `[[workspace.members]]` in the workspace's
+`spec.toml`:
+
+- `default_members = ["<member-name>", ...]` — the members `cargo`
+  builds at the root when no `-p` / `--workspace` flag is given. Names,
+  not paths: each must be the `name` of a `[[workspace.members]]` entry,
+  and the emitter writes that member's `path` under `default-members`.
+  An unknown name fails `validate` (`workspace_default_member` relation,
+  `REDUCE_UNRESOLVED`) and fails `manifest`. Use it when a member cannot
+  build for the host — a board crate — so `cargo test` at the root does
+  not try.
+- `exclude = ["<path>", ...]` — paths Cargo must not treat as members
+  even though they sit under the root (a host-only tool crate, a
+  vendored crate). Emitted verbatim.
+
+Both are emitted in declaration order and omitted when empty.
+
 ## Adopting an existing single-crate project as a member
 
 You have a *validated* single-crate project (`library-api`,
@@ -192,8 +211,10 @@ architecture.toml.template    # [workspace_package] + [[workspace_dependencies]]
 domain.toml.template          # member-name uniqueness + path uniqueness
 requirements.toml.template    # rare workspace-level requirements
 schemas/
-  workspace.schema.yaml       # validates spec.toml's [workspace] table
   architecture.schema.yaml    # validates the workspace architecture.toml
+                              # (spec.toml's [workspace] table is validated
+                              # by the analyzer's embedded spec.schema.yaml;
+                              # the profile ships no copy)
 reductions/
   project.yaml                # Member + WorkspaceDependency entities
 codegen/

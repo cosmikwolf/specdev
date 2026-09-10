@@ -1,0 +1,26 @@
+# CI-only reference crate for the egui-plot block codegen prose.
+# Type-checks the plot + series emission examples in
+# ../../codegen/rust/README.md. A std host-target lib (type-checks without
+# linking a rendering backend). NOT inlined.
+#
+# The block contributes `egui_plot` but NOT `egui` -- egui always arrives
+# from whichever unit supplies the crate-root `pub use ...::egui;` alias.
+# This reference therefore declares egui directly and re-exports it from
+# lib.rs, standing in for a host so the plot prose has something to
+# compile against. That is why deps.yaml and this manifest do not agree
+# on a crate list, and why they are not required to: the pin checks
+# compare only crates declared in BOTH.
+#
+# The two versions are a matched pair, not a coincidence: egui_plot 0.37
+# depends on egui ^0.36, so this pairing is the one that unifies.
+[package]
+name = "egui-plot-reference"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[lib]
+
+[dependencies]
+egui = "0.36"
+egui_plot = "0.37"

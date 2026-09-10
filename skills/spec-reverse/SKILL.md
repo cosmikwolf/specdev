@@ -39,7 +39,9 @@ If the project has no `specs/specdev/` directory, this is expected for a greenfi
 
 If `specs/specdev/` is present, continue. Read `spec.toml` to learn the project's `[project].profile` and `[project].language`.
 
-For firmware-layered projects, the relevant blocks should be inlined before reversing (the analyzer's pre-flight in Step 1 will tell you which are present):
+Read `specs/specdev/profile.yaml` too. If it declares `reverse.vocabulary: profile`, the profile's own schema (items, visibility, feature gates — `module.conventions.md` is the reading in Step 2) is the reverse vocabulary and no block needs to be inlined. `library-api` and `rust-app` ship this declaration. The analyzer reads the same key in Step 1 and reports `[REVERSE-004]` as info instead of stopping on `[REVERSE-002]`.
+
+For firmware-layered projects (and any profile without `reverse.vocabulary: profile`), the relevant blocks should be inlined before reversing (the analyzer's pre-flight in Step 1 will tell you which are present):
 - An MCU block (e.g., `stm32h5-rs`) — needed to put `peripherals` / `pins` into module specs.
 - A runtime block (e.g., `embassy`) — needed to put `tasks` / `channels` into module specs.
 - Any relevant bridge (e.g., `embassy+stm32h5-rs`) — needed for `bindings.<a>+<b>` entries.
@@ -57,10 +59,11 @@ specdev-analyzer reverse [--into <a,b,...>]
 The analyzer reports the inlined blocks, the effective vocabulary (`--into` if passed, else all inlined), any errors, and any warnings. Error/warning codes:
 
 - `[REVERSE-001]` — `--into` named a block that's not inlined. Either inline it, drop it from `--into`, or correct the spelling.
-- `[REVERSE-002]` — no blocks inlined and no `--into`. Stop and tell the user to inline at least one block or pass `--into`.
+- `[REVERSE-002]` — no blocks inlined and no `--into`, and the profile does not declare its own vocabulary. Stop and tell the user to inline at least one block or pass `--into`.
+- `[REVERSE-004]` (info) — no blocks inlined, but `profile.yaml` declares `reverse.vocabulary: profile`. The vocabulary is the profile's own schema; proceed.
 - `[REVERSE-003]` (warning) — 2+ blocks inlined and no `--into`; vocabulary is ambiguous. Either accept that the skill will use READMEs from every inlined block as prompt context, or restart with `--into <a,b,...>` to scope.
 
-Do not proceed past `[REVERSE-002]` — the skill cannot author against an empty vocabulary.
+Do not proceed past `[REVERSE-002]` — the skill cannot author against an empty vocabulary. `[REVERSE-004]` is not empty: the profile schema is the vocabulary.
 
 ## Step 2 — read the authoritative guides
 

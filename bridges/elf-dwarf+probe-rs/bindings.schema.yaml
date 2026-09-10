@@ -1,0 +1,103 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://specdev.dev/bridges/elf-dwarf+probe-rs.v1"
+title: "elf-dwarf+probe-rs bridge (v1)"
+description: |
+  Schema fragment contributed by the `elf-dwarf+probe-rs` bridge. Adds
+  shape under bindings."elf-dwarf+probe-rs" on `Module`.
+
+  Wires symbol recovery to memory sampling: each entry says "the
+  variables this selection yields are read through this sampler". That
+  turns a sampler's runtime address list — which the probe-rs block
+  deliberately leaves open — into the output of a debug-info query.
+
+  The binding carries the one decision neither block can make alone:
+  how a recovered DWARF type becomes a probe access width. The
+  elf-dwarf block knows a variable is a 2-byte signed integer but knows
+  nothing about reading memory; the probe-rs block knows how to read 2
+  bytes but nothing about what they mean. Only the pairing knows that
+  the former should choose the latter.
+
+  The bridge does NOT introduce new entity kinds — it contributes a
+  relation materialized from each sampled_selections[] entry. See
+  `reduction.yaml`.
+type: object
+properties:
+  bindings:
+    type: object
+    properties:
+      "elf-dwarf+probe-rs":
+        type: object
+        additionalProperties: false
+        properties:
+          sampled_selections:
+            description: |
+              Each entry declares that the globals matched by one
+              selection are sampled through one sampler.
+            type: array
+            items: { $ref: "#/$defs/SampledSelection" }
+
+$defs:
+  SampledSelection:
+    type: object
+    additionalProperties: false
+    required: [selection, sampler]
+    properties:
+      selection:
+        description: |
+          References an `elf_dwarf.selections[].id` declared on this
+          SAME module. Cross-module wiring is not supported in v1
+          (co-residency).
+        type: string
+        pattern: "^[A-Za-z_][A-Za-z0-9_]*$"
+      sampler:
+        description: |
+          References a `probe_rs.samplers[].id` declared on this SAME
+          module. Cross-module wiring is not supported in v1
+          (co-residency).
+        type: string
+        pattern: "^[A-Za-z_][A-Za-z0-9_]*$"
+      width_from:
+        description: |
+          Where each read's access width comes from:
+
+            type            — the variable's own DWARF byte size and
+                              encoding. This is the point of the
+                              pairing and the default: a 2-byte signed
+                              integer is read as 2 bytes and shown as
+                              signed, with no hand-maintained table.
+            sampler_default — the sampler's `default_width` for every
+                              variable, ignoring the recovered type.
+                              For a target whose debug info is known to
+                              disagree with its linker script, where a
+                              uniform width is at least predictable.
+        type: string
+        enum: [type, sampler_default]
+        default: type
+      aggregates:
+        description: |
+          What to do with a selected variable whose type resolves to a
+          struct, array or union:
+
+            skip  — leave it out of the sampler's address list. The
+                    default: an aggregate has no scalar value to plot,
+                    and reading one per pass can cost more transfer
+                    than every scalar combined.
+            bytes — read it as a byte slice in one transaction. Correct
+                    when the consumer decodes the layout itself.
+        type: string
+        enum: [skip, bytes]
+        default: skip
+      on_missing:
+        description: |
+          What happens when the selection yields no variables at all —
+          a pattern that matched nothing, or an image not yet loaded:
+
+            empty — sample nothing and carry on. The default, because a
+                    viewer started before its image is chosen is in
+                    exactly this state and it is not an error.
+            error — refuse to start the sampler. For an automated run
+                    where an empty symbol set means a broken build and
+                    silently sampling nothing would look like success.
+        type: string
+        enum: [empty, error]
+        default: empty

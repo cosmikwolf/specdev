@@ -15,7 +15,20 @@
 //! directly (`slider`/`button`/`numeric_field`); five were corrected to the
 //! pinned `nih_plug_egui` reality (no `ParamButton`/`ParamComboBox`/`Knob`;
 //! `Enum::variants()` yields names; `Param::unit()` not `unit_string()`).
+// A dependency declared but never imported is one the unit contributes to user
+// projects with no compiled witness that it is needed or that its version is
+// right. `deny` rather than `warn` so the build fails wherever it runs -- the
+// reference-crate CI script uses a plain `cargo build`, and a warning nobody
+// reads catches nothing. If a dep is genuinely used only under a cfg, add
+// `use <crate> as _;` here rather than downgrading this.
+#![deny(unused_crate_dependencies)]
 
+/// The host obligation this bridge owns: one crate-root re-export, so the
+/// egui block's emitted topology code resolves `crate::egui`. A real project
+/// gets exactly one of these, from exactly one host.
+pub use nih_plug_egui::egui;
+
+pub mod editor;
 pub mod params;
 
 pub mod button;
