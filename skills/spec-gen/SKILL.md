@@ -1,6 +1,6 @@
 ---
 name: spec-gen
-description: This skill should be used when the user asks to "generate code", "codegen", "run spec-gen", "generate <ModuleName>", "codegen all modules", "implement this spec", "build my source files from spec", or names any module to materialize as source. Generates source code (Rust or Dart, per the project's language) AND the build manifest (Cargo.toml / pubspec.yaml / package.json) deterministically from validated specdev specs (blocks + bridges + profiles model). Refuses on incomplete specs — no stub bodies (`todo!()` / `throw UnimplementedError()`); if the spec is missing information needed to implement a function, the skill stops and asks rather than improvising.
+description: This skill should be used when the user asks to "generate code", "codegen", "run spec-gen", "generate <ModuleName>", "codegen all modules", "implement this spec", "build my source files from spec", or names any module to materialize as source. Generates source code (Rust, Dart or TypeScript, per the project's language) AND the build manifest (Cargo.toml / pubspec.yaml / package.json) deterministically from validated specdev specs (blocks + bridges + profiles model). Refuses on incomplete specs — no stub bodies (`todo!()` / `throw UnimplementedError()` / `throw new Error("not implemented")`); if the spec is missing information needed to implement a function, the skill stops and asks rather than improvising.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 argument-hint: <ModuleName | --all [--force]>
 ---
@@ -143,7 +143,7 @@ Output the source files the prompt prescribes, following these priority rules wh
 For each file written:
 - File header line: `// SPDX-License-Identifier: <project license>` if the spec declares one in `spec.toml [project].license`.
 - A regen-pointer comment: `// @spec specs/modules/<Name>.toml` so a reader can navigate from source to spec.
-- No stub bodies. Rust: no `todo!()` / `unimplemented!()`. Dart: no `throw UnimplementedError()` (in any dress). If the spec lacks information needed to implement a function body, **stop and ask the user** — do not improvise. (The comment syntax above is `//` in both languages; for Dart use `// @spec ...` the same way.)
+- No stub bodies. Rust: no `todo!()` / `unimplemented!()`. Dart: no `throw UnimplementedError()` (in any dress). TypeScript: no `throw new Error("not implemented")`, no `return null as any`, no `// @ts-expect-error` over an unwritten body. If the spec lacks information needed to implement a function body, **stop and ask the user** — do not improvise. (The comment syntax above is `//` in all three languages; use `// @spec ...` the same way.)
 
 Do not modify files outside the auto-generated regions. If hand-written code already exists in the target file, preserve it and warn in the report.
 
@@ -156,6 +156,8 @@ specdev-analyzer manifest --write
 ```
 
 The analyzer renders the project's build manifest deterministically from the spec, dispatching on `[project].language` and writing the language's canonical filename in the project root — `Cargo.toml` for rust (from `spec.toml [project]` + `architecture.toml` `[platform]`/`[runtime]`/`[logger]`/`[[external_deps]]`/`[msrv]`/`[[features]]` + per-module `external_deps[]`), `pubspec.yaml` for dart (from `[project]` + `architecture.toml` `[environment]`/`[[external_deps]]`/`[[dependency_overrides]]` + per-module `external_deps[]`), `package.json` for typescript (from `[project]` + `architecture.toml` `version`/`[environment]`/`[scripts]`/`[[external_deps]]` + per-module `external_deps[]`). Lex-sorted; byte-stable. A typescript workspace root also writes `pnpm-workspace.yaml` beside `package.json`; it is gen-owned and overwritten on every write — record it in Step 6.5 with the manifest.
+
+The same command also writes the profile's **paired files** — config files the profile ships as templates (`nextjs-app`: `tsconfig.json`, `next.config.ts`, `vitest.config.ts`, `playwright.config.ts`, `.gitignore`, `app/.gitkeep`). Each is written **only when absent**, one `wrote paired file <path>` line each; a file already on disk is left untouched. After that first write they are externally owned — never rewritten, never gen-recorded, and never listed in Step 6.5. They are in the gate key, so a user editing one re-gates every module, which is correct: the gate now proves something different.
 
 If stderr has `warning:` lines (typically version conflicts when two spec locations declare the same dependency at different versions), surface them in the report. The user reconciles by editing the spec, not the generated manifest.
 
@@ -206,6 +208,8 @@ Re-running gen and re-recording replaces the entries; there is nothing else to m
 Do **not** record `memory.x` — firmware post-processing (Step 7) may preserve a hand-authored version, and recording it would flag legitimate hand-authorship as drift.
 
 Do **not** record externally-owned files in a Dart/Flutter tree: the platform directories (`android/`, `ios/`, `web/`, `macos/`, `windows/`, `linux/`), `analysis_options.yaml`, `.metadata`, and any third-party codegen output (`*.g.dart`, `*.freezed.dart`, FFI-bridge glue). Those files belong to `flutter create` or their own generators; recording them reports perpetual `edited` drift the moment their generator reruns. Record only what this skill emitted: `lib/main.dart`, `lib/src/*.dart`, test files, and `pubspec.yaml`.
+
+Do **not** record externally-owned files in a TypeScript/Node tree: `node_modules/`, the framework's build output (`.next/`, `dist/`, `build/`), the lockfile (`pnpm-lock.yaml` / `package-lock.json` / `yarn.lock`), tool-written declaration shims (`next-env.d.ts`), incremental-build state (`*.tsbuildinfo`), and any agent-instruction block a dev server maintains (`next dev` re-adds a block to `AGENTS.md` on every run; the same holds for a `CLAUDE.md` block if the tool writes one). The package manager and the framework own those and rewrite them whenever they run, so a record reports perpetual `edited` drift. Record only what this skill emitted: the module source files, test files, and `package.json` (plus `pnpm-workspace.yaml` at a workspace root). The profile's `paired_files` config templates (`tsconfig.json`, `next.config.ts`, `vitest.config.ts`, `playwright.config.ts`, `.gitignore`) are written by Step 6 **only when absent** and are externally owned after that — never rewritten and never gen-recorded, by the analyzer or by you. `next build` rewrites `tsconfig.json` on its first run, which is why that file can live in no other ownership category. They are still in the gate key, so editing one re-gates every module.
 
 ## Step 7 — firmware-layered post-processing (memory.x)
 

@@ -26,8 +26,9 @@ The package manifest. Minimal library package:
   },
   "dependencies": {},
   "devDependencies": {
-    "typescript": "^5.9.0",
-    "vitest": "^3.2.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^7.0.0",
+    "vitest": "^5.0.0",
     "prettier": "^3.6.0"
   }
 }
@@ -40,6 +41,12 @@ The package manifest. Minimal library package:
   carries.
 - `scripts` are the toolchain's entry points; a profile may override or add to
   them.
+- **The pins are facts with a date, not defaults.** Registry-checked 2026-09-09:
+  `typescript 7.0.2`, `vitest 5.0.0`, `prettier 3.9.6`. `@types/node` is pinned
+  to `^22` on purpose — its major tracks the Node major in `engines`, not the
+  newest release (26.x at that date), and Vitest 5 peers `^22 || >=24`. Re-read
+  the registry before you copy these into a new profile; a pin recalled from
+  memory anchors every API claim written against it to a guess.
 
 ### Dependency shapes
 
@@ -105,9 +112,15 @@ that owns the whole value — and the emitter renders it as follows:
 The package manager owns the lockfile — `pnpm-lock.yaml`, `package-lock.json`
 or `yarn.lock` — and rewrites it whenever `package.json` changes. It is
 **externally owned**: committed, never generated, never recorded as a generated
-file. The compile gate that runs after generation is what brings the lockfile
-back in step; a gate that runs with `--frozen-lockfile` belongs in CI, where
+file. The profile's module-scope gate is what brings the lockfile back in step —
+its first step installs, without `--frozen-lockfile`, so a newly generated
+dependency can move the lockfile. `--frozen-lockfile` belongs in CI, where
 lockfile staleness is the thing under test, not in the per-module gate.
+
+The lockfile is also in the gate key (`lockfile_hash`), so any resolution change
+flips every module to `verified: false` and the next gen re-gates them. That is
+the intended direction: a pass proved one set of resolved dependencies, and
+those are no longer the ones on disk.
 
 ---
 
@@ -144,7 +157,7 @@ packages:
 |---|---|---|
 | Fetch deps | `pnpm install` | `npm install` |
 | Fetch deps, lockfile must already match (CI) | `pnpm install --frozen-lockfile` | `npm ci` |
-| Type check (the compile gate) | `pnpm exec tsc --noEmit` | `npx tsc --noEmit` |
+| Type check | `pnpm exec tsc --noEmit` | `npx tsc --noEmit` |
 | Format | `pnpm exec prettier --write .` | `npx prettier --write .` |
 | Run tests | `pnpm exec vitest run` | `npx vitest run` |
 | Build a library | `pnpm exec tsc -p tsconfig.json` | `npx tsc -p tsconfig.json` |
@@ -154,6 +167,14 @@ packages:
   type-clean tree is the minimum bar for generated code. It does not run the
   code and does not see framework-level errors; a framework profile adds its own
   slower gate.
+- **None of these commands is "the compile gate".** The gate is the profile's
+  `gates:` registry in `specs/specdev/profile.yaml` — a `label`, a `scope` and
+  `steps` as argv lists — and `specdev-analyzer gate --label <l> [--module <m>]…`
+  is what runs it and writes the rows. This table is the menu a profile author
+  picks steps from, not a procedure anyone follows by hand. A typical TypeScript
+  registry has a module-scope gate (`[pnpm, install]`, `[pnpm, exec, tsc,
+  --noEmit]`, `[pnpm, exec, vitest, run, --passWithNoTests]`) and, for a
+  framework, a batch-scope gate holding the slower whole-tree build.
 - `node --version` and the package-manager version are machine facts. The
   project pins them through `engines` and `packageManager`, which are files.
 
@@ -185,7 +206,11 @@ packages:
 - A framework profile ships its own `tsconfig.json` template (JSX mode, path
   aliases, plugin entries). Generated code must be clean under the project's
   committed options — do not weaken the options to make generated code pass.
-- `tsconfig.json` is template-once: written at bootstrap, then externally owned.
+- `tsconfig.json` is **paired-file** owned: the profile declares it under
+  `paired_files:`, and `specdev-analyzer manifest --write` writes it **only when
+  absent**. After that first write it is never rewritten and never gen-recorded
+  — which is the only category it can live in, because `next build` rewrites it
+  on its first run. It is in the gate key, so editing it re-gates every module.
 
 ---
 
@@ -208,6 +233,10 @@ Never generated, never recorded, never spec modules:
 - Build output: `dist/`, `build/`, a framework's `.next/` or equivalent.
 - The lockfile.
 - Tool-generated declaration shims (`next-env.d.ts` and its kin).
+- Incremental-build state (`*.tsbuildinfo`), written by `tsc` beside the
+  tsconfig that produced it.
+- Agent-instruction blocks a dev server maintains in `AGENTS.md` / `CLAUDE.md`.
+  Measured: `next dev` re-adds its block on every run.
 - Generated clients from schema-first tools (an ORM's generated client, GraphQL
   codegen output) — the analog of Dart's `*.g.dart`.
 - Editor and CI configuration.
