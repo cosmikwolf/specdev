@@ -143,6 +143,7 @@ Output the source files the prompt prescribes, following these priority rules wh
 For each file written:
 - File header line: `// SPDX-License-Identifier: <project license>` if the spec declares one in `spec.toml [project].license`.
 - A regen-pointer comment: `// @spec specs/modules/<Name>.toml` so a reader can navigate from source to spec.
+- **The header lines go above a first-line directive, not below it.** When the profile's prose calls for a directive or a guard import on "the first line of the body" (`"use client"`, `import "server-only"`), that means the first line of *code*: the SPDX and `// @spec` comments sit above it. Measured on Next 16.3.4: a leading comment does not stop the directive being recognized. Do not drop the header to get the directive onto line 1, and do not move the header below it.
 - No stub bodies. Rust: no `todo!()` / `unimplemented!()`. Dart: no `throw UnimplementedError()` (in any dress). TypeScript: no `throw new Error("not implemented")`, no `return null as any`, no `// @ts-expect-error` over an unwritten body. If the spec lacks information needed to implement a function body, **stop and ask the user** — do not improvise. (The comment syntax above is `//` in all three languages; use `// @spec ...` the same way.)
 
 Do not modify files outside the auto-generated regions. If hand-written code already exists in the target file, preserve it and warn in the report.

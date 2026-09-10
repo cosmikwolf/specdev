@@ -73,7 +73,7 @@ These four questions are all the schema requires. Profile-specific decisions (ta
 
 ## Step 5 — run bootstrap
 
-Run from the project root:
+`<bootstrap_dir>` is a required trailing positional and the analyzer creates it if it does not exist, so run this from wherever you are and give the target as a path — there is no project root to `cd` into yet when the directory is new:
 
 ```sh
 specdev-analyzer bootstrap \
