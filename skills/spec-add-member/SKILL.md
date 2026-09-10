@@ -13,7 +13,7 @@ Promote a **validated** single-crate specdev project into a member of a `rust-wo
 
 **The ordering trap this skill exists to prevent.** `specdev-analyzer bootstrap` refuses a target whose `specs/specdev/` already exists (`BOOTSTRAP-001`). So when the workspace root is the *same directory* as the crate being adopted, the crate's tree must move **out** of the root **before** the workspace shell is bootstrapped there. Doing it in the wrong order is the exact friction that motivated this skill.
 
-If `specdev-analyzer` is not on PATH, tell the user to install it (`cargo install --git https://github.com/cosmikwolf/specdev-analyzer`) and stop. Do not attempt to move or wire files without the analyzer.
+If `specdev-analyzer` is not on PATH, tell the user to install it (`cargo install --git https://github.com/cosmikwolf/specdev-analyzer`) and stop. If it IS on PATH but reports `MANIFEST-002`, or a `MANIFEST-001` naming a file under the plugin tree, then the analyzer is older than the plugin — not a problem with any project file. Tell the user to re-run the install command with `--force` (or `cargo install --path <checkout> --force` from a local checkout), then retry. Do not attempt to move or wire files without the analyzer.
 
 ---
 

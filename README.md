@@ -14,6 +14,23 @@ Pairs with the [`specdev-analyzer`](https://github.com/cosmikwolf/specdev-analyz
    cargo install --git https://github.com/cosmikwolf/specdev-analyzer
    ```
 
+   **Keeping it current.** The analyzer embeds the JSON Schemas it
+   validates the plugin's files against, so the two are one unit: pull the
+   plugin and you must re-install the analyzer. Re-run the same command with
+   `--force` (or `cargo install --path <analyzer-checkout> --force`) — an
+   install at an unchanged version still replaces the binary.
+
+   A stale analyzer announces itself two ways:
+
+   - `[MANIFEST-002] … declares contract_version N; this specdev-analyzer
+     understands M` — the plugin is ahead. Re-install.
+   - `[MANIFEST-001]` naming a file **under the plugin tree** — an analyzer
+     older than the `contract_version` handshake. Re-install.
+
+   Neither means anything is wrong with your project. `specdev-analyzer`
+   and the plugin both report `0.1.0` and always have, so the version
+   numbers cannot tell you which is older; `contract_version` can.
+
 2. Add the marketplace and install the plugin in Claude Code:
 
    ```
