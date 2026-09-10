@@ -73,7 +73,7 @@ realtime_audit = false      # informational; future graph-check primitive (D48)
 # (a vanilla crates.io dep — `source` omitted defaults to crates.io).
 # [[external_deps]]
 # crate = "rtrb"
-# version = "^0.3"
+# version = "^0.4"
 
 # EXAMPLE: depend on a sibling workspace member by path. `source` is a
 # tagged union; the path form is `{ path = "..." }` (NOT
