@@ -35,6 +35,10 @@ Install with:
     cargo install --git https://github.com/cosmikwolf/specdev-analyzer
 
 Or set \`ANALYZER_BIN\` to an absolute path.
+
+If it IS installed and a command reports \`MANIFEST-002\`, or a
+\`MANIFEST-001\` naming a file under the plugin tree, the analyzer is older
+than the plugin. Re-install it with the same command plus \`--force\`.
 EOF
     exit 0
 fi
