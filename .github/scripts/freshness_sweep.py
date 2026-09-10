@@ -12,6 +12,8 @@ WHAT THIS REPORTS, AND WHY THE DISTINCTION IS THE WHOLE POINT
 
     current               pinned version is the latest              silent
     held                  behind on purpose, with a reason on file  silent
+    ahead                 the feed's newest is older than the pin   silent
+    unswept               no release feed for this language / SDK   informational
     behind, compiles      newer exists; the reference still builds  informational
     behind, BREAKS        newer exists; the reference fails on it   actionable
 
@@ -150,6 +152,24 @@ def latest_pub_dev(name: str) -> str | None:
     return json.loads(body).get("latest", {}).get("version")
 
 
+def latest_npm(name: str) -> str | None:
+    """The version npm itself resolves `npm install <name>` to.
+
+    The `latest` dist-tag is the registry's own answer, so prereleases are
+    excluded without this caller filtering them — npm publishes those under
+    `next` / `beta` tags instead. Scoped names carry a `/` that has to be
+    encoded, or the registry reads it as a path segment.
+    """
+    try:
+        body = _get(f"https://registry.npmjs.org/{name.replace('/', '%2f')}/latest")
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return None
+        raise
+    version = json.loads(body).get("version")
+    return version if isinstance(version, str) else None
+
+
 def latest_dart_sdk() -> str | None:
     body = _get("https://storage.googleapis.com/dart-archive/channels/stable/release/latest/VERSION")
     return json.loads(body).get("version")
@@ -182,6 +202,21 @@ SDK_FEEDS = {
     "dart": latest_dart_sdk,
     "flutter": latest_flutter_sdk,
     "node": latest_node,
+}
+
+# One release feed per language. A language absent from this map is reported
+# as `unswept`, and never swept against another language's registry. The
+# crates.io fallback this replaces split fourteen npm pins two ways, both
+# wrong: `next`, `react`, `typescript`, `vite` and `prettier` exist as
+# unrelated crates, so those five were compared against a dead crate's version
+# and called `behind`; the other nine 404'd, which left the version column `?`
+# and the verdict `current` — a clean over pins nothing had compared (#124).
+# The second half is the worse one, and it is the same false clean as #105,
+# which `read_profile_pins`'s docstring predicted for "an npm list".
+REGISTRY_FEEDS = {
+    "rust": latest_crates_io,
+    "dart": latest_pub_dev,
+    "typescript": latest_npm,
 }
 
 
@@ -418,6 +453,23 @@ def _components(v: str) -> tuple[int, int, int]:
     return (parts[0], parts[1], parts[2])
 
 
+def ahead_of(req: str, version: str) -> bool:
+    """Is the pin ABOVE the newest thing the registry offered?
+
+    `satisfies` asks whether the candidate sits inside the declared range, and
+    a candidate *below* the floor is outside it — so without asking this first,
+    a pin the world has not caught up with reads as `behind`, gets built
+    against the older version, and fails. `blocks/itm` pins `itm 0.9.0-rc.1`
+    while the newest stable is `0.3.1`: the pin is the newest version
+    published, and calling it behind sent the weekly job red on a correct pin
+    (#112). Being ahead is never a finding — there is nothing to bump to.
+
+    Prerelease identifiers are not compared, because `_components` drops them
+    and the stable feeds never return one. That is why the row says so.
+    """
+    return _components(version) < _components(req.lstrip("^~>= "))
+
+
 def read_policy(root: Path, unit: str, language: str) -> dict:
     """Deliberate holds, keyed by crate name.
 
@@ -533,6 +585,22 @@ SATISFIES_CASES = [
     (">= 3.35.0", "3.47.2", True, ">= tolerates a space before the version"),
 ]
 
+# `satisfies` says "the candidate is outside the declared range" for BOTH a
+# candidate that is too new and one that is too old. Only the second is
+# `ahead`, and telling them apart is what keeps a correct pin out of the red
+# (#112). These cases exist because the `satisfies` table above deliberately
+# asserts False for ("1.0.3", "1.0.2") — that answer is right, and the bug was
+# the caller reading it as "behind".
+AHEAD_CASES = [
+    ("0.9.0-rc.1", "0.3.1", True, "a prerelease pin the stable line has not reached — blocks/itm"),
+    ("0.36", "0.37.0", False, "genuinely behind: the feed is newer"),
+    ("0.36", "0.36.1", False, "a patch above the pin is not ahead"),
+    ("1.0.3", "1.0.2", True, "the feed's newest is below the pinned floor"),
+    ("^19.2.0", "19.3.0", False, "caret pin, feed newer within the major"),
+    ("2.0.0", "2.0.0", False, "equal is not ahead"),
+    (">=3.35.0", "3.34.9", True, "the feed has not reached our declared minimum"),
+]
+
 
 def self_test() -> int:
     bad = 0
@@ -541,7 +609,14 @@ def self_test() -> int:
         if got != want:
             bad += 1
         print(f"{'ok  ' if got == want else 'FAIL'} satisfies({req!r}, {ver!r}) = {got} — {why}")
-    print(f"\n{len(SATISFIES_CASES) - bad}/{len(SATISFIES_CASES)} passed")
+    print()
+    for req, ver, want, why in AHEAD_CASES:
+        got = ahead_of(req, ver)
+        if got != want:
+            bad += 1
+        print(f"{'ok  ' if got == want else 'FAIL'} ahead_of({req!r}, {ver!r}) = {got} — {why}")
+    total = len(SATISFIES_CASES) + len(AHEAD_CASES)
+    print(f"\n{total - bad}/{total} passed")
     return 1 if bad else 0
 
 
@@ -584,16 +659,51 @@ def main() -> int:
             pinned_short = pin.pinned
             if feed is None:
                 # No feed for this SDK. Say so; do not fall through to a
-                # package registry, and do not drop it silently.
-                rows.append((pin, pinned_short, "?", "behind", "unswept: no release feed for this SDK"))
+                # package registry, and do not drop it silently. `unswept` and
+                # not `behind`: nothing was compared, so claiming a direction
+                # would be inventing one.
+                rows.append((pin, pinned_short, "?", "unswept", "no release feed for this SDK"))
                 continue
             current = feed() or "?"
             behind = current != "?" and not satisfies(pin.pinned, current)
         else:
-            lookup = latest_pub_dev if pin.language == "dart" else latest_crates_io
-            current = lookup(pin.name) or "?"
+            lookup = REGISTRY_FEEDS.get(pin.language)
             pinned_short = pin.pinned
+            if lookup is None:
+                rows.append(
+                    (pin, pinned_short, "?", "unswept",
+                     f"no release feed for language `{pin.language}`")
+                )
+                continue
+            current = lookup(pin.name) or "?"
             behind = current != "?" and not satisfies(pin.pinned, current)
+
+        # A comparison that did not happen must never render as `current`.
+        # A 404, an unreachable git remote, or a feed that answered with
+        # nothing all leave `current` as "?", which makes `behind` False and
+        # used to print a clean row. Nine npm pins were reported current that
+        # way, having been compared to nothing at all (#124) — the same false
+        # clean as #105, and the reason `unswept` is a state rather than a
+        # note on some other state.
+        if current == "?":
+            rows.append(
+                (pin, pinned_short, current, "unswept",
+                 "the feed returned nothing for this name")
+            )
+            continue
+
+        # The registry's newest is OLDER than what we pin. Ask before `behind`,
+        # or a pin nothing has caught up with is downgraded and built against
+        # the older version (#112).
+        # `pin.kind != "git"`: a commit SHA has no version ordering. `_components`
+        # would read one as (0, 0, 0) — or worse, parse an all-digit SHA into a
+        # number — and compare two meaningless tuples.
+        if behind and current != "?" and pin.kind != "git" and ahead_of(pin.pinned, current):
+            rows.append(
+                (pin, pinned_short, current, "ahead",
+                 "pin is newer than the feed's newest; prereleases not compared")
+            )
+            continue
 
         if not behind:
             rows.append((pin, pinned_short, current, "current", ""))
@@ -616,14 +726,19 @@ def main() -> int:
 
     width = max((len(p.unit) for p, *_ in rows), default=10)
     for pin, pinned, current, state, note in rows:
-        marker = {"current": "  ", "held": "· ", "behind": "→ ", "BREAKS": "✗ "}[state]
+        marker = {
+            "current": "  ", "held": "· ", "ahead": "↑ ",
+            "unswept": "? ", "behind": "→ ", "BREAKS": "✗ ",
+        }[state]
         line = f"{marker}{pin.unit:<{width}}  {pin.name:<26} {pinned:<14} {current:<14} {state}"
         print(line + (f"   ({note})" if note else ""))
 
     print()
-    counts = {s: sum(1 for *_, st, _ in rows if st == s) for s in ("current", "held", "behind", "BREAKS")}
+    states = ("current", "held", "ahead", "unswept", "behind", "BREAKS")
+    counts = {s: sum(1 for *_, st, _ in rows if st == s) for s in states}
     print(
         f"current: {counts['current']}   held: {counts['held']}   "
+        f"ahead: {counts['ahead']}   unswept: {counts['unswept']}   "
         f"behind: {counts['behind']}   BREAKS: {counts['BREAKS']}"
     )
     if args.no_build:
@@ -637,11 +752,12 @@ def main() -> int:
     unverified = [
         (p, cur, note)
         for p, _, cur, st, note in rows
-        if st == "behind" and ("not checked" in note or "not built" in note)
+        if st == "unswept"
+        or (st == "behind" and ("not checked" in note or "not built" in note))
     ]
     if unverified:
         print(
-            f"\nUNVERIFIED — {len(unverified)} behind, with nothing able to say whether it breaks:"
+            f"\nUNVERIFIED — {len(unverified)} pin(s) with nothing able to say whether they break:"
         )
         for pin, current, note in unverified:
             print(f"  {pin.unit} / {pin.name}: {pin.pinned} → {current}   ({note})")
