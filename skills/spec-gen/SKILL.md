@@ -75,6 +75,10 @@ Each module also carries a second, independent field — **`verified`** — whic
 
 Your **re-gate set** is every module with `category: unchanged` and `verified: false`. These modules are **not regenerated** — nothing about their inputs changed — but they are **not skipped as done** either: run the compile gate (Step 8) for them and record the result (Step 8.5). A re-gate costs one compiler run; a regenerate costs a session. `edited` modules are never in the re-gate set (a hand-edit is `/spec-drift`'s finding).
 
+`verified` is computed against the **gate registry** — the `gates:` list in `specs/specdev/profile.yaml` (Step 8). A module is verified only when **every** gate with `scope: module` has a passing row for it at the current key; a pass from one of two declared gates is not enough.
+
+The report opens with **`gates_declared`**. It is `true` when the registry declares at least one `scope: module` gate. When it is **`false`**, no module can be verified — every module reads `verified: false`, and there is no gate to run in Step 8 — so **stop here**. Do not treat this as "no gates required": a project with nothing declared has nothing to verify with, and that is a missing precondition, not a pass. The fix is a `gates:` block in the inlined profile; `specdev-analyzer gen --module <any module> --tail` prints the block to paste (the plugin's registry for this profile) or, for a profile that ships none, the minimal shape to write. Run it for one module, present the message verbatim, and stop.
+
 The report may also carry a `batch:` list — the whole-tree result of the last gate per label, with `current: true` when it was recorded against today's lockfile. A `pass: false` batch row means the tree did not build the last time a gate ran, even if every module you are about to skip reads `verified: true` (a later module broke it). Surface it in Step 9.
 
 **Exit rule.** If the regenerate set is empty, skip Steps 4, 5 and 7. Steps 6 (manifest), 6.2 (derive) and 6.5 (record — the manifest line only, no `--module`) **always run**. Run Step 8 (and 8.5) for the re-gate set; skip it only when that set is also empty, then go to Step 9 to report what was skipped. The manifest and the derived files are deterministic, so an unchanged tree writes identical bytes; derive needs the full module set to find a stale file, and a deleted module has no `gen-plan` row at all.
@@ -107,7 +111,12 @@ Read the preamble once. It is the contract for **every** module you generate thi
 specdev-analyzer gen --module <Name> --tail
 ```
 
-`--tail` enforces the **codegen gate** before assembling: if the module is reachable from an open question (`status = "open"` in `specs/open_questions.toml`), it aborts non-zero with a refusal naming the question, the module, and the exit options. Present the refusal verbatim and stop for that module — do not fall back to `prompt --module` or the whole-prompt `gen --module` to sidestep the gate. The user resolves via `/spec-question` (close the question, or commit a provisional default to downgrade it to `default_committed`); then re-run this step.
+`--tail` enforces two gates before assembling, and it does so in every mode — a single-module run and `--force` skip Step 3.5, not this.
+
+- **The gate registry.** If `specs/specdev/profile.yaml` declares no gate with `scope: module` (no `gates:` key, a batch-only registry, or no inlined profile at all), `--tail` aborts non-zero. The message carries the fix: the plugin's `gates:` block for this profile to paste into the inlined profile, or — for a profile that ships none — the minimal shape to write. Present it verbatim and stop the run; nothing is generated ungated. The user pastes and re-runs.
+- **The codegen gate.** If the module is reachable from an open question (`status = "open"` in `specs/open_questions.toml`), it aborts non-zero with a refusal naming the question, the module, and the exit options. Present the refusal verbatim and stop for that module. The user resolves via `/spec-question` (close the question, or commit a provisional default to downgrade it to `default_committed`); then re-run this step.
+
+Do not fall back to `prompt --module` or the whole-prompt `gen --module` to sidestep either gate.
 
 When the gate passes, the tail is a deterministic concatenation of:
 
@@ -204,50 +213,40 @@ If `spec.toml [project].profile != "firmware-layered"`, skip this step entirely.
 
 ## Step 8 — compile gate
 
-Dispatch on `spec.toml [project].language`.
+The gates are **data**: the `gates:` list in `specs/specdev/profile.yaml`. Each entry has a `label` (opaque; the row key in Step 8.5), a `scope` (`module` or `batch`) and `steps` — a list of argv lists. Read the registry and run what it says. Do not dispatch on the language or the profile, and do not run a compiler command from memory; a project whose registry lacks a check has a profile bug, not a skill gap.
 
-For Rust projects:
+For every gate in declared order:
 
-```sh
-cargo check --quiet
-```
+1. From the project root (a workspace member's own root — the workspace walk already `cd`s per member), run each step as **one process** with exactly that argv, in order. Never join a list into a shell string.
+2. A `${root.<table>.<field>}` token in a step is the value at that path in `specs/architecture.toml` (`${root.platform.target_triple}` is `[platform] target_triple`). An absent field is an error: stop and report it; never substitute an empty string.
+3. The first non-zero exit **fails the gate**; do not run its later steps. Capture the output — the first error is what Step 9 reports verbatim.
+4. A `scope: module` gate runs **once per run** and its result is scoped to modules only by the recording (Step 8.5): for an incremental `--all` that is the regenerate set and the re-gate set together; one `cargo check` covers the whole tree and that is fine. A `scope: batch` gate also runs once and is recorded with no module.
 
-For firmware-layered, `cargo check` against the host won't pass without the target triple. Use:
+Failure classes differ and Step 8.5 depends on the difference:
 
-```sh
-cargo check --quiet --target <[platform].target_triple from architecture.toml>
-```
+- **A step ran and exited non-zero** (compile error, analyzer error, a network failure during an install step): the gate **failed**. Record the failure (Step 8.5) before you stop, then report the first error verbatim and stop.
+- **A step could not start** (executable not on `PATH`, SDK or target not installed): the gate **did not run**. Record nothing, and surface the install hint from the tool's own output as a one-line action item — do not install anything yourself.
 
-If the target isn't installed (`rustup target add ...` missing), surface the install command in the report; don't try to install it automatically.
-
-For Dart projects (Flutter profiles):
-
-```sh
-flutter pub get && flutter analyze
-```
-
-The analyze gate must come back **clean** (no errors; treat analyzer errors like compile errors). If the Flutter SDK is not on PATH, report that the gate could not run and stop — do not mark generation verified without it. A Flutter app also needs its platform scaffolding once per project (`flutter create . --platforms <matrix>` from the project root, platforms from `architecture.toml`); if the platform dirs are absent, surface that command as an action item rather than running it implicitly — it writes a large externally-owned tree the user should see created. Include in the same action item: delete the scaffold's `test/widget_test.dart` afterwards — it references template symbols that don't exist in a spec-generated app and breaks both gates; the spec's test items supersede it.
-
-In every language: if the gate fails, **record the failure (Step 8.5) before you stop**, then report the first error verbatim and stop. Do not auto-edit code to fix build errors stemming from missing scaffolding outside the per-module emission scope (e.g. the entry point doesn't register this module yet) — surface the gap as a one-line action item.
-
-For an incremental `--all`, the gate runs for the **regenerate set and the re-gate set together** (Step 3.5). One `cargo check` / `flutter analyze` covers the whole tree; that is fine — the recording step below is what scopes the result to the modules of this run.
+Do not auto-edit code to fix build errors stemming from missing scaffolding outside the per-module emission scope (e.g. the entry point doesn't register this module yet) — surface the gap as a one-line action item.
 
 ## Step 8.5 — record the gate result
 
-Record the outcome of Step 8 for every module in this run — the regenerate set plus the re-gate set — under a label that names the gate:
+Record the outcome of Step 8 **once per gate that ran**, under the gate's `label` from the registry — the label is the row key, so it must be the registry's string, verbatim:
 
 ```sh
-# pass:
-specdev-analyzer gen-record-gate --label cargo-check --pass --module <A> --module <B> ...
-# fail:
-specdev-analyzer gen-record-gate --label cargo-check --fail --module <A> --module <B> ...
+# a scope: module gate — one --module per module in the run (regenerate set + re-gate set):
+specdev-analyzer gen-record-gate --label <label> --pass --module <A> --module <B> ...
+specdev-analyzer gen-record-gate --label <label> --fail --module <A> --module <B> ...
+# a scope: batch gate — no --module:
+specdev-analyzer gen-record-gate --label <label> --pass
+specdev-analyzer gen-record-gate --label <label> --fail
 ```
 
-Use `--label flutter-analyze` for the Dart gate. One `--module` per module in the run; the command also writes one **batch** row (the whole-tree result) under the same label. It hashes the project's lockfile *at this moment* — which is why this step comes **after** Step 8 and never before it: `cargo check` creates or rewrites `Cargo.lock`, and a pass recorded against the pre-gate lockfile would be invalid the instant it was written.
+A module-scope call also writes one **batch** row (the whole-tree result) under the same label. The command hashes the project's lockfile *at this moment* — which is why this step comes **after** Step 8 and never before it: `cargo check` creates or rewrites `Cargo.lock`, an install step rewrites its lockfile, and a pass recorded against the pre-gate lockfile would be invalid the instant it was written. A module is `verified` next run only when **every** module-scope gate in the registry has a pass row for it, so a gate you skipped recording leaves the module unverified — the safe direction.
 
 **Record every module in the run on a failure, not just the one the error names.** `cargo check` compiles the whole crate, so a failure proves nothing about any module in the run; under-claiming is the safe direction. Modules *outside* the run are untouched — their earlier pass rows stand, and the batch row is what tells Step 9 the tree does not build.
 
-**Never record a pass you did not observe.** If the gate could not run (SDK missing, target not installed), record nothing: an unrecorded gate reads `verified: false` next time and simply re-gates, which is the correct outcome. A recorded pass means exactly "one environment compiled these inputs against this lockfile, once" — the toolchain version is deliberately not part of the key, so do not read `verified: true` as "compiles everywhere".
+**Never record a pass you did not observe.** If a gate could not run (a step's executable could not start — SDK missing, target not installed), record nothing: an unrecorded gate reads `verified: false` next time and simply re-gates, which is the correct outcome. A recorded pass means exactly "one environment compiled these inputs against this lockfile, once" — the toolchain version is deliberately not part of the key, so do not read `verified: true` as "compiles everywhere".
 
 Do not hand-edit the `[[gates]]` rows in `gen-lineage.toml`.
 
@@ -257,7 +256,7 @@ For an incremental `--all`, open with a one-line summary of the plan from Step 3
 
 Every `edited` and `conflict` line Step 6.2 printed is an **action item**, one line each: the path, what stands there (a hand edit in a derived file; an unrecorded file at a derived target), and the exit — `specdev-analyzer derive --write --accept-edits`, or move the file. A `conflict` records nothing, so the module reads `unchanged` and this line is the only signal that its route file is not the spec's.
 
-"Verified" in this report is the **recorded** fact from Step 8.5 — a module is verified when `gen-plan` says `verified: true`, and not otherwise. Do not call a module verified from memory of having seen the gate pass; if you did not record it, it is not verified.
+"Verified" in this report is the **recorded** fact from Step 8.5 — a module is verified when `gen-plan` says `verified: true` (a pass row from every module-scope gate in the registry), and not otherwise. Do not call a module verified from memory of having seen the gate pass; if you did not record it, it is not verified.
 
 Then one paragraph per module **generated** (skipped modules need no paragraph; re-gated modules get one line each with the gate result):
 - Source file(s) written, with paths relative to project root.

@@ -69,6 +69,16 @@ specdev-analyzer manifest --write
 (`/spec-gen` runs this as its manifest step.) pubspec is output, never
 hand-maintained.
 
+The compile gate is declared as data in `profile.yaml` (`gates:`):
+`flutter-analyze`, `scope: module` — `flutter pub get`, then `flutter
+analyze --no-fatal-infos --no-fatal-warnings` (errors fail the gate;
+infos and warnings do not, the same bar as `cargo check`). Platform
+scaffolding is not the gate's finding: both steps pass with no platform
+directories, so run `flutter create . --platforms <matrix>` once by
+hand before the first real build (platforms from `architecture.toml`),
+and delete the scaffold's `test/widget_test.dart` afterwards — it
+references template symbols a spec-generated app does not have.
+
 A minimal complete module file (`specs/modules/CounterService.toml` —
 PascalCase `name`, filename matching it; prefer `/spec-design` for
 guided authoring):

@@ -8,9 +8,13 @@ client/server boundary carried as two fields the compiler enforces.
 **Status:** this profile bootstraps, validates, emits `package.json`
 plus its config files, and derives the route files under `app/`
 (`specdev-analyzer derive --write`, run by `/spec-gen` on every gen).
-The gate runner (`specdev-analyzer gate`) is not yet shipped; until it
-is, `/spec-gen` cannot run a nextjs-app gate and the user runs `pnpm
-build` by hand.
+Its two compile gates are declared as data in `profile.yaml` (`gates:`):
+`fast` (`scope: module` — `pnpm install`, `next typegen`, `tsc
+--noEmit`, `vitest run --passWithNoTests`) and `next-build` (`scope:
+batch` — `next build`). `/spec-gen` reads the registry and runs each
+step; a module is `verified` only with a current pass row from every
+module-scope gate. The analyzer-run gate (`specdev-analyzer gate`),
+which executes the steps and writes the rows itself, is not yet shipped.
 
 ## When to use this profile
 
