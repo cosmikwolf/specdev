@@ -8,7 +8,7 @@ allowed-tools: Read, Bash, Glob, Grep
 
 Run the analyzer's drift reporters — inlined-unit drift and generated-file drift — and present the results grouped by drift class. This skill never edits files — drift is observational. Acting on drift (`--merge` to update from plugin, hand-edits to lock in local divergence, etc.) is a separate user decision driven by `/spec-inline --merge`, `/spec-inline-bridge --merge`, or hand-edit + acceptance.
 
-If `specdev-analyzer` is not on PATH, tell the user to install it (`cargo install --git https://github.com/cosmikwolf/specdev-analyzer`) and stop. If it IS on PATH but reports `MANIFEST-002`, or a `MANIFEST-001` naming a file under the plugin tree, then the analyzer is older than the plugin — not a problem with any project file. Tell the user to re-run the install command with `--force` (or `cargo install --path <checkout> --force` from a local checkout), then retry.
+If `specdev-analyzer` is not on PATH, tell the user to install it (follow `${CLAUDE_PLUGIN_ROOT}/shared/analyzer-install.md` — it derives the org from the plugin's own remote; both repositories are private) and stop. If it IS on PATH but reports `MANIFEST-002`, or a `MANIFEST-001` naming a file under the plugin tree, then the analyzer is older than the plugin — not a problem with any project file. Tell the user to re-run the install command with `--force` (or `cargo install --path <checkout> --force` from a local checkout), then retry.
 
 Before any analyzer invocation, run the env preamble from `${CLAUDE_PLUGIN_ROOT}/shared/plugin-root-preamble.md`:
 

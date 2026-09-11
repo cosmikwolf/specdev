@@ -30,15 +30,21 @@ if ! command -v "${ANALYZER_BIN}" >/dev/null 2>&1; then
 
 **ERROR:** \`${ANALYZER_BIN}\` is not on PATH.
 
-Install with:
+Install from a local checkout of \`specdev-analyzer\` (no org access
+needed):
 
-    cargo install --git https://github.com/cosmikwolf/specdev-analyzer
+    cargo install --path <analyzer-checkout>
+
+Or from the private repository, replacing \`<org>\` with the GitHub
+organization you were granted access to:
+
+    cargo install --git https://github.com/<org>/specdev-analyzer
 
 Or set \`ANALYZER_BIN\` to an absolute path.
 
 If it IS installed and a command reports \`MANIFEST-002\`, or a
 \`MANIFEST-001\` naming a file under the plugin tree, the analyzer is older
-than the plugin. Re-install it with the same command plus \`--force\`.
+than the plugin. Re-install it with whichever command you used above, plus \`--force\`.
 EOF
     exit 0
 fi
