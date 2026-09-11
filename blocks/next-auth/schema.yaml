@@ -1,0 +1,76 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://specdev.dev/blocks/next-auth.v1"
+title: "next-auth block (v1)"
+description: >
+  Schema fragment contributed by the `next-auth` block. Adds a
+  namespaced `[next_auth]` table to `Module` describing the ONE module
+  that holds an Auth.js configuration.
+
+  The table holds CONFIG INPUTS, never a mirror of the Auth.js API.
+  Callbacks, provider options and custom pages are code and live in the
+  config file this table names; restating them here would give one fact
+  two sources.
+
+  Session strategy is deliberately NOT here. Without a database adapter
+  Auth.js has only one strategy — `jwt` — so there is nothing to decide.
+  The choice appears exactly when an adapter does, and an adapter needs
+  a second unit, so it belongs to the bridge that joins them.
+
+  This schema is self-contained: identifier patterns are inlined rather
+  than $ref'd against profile-shipped enums.schema.yaml so the block
+  composes against any profile that exposes `Module`.
+type: object
+properties:
+  next_auth:
+    type: object
+    additionalProperties: false
+    required: [config_file, providers]
+    properties:
+      config_file:
+        description: >
+          Path to the Auth.js configuration module, relative to the
+          project root. Auth.js v5 puts it at the repository root
+          (`auth.ts`) so that any module may import `auth`, `signIn`,
+          `signOut` and `handlers` from one place. Codegen needs the
+          path because every consumer's import is derived from it.
+        type: string
+        minLength: 1
+        default: "auth.ts"
+      providers:
+        description: >
+          Auth.js provider ids this configuration enables, e.g.
+          `github`, `google`, `credentials`, `resend`.
+
+          Deliberately NOT an enum. Auth.js ships roughly eighty
+          providers and adds more between releases, so an enumerated
+          list here would reject a valid provider the day it shipped
+          and would need a sweep this block cannot guarantee. The
+          pattern admits any provider id; a wrong one fails at
+          `next build` on the import, which is the checker that does
+          know the real list.
+        type: array
+        minItems: 1
+        uniqueItems: true
+        items:
+          type: string
+          pattern: "^[a-z0-9][a-z0-9-]*$"
+      edge_split:
+        description: >
+          Whether the configuration is split across two files for Edge
+          compatibility. `true` means an edge-safe `auth.config.ts`
+          holds the providers and callbacks, and `config_file` imports
+          it and adds anything the Edge runtime cannot load. Required
+          when middleware calls `auth` and any part of the
+          configuration reaches a Node-only API — a database adapter is
+          the usual cause, which is why the bridge that adds one has
+          more to say about this field.
+        type: boolean
+        default: false
+      base_path:
+        description: >
+          Mount point of the Auth.js route handler, stated only when it
+          differs from the default `/api/auth`. The derived route file
+          lives at `app<base_path>/[...nextauth]/route.ts`.
+        type: string
+        pattern: "^/[A-Za-z0-9/_-]*[A-Za-z0-9_-]$"
+        default: "/api/auth"
