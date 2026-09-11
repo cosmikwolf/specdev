@@ -1,0 +1,32 @@
+// Reference schema. Minimal on purpose: it exists to give the generated
+// client something to type, not to model a domain. SQLite so the gate
+// needs no database server.
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Event {
+  id       String    @id @default(cuid())
+  name     String
+  startsAt DateTime
+  bookings Booking[]
+}
+
+model Booking {
+  id      String @id @default(cuid())
+  seat    String
+  event   Event  @relation(fields: [eventId], references: [id])
+  eventId String
+
+  @@unique([eventId, seat])
+}
+
+model User {
+  id    String @id @default(cuid())
+  email String @unique
+}

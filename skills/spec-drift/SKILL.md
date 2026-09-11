@@ -8,7 +8,7 @@ allowed-tools: Read, Bash, Glob, Grep
 
 Run the analyzer's drift reporters — inlined-unit drift and generated-file drift — and present the results grouped by drift class. This skill never edits files — drift is observational. Acting on drift (`--merge` to update from plugin, hand-edits to lock in local divergence, etc.) is a separate user decision driven by `/spec-inline --merge`, `/spec-inline-bridge --merge`, or hand-edit + acceptance.
 
-If `specdev-analyzer` is not on PATH, tell the user to install it (`cargo install --git https://github.com/cosmikwolf/specdev-analyzer`) and stop.
+If `specdev-analyzer` is not on PATH, tell the user to install it (follow `${CLAUDE_PLUGIN_ROOT}/shared/analyzer-install.md` — it derives the org from the plugin's own remote; both repositories are private) and stop. If it IS on PATH but reports `MANIFEST-002`, or a `MANIFEST-001` naming a file under the plugin tree, then the analyzer is older than the plugin — not a problem with any project file. Tell the user to re-run the install command with `--force` (or `cargo install --path <checkout> --force` from a local checkout), then retry.
 
 Before any analyzer invocation, run the env preamble from `${CLAUDE_PLUGIN_ROOT}/shared/plugin-root-preamble.md`:
 
@@ -25,10 +25,14 @@ Skip if `SPECDEV_PLUGIN_ROOT` is already set or every invocation passes `--plugi
 From the project root:
 
 ```sh
-specdev-analyzer drift --no-color
+specdev-analyzer drift
 ```
 
-Capture stdout and exit code. Drift always exits `0` on a successful run — the report's *content* is the signal, not the exit code. A non-zero exit indicates an analyzer error (layout missing, plugin root unresolvable, …); surface the message verbatim and stop.
+Capture stdout and the exit code. Three outcomes:
+
+- **`0`** — the report is the signal, not the exit code. Drift is a reporter: a file classified `locally-edited` still exits `0`.
+- **`1`** — a broken invariant (`DRIFT-INVARIANT-00N`): a corrupted tree, such as a file recorded in `lineage.toml` that is no longer on disk. Read the `invariants:` list first; it takes priority over every category below.
+- **`2`** — an analyzer error (layout missing, plugin root unresolvable, …). Surface the message verbatim and stop.
 
 ## Step 2 — present the four drift classes
 
@@ -42,6 +46,43 @@ The analyzer classifies each tracked inlined file (under `specs/specdev/inlined/
 Group findings by class in this order: `both`, `plugin-moved`, `locally-edited`, `clean`. Show counts per class, then the affected paths under each non-empty class.
 
 For `clean`: collapse to a single line ("`<N>` files clean.") unless the user asks for the full list.
+
+## Step 2b — present the profile substrate
+
+The report also carries a `profile:` section covering the files `bootstrap`
+scaffolded from the profile — the schemas under `specs/specdev/schemas/`,
+`profile.yaml`, `specs/specdev/templates/*`, the root TOMLs. These use the
+same four classes, so read them exactly as in Step 2, with two differences.
+
+**`status: not_recorded`.** The project was bootstrapped before the
+substrate was hashed, so `files:` is empty and nothing is being claimed
+either way. Say that plainly — do NOT report the substrate as clean. Tell
+the user the only way to start tracking it is a fresh bootstrap into a new
+tree, and that `migrate --refresh` cannot help here because no file can be
+proven untouched.
+
+**`comparison: excludes_unit_refs`.** `module.schema.yaml` is co-owned:
+`inline` appends each inlined unit's `$ref` to its `allOf` array. That
+array is excluded from the comparison and is reported by the `units:`
+section instead. So a `clean` verdict on this file means "the profile's part
+of it is current" — it says nothing about the `$ref` list.
+
+For a `plugin-moved` profile file, the remedy is NOT `--merge` (that is for
+blocks and bridges). Offer:
+
+```sh
+specdev-analyzer migrate --refresh --dry-run
+```
+
+It rewrites only files whose on-disk hash still matches the hash bootstrap
+recorded — proof that nobody edited them. Anything you changed is listed as
+`KEPT` and left alone, because profile files keep no `upstream/` base copy
+and there is nothing to merge against. Show the dry run, then re-run
+without `--dry-run` once the user agrees.
+
+A `locally-edited` or `both` profile file is the user's call. There is no
+merge path; the choice is keep the edit or re-apply the plugin's version by
+hand.
 
 ## Step 3 — check generated files (gen-drift)
 

@@ -1,0 +1,85 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://specdev.dev/bridges/next-auth+prisma.v1"
+title: "next-auth+prisma bridge (v1)"
+description: |
+  Schema fragment contributed by the `next-auth+prisma` bridge. Adds
+  shape under bindings."next-auth+prisma" on `Module`.
+
+  Wires an Auth.js configuration to a Prisma client: the adapter that
+  lets Auth.js persist users, accounts, sessions and verification
+  tokens through Prisma rather than in a token.
+
+  The pairing carries one decision neither block can make alone, and it
+  is the whole reason this is a bridge rather than a field.
+
+    * WHICH SESSION STRATEGY. Without an adapter Auth.js has exactly one
+      strategy, `jwt`, so there is nothing to choose and the next-auth
+      block rightly does not ask. Add an adapter and `database` becomes
+      the default — and becomes possible. But `database` reads the
+      session on every request, so when middleware calls `auth`, that
+      read happens in the Edge runtime, and whether it CAN is a fact
+      about the prisma block's `adapter` field, which the next-auth
+      block cannot see. Two independently-declared values that must
+      agree is exactly what a bridge is for.
+
+  The bridge also owns the `@auth/prisma-adapter` dependency. That
+  package is a join product: it is useless without both blocks, so
+  contributing it from either one would hand a project a dependency it
+  cannot satisfy.
+
+  The bridge does NOT introduce new entity kinds — it contributes a
+  relation materialized from the binding. See `reduction.yaml`.
+type: object
+properties:
+  bindings:
+    type: object
+    properties:
+      "next-auth+prisma":
+        type: object
+        additionalProperties: false
+        required: [client, session_strategy]
+        properties:
+          session_strategy:
+            description: |
+              How Auth.js stores a session once the Prisma adapter is
+              present:
+
+                database — a row per session; signing out deletes it and
+                           a session can be revoked server-side. This is
+                           Auth.js's own default when an adapter is
+                           configured. Every session read is a query, so
+                           the prisma `adapter` must work wherever those
+                           reads happen.
+                jwt      — the session lives in a signed cookie and the
+                           adapter is used only for account linking and
+                           verification tokens. No query on the hot
+                           path, so it works under any prisma `adapter`,
+                           at the cost of not being revocable until the
+                           token expires.
+
+              Choose `jwt` when middleware calls `auth` and the prisma
+              `adapter` is a Node-only driver. See the bridge's codegen
+              prose for which adapters are Edge-capable; that table is
+              the reason this field is here and not in either block.
+            type: string
+            enum: [database, jwt]
+          client:
+            description: >
+              Name of the module whose `[prisma.datasource]` table owns
+              the Prisma client this adapter wraps.
+
+              The binding carries the reference itself rather than
+              reading the module's own `[prisma].client`, and that is
+              not a style choice. A relation template that reaches for a
+              field which may be absent aborts the reducer with a
+              plugin-author message and exit 2 instead of reporting a
+              finding — measured. A required field here cannot dangle,
+              so a wrong value is an ordinary REDUCE_UNRESOLVED naming
+              this bridge's relation.
+
+              The module holding an Auth.js config does NOT also need a
+              `[prisma].client`: it never queries a model, it hands the
+              client to the adapter. This binding IS its relationship to
+              the database, and it is the only producer of that fact.
+            type: string
+            pattern: "^[A-Za-z_][A-Za-z0-9_]*$"

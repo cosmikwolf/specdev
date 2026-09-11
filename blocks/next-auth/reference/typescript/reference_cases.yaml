@@ -1,0 +1,8 @@
+# Reference-package coverage manifest. Plugin-author / CI-only; never
+# inlined. Drives REF-COVERAGE-001 (each name -> src/<name>.ts).
+# One case per section of codegen/typescript/README.md that carries code.
+reference_cases:
+  - config
+  - edge_split
+  - route
+  - session

@@ -1,0 +1,36 @@
+metaschema_version: "v1"
+
+# next-auth block reduction. One entity kind — Config — materialized
+# from the module that holds the Auth.js configuration.
+#
+# `for_each: next_auth` selects a SINGLE optional object, not an array:
+# a key step that misses yields no pick, so a module without the table
+# materializes nothing and a module with it materializes exactly one
+# Config. Same shape as the prisma block's Datasource.
+#
+# The name is suffixed. `${root.name}` alone collides with the canonical
+# Module entity of that name and fails `unique_qualified_names` —
+# measured on the prisma block before this one was written.
+#
+# No relations. Within this block a Config references nothing: providers
+# are opaque ids resolved by Auth.js at build time, not entities here.
+# The one relation this vocabulary has — a Config wired to a database
+# adapter — needs a second unit and therefore lives in a bridge.
+#
+# Providers are NOT materialized as entities. They carry no attributes
+# the spec owns and nothing references them, so an entity per provider
+# would add graph nodes no check reads. Same call the itm block makes
+# for its `[itm.decoder]` singleton.
+
+entities:
+  - kind: Config
+    extends: Module
+    from: "specs/modules/*.toml"
+    for_each: "next_auth"
+    name: "${root.name}.auth"
+    attrs:
+      config_file: ".config_file"
+      edge_split:  ".edge_split"
+      base_path:   ".base_path"
+
+relations: []

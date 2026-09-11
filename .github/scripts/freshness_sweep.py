@@ -12,6 +12,8 @@ WHAT THIS REPORTS, AND WHY THE DISTINCTION IS THE WHOLE POINT
 
     current               pinned version is the latest              silent
     held                  behind on purpose, with a reason on file  silent
+    ahead                 the feed's newest is older than the pin   silent
+    unswept               no release feed for this language / SDK   informational
     behind, compiles      newer exists; the reference still builds  informational
     behind, BREAKS        newer exists; the reference fails on it   actionable
 
@@ -118,14 +120,38 @@ def _version_key(v: str) -> tuple:
     return (parts[0], parts[1], parts[2], 1 if not pre else 0, pre)
 
 
+def _index_name_candidates(name: str) -> list[str]:
+    """The names to try in the sparse index, in order.
+
+    The index stores a crate under the name it was **published** with, but a
+    manifest may spell it the other way round and cargo still resolves it:
+    measured, `cargo add static-cell` adds `static_cell v2.1.1`. Asking the
+    index verbatim therefore 404s on a legal pin — `profiles/firmware-layered`
+    offers `crate = "static-cell"`, which is correct for cargo and absent from
+    `st/at/static-cell` (#125). Try the spelling as written first, then the
+    two separator swaps.
+    """
+    lowered = name.lower()
+    out = [lowered]
+    for swapped in (lowered.replace("-", "_"), lowered.replace("_", "-")):
+        if swapped not in out:
+            out.append(swapped)
+    return out
+
+
 def latest_crates_io(name: str) -> str | None:
     """Highest non-yanked, non-prerelease version on crates.io."""
-    try:
-        body = _get(f"https://index.crates.io/{_index_path(name)}")
-    except urllib.error.HTTPError as e:
-        if e.code == 404:
-            return None
-        raise
+    body = None
+    for candidate in _index_name_candidates(name):
+        try:
+            body = _get(f"https://index.crates.io/{_index_path(candidate)}")
+            break
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                continue
+            raise
+    if body is None:
+        return None
     versions = []
     for line in body.splitlines():
         line = line.strip()
@@ -148,6 +174,24 @@ def latest_pub_dev(name: str) -> str | None:
             return None
         raise
     return json.loads(body).get("latest", {}).get("version")
+
+
+def latest_npm(name: str) -> str | None:
+    """The version npm itself resolves `npm install <name>` to.
+
+    The `latest` dist-tag is the registry's own answer, so prereleases are
+    excluded without this caller filtering them — npm publishes those under
+    `next` / `beta` tags instead. Scoped names carry a `/` that has to be
+    encoded, or the registry reads it as a path segment.
+    """
+    try:
+        body = _get(f"https://registry.npmjs.org/{name.replace('/', '%2f')}/latest")
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return None
+        raise
+    version = json.loads(body).get("version")
+    return version if isinstance(version, str) else None
 
 
 def latest_dart_sdk() -> str | None:
@@ -182,6 +226,21 @@ SDK_FEEDS = {
     "dart": latest_dart_sdk,
     "flutter": latest_flutter_sdk,
     "node": latest_node,
+}
+
+# One release feed per language. A language absent from this map is reported
+# as `unswept`, and never swept against another language's registry. The
+# crates.io fallback this replaces split fourteen npm pins two ways, both
+# wrong: `next`, `react`, `typescript`, `vite` and `prettier` exist as
+# unrelated crates, so those five were compared against a dead crate's version
+# and called `behind`; the other nine 404'd, which left the version column `?`
+# and the verdict `current` — a clean over pins nothing had compared (#124).
+# The second half is the worse one, and it is the same false clean as #105,
+# which `read_profile_pins`'s docstring predicted for "an npm list".
+REGISTRY_FEEDS = {
+    "rust": latest_crates_io,
+    "dart": latest_pub_dev,
+    "typescript": latest_npm,
 }
 
 
@@ -242,6 +301,41 @@ def read_pins(root: Path) -> list[Pin]:
                 pins.append(
                     Pin(unit, language, entry["package"], str(entry.get("version", "")), "registry")
                 )
+            # TypeScript manifests use a third section, `npm:`, keyed by
+            # `package:`. It was missing here while `REGISTRY_FEEDS` already
+            # carried a `typescript` feed, so the two halves disagreed: npm
+            # pins reached the sweep from a PROFILE template and never from a
+            # block's deps.yaml. The first typescript block exposed it —
+            # nothing was swept and the run still printed a clean total, which
+            # is the false green this report exists to avoid. Same shape as
+            # the crates loop; `source`-bearing entries are a closed set.
+            for entry in doc.get("npm") or []:
+                if any(k in entry for k in ("path", "link", "workspace")):
+                    # Local sources. No registry has heard of them, and a
+                    # lookup would 404 into `unswept` noise.
+                    continue
+                git = entry.get("git")
+                if isinstance(git, dict):
+                    pins.append(
+                        Pin(
+                            unit,
+                            language,
+                            entry["package"],
+                            str(git.get("ref", "(unpinned HEAD)")),
+                            "git",
+                            git["url"],
+                        )
+                    )
+                else:
+                    pins.append(
+                        Pin(
+                            unit,
+                            language,
+                            entry["package"],
+                            str(entry.get("version", "")),
+                            "registry",
+                        )
+                    )
 
     pins.extend(read_profile_pins(root))
     return pins
@@ -262,7 +356,9 @@ def read_profile_pins(root: Path) -> list[Pin]:
 
     Templates are prose to the analyzer but are valid TOML, so they are parsed
     rather than pattern-matched. Any table carrying a name key and `version`
-    is a pin, wherever it sits.
+    is a pin, wherever it sits — including inside the template's own comments,
+    which is where the optional ready-to-uncomment blocks live. See
+    `commented_toml`; those pins carry a `(commented)` unit label.
 
     The name key is language-specific and there is no way around that: Rust
     manifests say `crate`, pub manifests say `package` (`pub_reference.schema.yaml`),
@@ -286,6 +382,17 @@ def read_profile_pins(root: Path) -> list[Pin]:
             continue
         for name, version in _walk_dep_refs(doc):
             pins.append(Pin(profile, language, name, version, "registry"))
+
+        # The same template's commented-out optional blocks. These are shipped
+        # content — a project author uncomments one and gets whatever it says
+        # — but `tomllib` sees a comment, so they were never swept, and two
+        # had gone a major version stale before anyone read them by hand
+        # (#111). Labelled `(commented)` because the row is about an inert
+        # pin: nothing is broken until someone uncomments it.
+        hidden = commented_toml(template.read_text())
+        if hidden:
+            for name, version in _walk_dep_refs(tomllib.loads(hidden)):
+                pins.append(Pin(f"{profile} (commented)", language, name, version, "registry"))
     pins.extend(read_profile_sdks(root))
     return pins
 
@@ -354,6 +461,64 @@ def _walk_sdk_constraints(node) -> list[tuple[str, str]]:
     return found
 
 
+def _is_path_source(source) -> bool:
+    """Does this `source` point at the local filesystem?
+
+    Two shapes reach here: the string form (`source = "path"`) and the table
+    form (`source = { path = "../x" }`). `"workspace"`, `"crates-io"` and a
+    git table are all still registry-or-remote and stay swept.
+    """
+    if isinstance(source, str):
+        return source == "path"
+    if isinstance(source, dict):
+        return "path" in source
+    return False
+
+
+# A commented line is kept only if it looks like TOML: a table header, or a
+# `key =` assignment. Prose inside the same comment run ("Optional: enable an
+# allocator only when modules need `alloc`.") matches neither and drops out.
+_TOML_HEADER = re.compile(r"^\[\[?[A-Za-z_][A-Za-z0-9_.\-\"']*\]\]?$")
+_TOML_KEYLINE = re.compile(r"^[A-Za-z_][A-Za-z0-9_.-]*\s*=")
+
+
+def commented_toml(text: str) -> str:
+    """The TOML hiding inside a template's comments.
+
+    Profile templates offer optional dependency blocks as ready-to-uncomment
+    comments. `tomllib` sees a comment, so those pins were invisible to this
+    sweep for its whole life, and two of them had gone a major version stale
+    before anyone read them by hand (#111).
+
+    Uncommenting is not enough on its own. Prose sits in the same comment run
+    as the pin it introduces, and some prose looks like a key —
+    `source = "workspace"   — <dep>.workspace = true inheritance` passes any
+    reasonable line filter and then fails the parse, which would throw away
+    the real pins beside it. So lines are added one at a time and a line that
+    breaks the document is dropped. Slow in principle, invisible in practice:
+    the templates are a few dozen comment lines each.
+
+    Returns a TOML document, possibly empty. The caller parses it.
+    """
+    kept: list[str] = []
+    for raw in text.splitlines():
+        stripped = raw.strip()
+        if not stripped.startswith("#"):
+            continue
+        body = stripped[1:]
+        body = body[1:] if body.startswith(" ") else body
+        body = body.strip()
+        if not (_TOML_HEADER.match(body) or _TOML_KEYLINE.match(body)):
+            continue
+        candidate = kept + [body]
+        try:
+            tomllib.loads("\n".join(candidate))
+        except tomllib.TOMLDecodeError:
+            continue
+        kept = candidate
+    return "\n".join(kept)
+
+
 def _walk_dep_refs(node) -> list[tuple[str, str]]:
     """Every `<name key> + version` pair in a parsed manifest.
 
@@ -361,12 +526,20 @@ def _walk_dep_refs(node) -> list[tuple[str, str]]:
     key but no `version` (a path, git or sdk dep) is not a pin and is skipped
     by the `version` requirement alone — which is also what keeps pubspec's
     `{ package = "flutter", sdk = "flutter" }` out of the registry pins.
+
+    A table that carries BOTH a `version` and a path source is skipped too.
+    No registry has ever heard of it: the commented examples this function
+    now reads are full of placeholders like
+    `{ crate = "my-core", version = "0.1.0", source = { path = "crates/my-core" } }`,
+    and looking those up produces an `unswept` row about a name that was
+    never meant to resolve.
     """
     found: list[tuple[str, str]] = []
     if isinstance(node, dict):
         for name_key in ("crate", "package"):
             if isinstance(node.get(name_key), str) and isinstance(node.get("version"), str):
-                found.append((node[name_key], node["version"]))
+                if not _is_path_source(node.get("source")):
+                    found.append((node[name_key], node["version"]))
                 break
         for value in node.values():
             found.extend(_walk_dep_refs(value))
@@ -416,6 +589,23 @@ def _components(v: str) -> tuple[int, int, int]:
     while len(parts) < 3:
         parts.append(0)
     return (parts[0], parts[1], parts[2])
+
+
+def ahead_of(req: str, version: str) -> bool:
+    """Is the pin ABOVE the newest thing the registry offered?
+
+    `satisfies` asks whether the candidate sits inside the declared range, and
+    a candidate *below* the floor is outside it — so without asking this first,
+    a pin the world has not caught up with reads as `behind`, gets built
+    against the older version, and fails. `blocks/itm` pins `itm 0.9.0-rc.1`
+    while the newest stable is `0.3.1`: the pin is the newest version
+    published, and calling it behind sent the weekly job red on a correct pin
+    (#112). Being ahead is never a finding — there is nothing to bump to.
+
+    Prerelease identifiers are not compared, because `_components` drops them
+    and the stable feeds never return one. That is why the row says so.
+    """
+    return _components(version) < _components(req.lstrip("^~>= "))
 
 
 def read_policy(root: Path, unit: str, language: str) -> dict:
@@ -533,6 +723,58 @@ SATISFIES_CASES = [
     (">= 3.35.0", "3.47.2", True, ">= tolerates a space before the version"),
 ]
 
+# `satisfies` says "the candidate is outside the declared range" for BOTH a
+# candidate that is too new and one that is too old. Only the second is
+# `ahead`, and telling them apart is what keeps a correct pin out of the red
+# (#112). These cases exist because the `satisfies` table above deliberately
+# asserts False for ("1.0.3", "1.0.2") — that answer is right, and the bug was
+# the caller reading it as "behind".
+AHEAD_CASES = [
+    ("0.9.0-rc.1", "0.3.1", True, "a prerelease pin the stable line has not reached — blocks/itm"),
+    ("0.36", "0.37.0", False, "genuinely behind: the feed is newer"),
+    ("0.36", "0.36.1", False, "a patch above the pin is not ahead"),
+    ("1.0.3", "1.0.2", True, "the feed's newest is below the pinned floor"),
+    ("^19.2.0", "19.3.0", False, "caret pin, feed newer within the major"),
+    ("2.0.0", "2.0.0", False, "equal is not ahead"),
+    (">=3.35.0", "3.34.9", True, "the feed has not reached our declared minimum"),
+]
+
+
+# `commented_toml` has to survive the shapes that actually ship: prose in the
+# same comment run as the pin it introduces, prose that looks like a key, and
+# path placeholders that no registry has heard of. Each case is
+# (label, template text, expected [(name, version)]).
+COMMENTED_CASES = [
+    (
+        "prose above a pin does not take the pin with it",
+        '# Optional: enable an allocator only when modules need `alloc`.\n'
+        '# [runtime.allocator]\n# crate = "embedded-alloc"\n# version = "^0.7"\n',
+        [("embedded-alloc", "^0.7")],
+    ),
+    (
+        "prose that looks like a key is dropped, the pin beside it survives",
+        '# [[external_deps]]\n# crate = "rtrb"\n# version = "^0.4"\n'
+        '#   source = "workspace"   — `<dep>.workspace = true` inheritance\n',
+        [("rtrb", "^0.4")],
+    ),
+    (
+        "a path placeholder is not a registry pin",
+        '# [[workspace_dependencies]]\n# crate = "my-core"\n# version = "0.1.0"\n'
+        '# source = { path = "crates/my-core" }\n',
+        [],
+    ),
+    (
+        "uncommented lines are not this pass's business",
+        '[logger.provider]\ncrate = "defmt"\nversion = "^1"\n',
+        [],
+    ),
+    (
+        "a bare version with no name key is not a pin",
+        '# [package]\n# version = "0.1.0"\n',
+        [],
+    ),
+]
+
 
 def self_test() -> int:
     bad = 0
@@ -541,7 +783,21 @@ def self_test() -> int:
         if got != want:
             bad += 1
         print(f"{'ok  ' if got == want else 'FAIL'} satisfies({req!r}, {ver!r}) = {got} — {why}")
-    print(f"\n{len(SATISFIES_CASES) - bad}/{len(SATISFIES_CASES)} passed")
+    print()
+    for req, ver, want, why in AHEAD_CASES:
+        got = ahead_of(req, ver)
+        if got != want:
+            bad += 1
+        print(f"{'ok  ' if got == want else 'FAIL'} ahead_of({req!r}, {ver!r}) = {got} — {why}")
+    print()
+    for label, text, want in COMMENTED_CASES:
+        got = _walk_dep_refs(tomllib.loads(commented_toml(text)))
+        ok = got == want
+        if not ok:
+            bad += 1
+        print(f"{'ok  ' if ok else 'FAIL'} commented_toml -> {got} — {label}")
+    total = len(SATISFIES_CASES) + len(AHEAD_CASES) + len(COMMENTED_CASES)
+    print(f"\n{total - bad}/{total} passed")
     return 1 if bad else 0
 
 
@@ -584,16 +840,51 @@ def main() -> int:
             pinned_short = pin.pinned
             if feed is None:
                 # No feed for this SDK. Say so; do not fall through to a
-                # package registry, and do not drop it silently.
-                rows.append((pin, pinned_short, "?", "behind", "unswept: no release feed for this SDK"))
+                # package registry, and do not drop it silently. `unswept` and
+                # not `behind`: nothing was compared, so claiming a direction
+                # would be inventing one.
+                rows.append((pin, pinned_short, "?", "unswept", "no release feed for this SDK"))
                 continue
             current = feed() or "?"
             behind = current != "?" and not satisfies(pin.pinned, current)
         else:
-            lookup = latest_pub_dev if pin.language == "dart" else latest_crates_io
-            current = lookup(pin.name) or "?"
+            lookup = REGISTRY_FEEDS.get(pin.language)
             pinned_short = pin.pinned
+            if lookup is None:
+                rows.append(
+                    (pin, pinned_short, "?", "unswept",
+                     f"no release feed for language `{pin.language}`")
+                )
+                continue
+            current = lookup(pin.name) or "?"
             behind = current != "?" and not satisfies(pin.pinned, current)
+
+        # A comparison that did not happen must never render as `current`.
+        # A 404, an unreachable git remote, or a feed that answered with
+        # nothing all leave `current` as "?", which makes `behind` False and
+        # used to print a clean row. Nine npm pins were reported current that
+        # way, having been compared to nothing at all (#124) — the same false
+        # clean as #105, and the reason `unswept` is a state rather than a
+        # note on some other state.
+        if current == "?":
+            rows.append(
+                (pin, pinned_short, current, "unswept",
+                 "the feed returned nothing for this name")
+            )
+            continue
+
+        # The registry's newest is OLDER than what we pin. Ask before `behind`,
+        # or a pin nothing has caught up with is downgraded and built against
+        # the older version (#112).
+        # `pin.kind != "git"`: a commit SHA has no version ordering. `_components`
+        # would read one as (0, 0, 0) — or worse, parse an all-digit SHA into a
+        # number — and compare two meaningless tuples.
+        if behind and current != "?" and pin.kind != "git" and ahead_of(pin.pinned, current):
+            rows.append(
+                (pin, pinned_short, current, "ahead",
+                 "pin is newer than the feed's newest; prereleases not compared")
+            )
+            continue
 
         if not behind:
             rows.append((pin, pinned_short, current, "current", ""))
@@ -616,14 +907,19 @@ def main() -> int:
 
     width = max((len(p.unit) for p, *_ in rows), default=10)
     for pin, pinned, current, state, note in rows:
-        marker = {"current": "  ", "held": "· ", "behind": "→ ", "BREAKS": "✗ "}[state]
+        marker = {
+            "current": "  ", "held": "· ", "ahead": "↑ ",
+            "unswept": "? ", "behind": "→ ", "BREAKS": "✗ ",
+        }[state]
         line = f"{marker}{pin.unit:<{width}}  {pin.name:<26} {pinned:<14} {current:<14} {state}"
         print(line + (f"   ({note})" if note else ""))
 
     print()
-    counts = {s: sum(1 for *_, st, _ in rows if st == s) for s in ("current", "held", "behind", "BREAKS")}
+    states = ("current", "held", "ahead", "unswept", "behind", "BREAKS")
+    counts = {s: sum(1 for *_, st, _ in rows if st == s) for s in states}
     print(
         f"current: {counts['current']}   held: {counts['held']}   "
+        f"ahead: {counts['ahead']}   unswept: {counts['unswept']}   "
         f"behind: {counts['behind']}   BREAKS: {counts['BREAKS']}"
     )
     if args.no_build:
@@ -637,11 +933,12 @@ def main() -> int:
     unverified = [
         (p, cur, note)
         for p, _, cur, st, note in rows
-        if st == "behind" and ("not checked" in note or "not built" in note)
+        if st == "unswept"
+        or (st == "behind" and ("not checked" in note or "not built" in note))
     ]
     if unverified:
         print(
-            f"\nUNVERIFIED — {len(unverified)} behind, with nothing able to say whether it breaks:"
+            f"\nUNVERIFIED — {len(unverified)} pin(s) with nothing able to say whether they break:"
         )
         for pin, current, note in unverified:
             print(f"  {pin.unit} / {pin.name}: {pin.pinned} → {current}   ({note})")
