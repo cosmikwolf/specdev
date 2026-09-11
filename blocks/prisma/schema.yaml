@@ -1,0 +1,117 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://specdev.dev/blocks/prisma.v1"
+title: "prisma block (v1)"
+description: >
+  Schema fragment contributed by the `prisma` block. Adds a namespaced
+  `[prisma]` table to `Module` describing how a module reaches a
+  Prisma Client.
+
+  Two shapes, and a module carries exactly one of them.
+
+    [prisma.datasource]  — the client singleton. One module per project
+                           owns the client; this table says which driver
+                           adapter it constructs and where the generated
+                           client was written.
+    client               — a consumer. Names the module that owns the
+                           singleton. The `model_uses_datasource`
+                           relation resolves it, so a wrong name is a
+                           REDUCE_UNRESOLVED error rather than a silent
+                           mis-import.
+
+  The table holds CONFIG INPUTS, never a mirror of the Prisma schema.
+  Models, fields and relations live in `schema.prisma`, which is
+  hand-owned; restating them here would give two sources for one fact.
+
+  Prisma 7 makes a driver adapter mandatory for a direct connection, and
+  the adapter package is chosen per database. Adapter choice therefore
+  determines the datasource provider, not the other way round, so this
+  table carries the adapter and never repeats the provider that
+  `schema.prisma` already states.
+
+  This schema is self-contained: identifier patterns are inlined rather
+  than $ref'd against profile-shipped enums.schema.yaml so the block
+  composes against any profile that exposes `Module`.
+type: object
+properties:
+  prisma:
+    type: object
+    additionalProperties: false
+    properties:
+      datasource:
+        description: >
+          Present on the ONE module that owns the client singleton, and
+          on no other. Absent on every consumer.
+        type: object
+        additionalProperties: false
+        required: [adapter, generated_client]
+        properties:
+          adapter:
+            description: |
+              Which Prisma driver adapter the singleton constructs. The
+              value is the adapter's short name; the block's codegen
+              prose maps each to its package, its exported class and the
+              datasource provider it serves:
+
+                pg              @prisma/adapter-pg              postgresql
+                neon            @prisma/adapter-neon            postgresql
+                better-sqlite3  @prisma/adapter-better-sqlite3  sqlite
+                libsql          @prisma/adapter-libsql          sqlite
+                d1              @prisma/adapter-d1              sqlite
+                mariadb         @prisma/adapter-mariadb         mysql
+                planetscale     @prisma/adapter-planetscale     mysql
+                mssql           @prisma/adapter-mssql           sqlserver
+
+              The adapter package is NOT contributed by this block: one
+              static dep list cannot hold eight mutually exclusive
+              choices. The author adds the chosen one under the
+              project's own dependency table, which the block README
+              states as a user action.
+            type: string
+            enum:
+              - pg
+              - neon
+              - better-sqlite3
+              - libsql
+              - d1
+              - mariadb
+              - planetscale
+              - mssql
+          generated_client:
+            description: >
+              The `output` path of the `prisma-client` generator block in
+              `schema.prisma`, relative to the project root. Prisma 7
+              makes `output` required and the client is imported from
+              that path, not from the `@prisma/client` package, so
+              codegen cannot write an import without it.
+            type: string
+            minLength: 1
+          schema_file:
+            description: >
+              Path to the Prisma schema, relative to the project root.
+              Stated only when it differs from the `prisma init` default.
+            type: string
+            minLength: 1
+            default: "prisma/schema.prisma"
+      client:
+        description: >
+          Present on a consumer module. Names the module whose
+          `[prisma.datasource]` table owns the singleton. Forbidden
+          beside `datasource` — a module either owns the client or uses
+          it.
+        type: string
+        pattern: "^[A-Za-z_][A-Za-z0-9_]*$"
+    # A module owns the client or uses it. Never both, never neither.
+    # A module owns the client or uses it. Never both, never neither.
+    #
+    # `oneOf` and not `anyOf` + `not`, and the reason is measured. The
+    # analyzer formats a `oneOf` failure into "closest is branch N,
+    # which needs: `client`" (#120); it has no such arm for `anyOf`,
+    # which falls through to "is not valid under any of the schemas
+    # listed in the 'anyOf' keyword" and names no key at all. The
+    # commoner authoring mistake is a bare `[prisma]` table, so the
+    # keyword that explains THAT one wins.
+    oneOf:
+      - required: [datasource]
+        not: { required: [client] }
+      - required: [client]
+        not: { required: [datasource] }
