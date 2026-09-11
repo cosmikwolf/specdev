@@ -1,0 +1,21 @@
+{
+  "name": "prisma-reference",
+  "private": true,
+  "type": "module",
+  "description": "CI-only. Compiles every worked example in ../../codegen/typescript/README.md against the pinned Prisma client.",
+  "scripts": {
+    "check": "prisma generate && tsc --noEmit"
+  },
+  "dependencies": {
+    "@prisma/adapter-better-sqlite3": "7.10.0",
+    "@prisma/client": "7.10.0",
+    "better-sqlite3": "^13.0.3"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^22.0.0",
+    "dotenv": "^17.0.0",
+    "prisma": "7.10.0",
+    "typescript": "^7.0.0"
+  }
+}
