@@ -301,6 +301,41 @@ def read_pins(root: Path) -> list[Pin]:
                 pins.append(
                     Pin(unit, language, entry["package"], str(entry.get("version", "")), "registry")
                 )
+            # TypeScript manifests use a third section, `npm:`, keyed by
+            # `package:`. It was missing here while `REGISTRY_FEEDS` already
+            # carried a `typescript` feed, so the two halves disagreed: npm
+            # pins reached the sweep from a PROFILE template and never from a
+            # block's deps.yaml. The first typescript block exposed it —
+            # nothing was swept and the run still printed a clean total, which
+            # is the false green this report exists to avoid. Same shape as
+            # the crates loop; `source`-bearing entries are a closed set.
+            for entry in doc.get("npm") or []:
+                if any(k in entry for k in ("path", "link", "workspace")):
+                    # Local sources. No registry has heard of them, and a
+                    # lookup would 404 into `unswept` noise.
+                    continue
+                git = entry.get("git")
+                if isinstance(git, dict):
+                    pins.append(
+                        Pin(
+                            unit,
+                            language,
+                            entry["package"],
+                            str(git.get("ref", "(unpinned HEAD)")),
+                            "git",
+                            git["url"],
+                        )
+                    )
+                else:
+                    pins.append(
+                        Pin(
+                            unit,
+                            language,
+                            entry["package"],
+                            str(entry.get("version", "")),
+                            "registry",
+                        )
+                    )
 
     pins.extend(read_profile_pins(root))
     return pins
