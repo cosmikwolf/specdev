@@ -62,7 +62,7 @@ From an empty directory:
 /spec-gen StatusLed           # assemble prompt → Claude emits source → analyzer emits Cargo.toml
 ```
 
-From an existing codebase:
+From an existing **Rust** codebase (reverse engineering is Rust-only today):
 
 ```
 /spec-init                    # bootstrap a profile first
@@ -81,7 +81,7 @@ From an existing codebase:
 | `/spec-question`       | Raise an open question in `open_questions.toml`, downgrade it to a committed default, or close it. |
 | `/spec-validate`       | Run `specdev-analyzer validate` and translate findings into actionable fixes.      |
 | `/spec-gen`            | Assemble a deterministic codegen prompt, emit source, then emit the build manifest and run the profile's declared compile gates. Refuses on incomplete specs (no stub bodies). |
-| `/spec-reverse`        | One-shot migration: reverse-engineer module specs from an existing codebase. Single-module or `--all`. |
+| `/spec-reverse`        | One-shot migration: reverse-engineer module specs from an existing **Rust** codebase. Single-module or `--all`. |
 | `/spec-inline`         | Inline a canonical block from `${CLAUDE_PLUGIN_ROOT}/blocks/<name>/` into `specs/specdev/inlined/blocks/<name>/`. |
 | `/spec-inline-bridge`  | Inline a canonical bridge between two already-inlined blocks. Bridge name is `<a>+<b>` with `a` and `b` lex-ordered. |
 | `/spec-drift`          | Read-only report on which inlined files diverge from the plugin tree or have been hand-edited. |
@@ -180,7 +180,7 @@ User-contributed blocks and bridges are first-class: `--from <url|path>` works a
 
 - **v1 is single-package** for every profile except `rust-workspace`. That profile coordinates multi-member Rust projects; per-member skills (`/spec-design`, `/spec-edit`, `/spec-gen`) run from the member's directory. A typescript package can sit inside a pnpm workspace — the manifest step emits the root `package.json` + `pnpm-workspace.yaml` from `[workspace].members[]` — but no shipped profile declares `package_json.shape: workspace`, so that root needs a user-authored profile.
 - **Codegen languages: `rust`, `dart`, `typescript`.** `c` and `cpp` have an audit tier (`languages/<lang>/audit.scm`) but no profile generates them yet.
-- **`/spec-reverse`** is a one-shot migration tool — moves an existing codebase into the spec-driven world. It is a person-in-the-loop authoring flow against the inlined-block schemas, not a continuous source-vs-spec audit. For ongoing source-vs-spec drift on a module's `[[items]]`, use `/spec-sync-items`.
+- **`/spec-reverse`** is a one-shot migration tool — moves an existing **Rust** codebase into the spec-driven world. Rust profiles only; a TypeScript or Dart project authors its modules with `/spec-design` instead. It is a person-in-the-loop authoring flow against the inlined-block schemas, not a continuous source-vs-spec audit. For ongoing source-vs-spec drift on a module's `[[items]]`, use `/spec-sync-items`.
 
 ## Permissions (optional hardening)
 
