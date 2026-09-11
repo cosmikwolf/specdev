@@ -136,8 +136,13 @@ Expect a clean report — bootstrap emits valid templates, and Step 6's optional
 
 ## Step 8 — report
 
+Run `/spec-config` first. It writes `.claude/rules/specdev.md` and `specdev-feedback.md` at the
+project root, each only when that file is absent, and the project owns both from then on. On a
+fresh bootstrap it creates both. It needs no analyzer.
+
 Summarize:
 - Files created (one line each, with paths).
+- What `/spec-config` reported for each of its two files: created, or already present.
 - The selected profile and a one-line reminder of what it shapes (firmware-layered → layered embedded; library-api → Rust library; rust-app → standalone Rust application, testable core plus thin entry point; audio-plugin → VST3/CLAP/standalone audio plugin; rust-workspace → workspace root that walks per-member crates; flutter-app → Flutter application; nextjs-app → Next.js App Router application). For a user-authored profile, quote its README's first line.
 - The gate registry the project inherited (Step 5.5): the labels and their scopes, or the shape to write when the profile ships none.
 - Validate result.
