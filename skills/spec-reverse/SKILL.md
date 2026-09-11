@@ -1,6 +1,6 @@
 ---
 name: spec-reverse
-description: This skill should be used when the user asks to "reverse-engineer specs", "generate specs from code", "document this existing codebase", "reverse <ModuleName>", or "spec-reverse --all". One-shot migration tool — moves an existing Rust codebase into the spec-driven world; not a continuous source-vs-spec audit (use /spec-sync-items for that). Extracts architecture and module TOML specs against a chosen profile (firmware-layered or library-api), using the analyzer's tree-sitter `extract-items` surface plus inlined block READMEs as authoring context.
+description: This skill should be used when the user asks to "reverse-engineer specs", "generate specs from code", "document this existing codebase", "reverse <ModuleName>", or "spec-reverse --all". One-shot migration tool — moves an existing Rust codebase into the spec-driven world; not a continuous source-vs-spec audit (use /spec-sync-items for that). Rust profiles only: the field guidance here is written against Rust module schemas, so a TypeScript or Dart project must use /spec-init plus /spec-design instead — the analyzer's `reverse` pre-flight admits those trees, but this skill's guidance does not fit their schemas. Extracts architecture and module TOML specs against a Rust profile, using the analyzer's tree-sitter `extract-items` surface plus inlined block READMEs as authoring context.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 argument-hint: [<ModuleName> | --all] [--into <a,b,...>]
 ---
@@ -39,7 +39,9 @@ If the project has no `specs/specdev/` directory, this is expected for a greenfi
 
 If `specs/specdev/` is present, continue. Read `spec.toml` to learn the project's `[project].profile` and `[project].language`.
 
-Read `specs/specdev/profile.yaml` too. If it declares `reverse.vocabulary: profile`, the profile's own schema (items, visibility, feature gates — `module.conventions.md` is the reading in Step 2) is the reverse vocabulary and no block needs to be inlined. `library-api` and `rust-app` ship this declaration. The analyzer reads the same key in Step 1 and reports `[REVERSE-004]` as info instead of stopping on `[REVERSE-002]`.
+**If `[project].language` is not `rust`, stop here.** The analyzer's `reverse` pre-flight is language-neutral and will report `Proceed.` for a TypeScript or Dart tree, but every field this skill teaches you to extract below (`layer`, `actions`, `ports`, `hardware`, `state_machines`, `metadata`) belongs to the Rust profile schemas — a `nextjs-app` module schema admits none of them, and names five fields (`role`, `environment`, `client_component`, `boundary_kind`, `app_path`) this skill never mentions. Tell the user to author the specs with `/spec-init` + `/spec-design` instead, and that reverse engineering for their language is not shipped yet.
+
+Read `specs/specdev/profile.yaml` too. If it declares `reverse.vocabulary: profile`, the profile's own schema (items, visibility, feature gates — `module.conventions.md` is the reading in Step 2) is the reverse vocabulary and no block needs to be inlined. Among the Rust profiles, `library-api` and `rust-app` ship this declaration; `nextjs-app` ships it too, which is why the pre-flight admits a TypeScript tree the guidance below does not cover. The analyzer reads the same key in Step 1 and reports `[REVERSE-004]` as info instead of stopping on `[REVERSE-002]`.
 
 For firmware-layered projects (and any profile without `reverse.vocabulary: profile`), the relevant blocks should be inlined before reversing (the analyzer's pre-flight in Step 1 will tell you which are present):
 - An MCU block (e.g., `stm32h5-rs`) — needed to put `peripherals` / `pins` into module specs.

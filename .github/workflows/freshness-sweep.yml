@@ -10,6 +10,8 @@
 #
 #   current            pinned version is still the latest      silent
 #   held               behind on purpose, reason on file       silent
+#   ahead              the feed's newest is older than the pin silent
+#   unswept            no release feed for this language/SDK   informational
 #   behind, compiles   newer exists, the reference builds      informational
 #   behind, BREAKS     newer exists, the reference fails       fails the job
 #
@@ -28,8 +30,8 @@ jobs:
   sweep:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: Install PyYAML

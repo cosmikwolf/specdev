@@ -1,0 +1,26 @@
+# Manifest — next-auth+prisma bridge dispatch contract.
+# Schema: specdev-analyzer/src/embedded/bridge_contract.schema.yaml.
+#
+# The bindings table lives on the module owning one endpoint block's
+# table — the `[next_auth]` config module — which is what
+# `endpoint_module` names. The second endpoint is reached BY NAME on the
+# module that owns the `[prisma.datasource]` table, because a project has
+# exactly one of those and it is rarely the auth module. The enum has no
+# value for "named cross-module endpoint"; `endpoint_module` is the
+# closer of the two it offers.
+#
+# Saying this plainly costs nothing, because the field is inert:
+# `binding_locality` is parsed and enum-validated and then read by
+# nothing — zero consumers in the analyzer's `src/`, measured. Only
+# `diagnostic_template` below has a live reader. The locality rule such
+# as it is gets enforced by how this bridge writes its endpoint
+# templates, not by this declaration.
+
+binding_locality: endpoint_module
+
+diagnostic_template: |
+  the {bridge_name} bridge binds an Auth.js config to a Prisma client:
+  bindings."next-auth+prisma".client must name a module whose
+  [prisma.datasource] table owns the client, and the module carrying the
+  binding must itself carry [next_auth]. Check the name against
+  specs/modules/, or inline the prisma block if no module owns one.

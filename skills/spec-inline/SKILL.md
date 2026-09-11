@@ -9,7 +9,7 @@ argument-hint: <block-name> [--merge]
 
 Inline a canonical block from the plugin tree (`${CLAUDE_PLUGIN_ROOT}/blocks/<block>/`) into the project's `specs/specdev/` tree. A block's inlined content is **split across** four locations (there is no single `inlined/blocks/<block>/` directory): `schemas/inlined/blocks/<block>.schema.yaml`, `reductions/blocks/<block>.yaml`, `codegen/<lang>/blocks/<block>/`, and an `upstream/blocks/<block>/` snapshot (used by `--merge`). The analyzer is the source of truth for what a block contributes (schema, reduction, codegen prose); this skill runs the command, surfaces output, and reports.
 
-If `specdev-analyzer` is not on PATH, tell the user to install it (`cargo install --git https://github.com/cosmikwolf/specdev-analyzer`) and stop.
+If `specdev-analyzer` is not on PATH, tell the user to install it (follow `${CLAUDE_PLUGIN_ROOT}/shared/analyzer-install.md` — it derives the org from the plugin's own remote; both repositories are private) and stop. If it IS on PATH but reports `MANIFEST-002`, or a `MANIFEST-001` naming a file under the plugin tree, then the analyzer is older than the plugin — not a problem with any project file. Tell the user to re-run the install command with `--force` (or `cargo install --path <checkout> --force` from a local checkout), then retry.
 
 Before any analyzer invocation, run the env preamble from `${CLAUDE_PLUGIN_ROOT}/shared/plugin-root-preamble.md`:
 

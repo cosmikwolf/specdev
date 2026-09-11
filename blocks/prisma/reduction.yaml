@@ -1,0 +1,55 @@
+metaschema_version: "v1"
+
+# prisma block reduction. Two entity kinds, one relation.
+#
+# `for_each: prisma.datasource` and `for_each: prisma.client` each select
+# a SINGLE optional value, not an array. A key step that misses yields no
+# pick, so a module without the table materializes nothing. Every other
+# block in the tree iterates an array, so this is the first use of that
+# selector shape.
+#
+# BOTH endpoints are block entities, and that is forced, not stylistic.
+# An unqualified kind in a block reduction resolves under the block's own
+# namespace, so `from_kind: Module` reads as `prisma.Module` and does not
+# exist. Reaching the canonical Module needs a profile-qualified path,
+# which would bind this block to one profile. So the consumer side gets
+# its own entity and the relation joins two prisma kinds.
+#
+# The relation is what makes `prisma.client` a checked reference:
+# `model_uses_datasource` targets the named module's Datasource entity,
+# so a mistyped name is a REDUCE_UNRESOLVED error with no new rule code.
+#
+# Entity names are suffixed. `${root.name}` alone collides with the
+# canonical Module entity of the same name and fails
+# `unique_qualified_names` — measured, not predicted.
+#
+# `schema.prisma` is NOT reduced. It is hand-owned, and lifting its
+# models here would give one fact two sources.
+
+entities:
+  - kind: Datasource
+    extends: Module
+    from: "specs/modules/*.toml"
+    for_each: "prisma.datasource"
+    name: "${root.name}.datasource"
+    attrs:
+      adapter:          ".adapter"
+      generated_client: ".generated_client"
+      schema_file:      ".schema_file"
+
+  - kind: Consumer
+    extends: Module
+    from: "specs/modules/*.toml"
+    for_each: "prisma.client"
+    name: "${root.name}.client"
+
+relations:
+  - kind: model_uses_datasource
+    extends: depends_on
+    from_kind: Consumer
+    to_kind: Datasource
+    from_spec: "specs/modules/*.toml"
+    for_each: "prisma.client"
+    endpoints:
+      from: "${root.name}.client"
+      to: "${.}.datasource"

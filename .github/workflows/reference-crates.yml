@@ -11,7 +11,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@nightly
         with:
           # Rust reference crates cross-compile per their .cargo/config.toml:
@@ -24,5 +24,16 @@ jobs:
           # Dart/Flutter reference packages (reference/dart/pubspec.yaml)
           # are analyzed with the Flutter SDK; it bundles `dart` too.
           channel: stable
+      - uses: pnpm/action-setup@v6
+        with:
+          # TypeScript reference packages (reference/typescript/package.json)
+          # gate on `pnpm install --frozen-lockfile` + `pnpm run check`. The
+          # version matches the `packageManager` field the package.json
+          # emitter writes, so CI resolves the lockfile the same way a
+          # developer does.
+          version: 10.15.0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.18.0
       - name: Build reference crates
         run: bash .github/scripts/build-reference-crates.sh

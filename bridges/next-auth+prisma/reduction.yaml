@@ -1,0 +1,51 @@
+metaschema_version: "v1"
+
+# next-auth+prisma bridge reduction. No new entity kinds — bridges
+# contribute relations only.
+#
+# One relation: the Auth.js Config on this module is backed by the
+# Prisma Datasource that the SAME module's `[prisma].client` names.
+# Both endpoints are block entities, so the relation is what makes the
+# pairing checkable: if the module carries `[next_auth]` and a binding
+# but no resolvable `[prisma].client`, the endpoint does not resolve and
+# REDUCE_UNRESOLVED fires with this bridge's `diagnostic_template` hint
+# appended.
+#
+# `for_each` selects a SINGLE optional object. The quoted segment is
+# required: the bridge name carries `-` and `+`, neither of which a bare
+# path segment admits.
+#
+# `for_each` selects the binding's `client` STRING, not the binding
+# object, and the endpoint template then reads `${.}` — the selected
+# value itself. That construction is load-bearing, and two earlier drafts
+# got it wrong.
+#
+# A relation whose endpoint template reads a field OTHER than the one
+# `for_each` selected aborts the reducer when that field is absent:
+# `template path ... resolved to nothing`, a plugin-author message, exit
+# 2 — even when the field is `required`, because reduction runs before
+# schema enforcement. Measured both ways on this very file: omitting
+# `session_strategy` (read only as an attr) gives a clean SCHEMA error at
+# exit 1; omitting `client` (read by the template) crashed.
+#
+# Selecting the field itself makes the failure impossible: absent field,
+# no pick, no iteration, no template. The author then gets the ordinary
+# "required property" SCHEMA error. This is why the prisma block's own
+# relation selects `prisma.client` rather than the `[prisma]` table.
+#
+# `session_strategy` is therefore NOT a relation attr. Codegen reads it
+# from the module TOML directly, the way the itm block reads its
+# `[itm.decoder]` singleton.
+
+entities: []
+
+relations:
+  - kind: config_backed_by
+    extends: depends_on
+    from_kind: next-auth.Config
+    to_kind: prisma.Datasource
+    from_spec: "specs/modules/*.toml"
+    for_each: 'bindings."next-auth+prisma".client'
+    endpoints:
+      from: "${root.name}.auth"
+      to: "${.}.datasource"

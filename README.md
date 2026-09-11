@@ -4,20 +4,52 @@ A Claude Code plugin for spec-driven development. Describe your project as TOML 
 
 The plugin models a project as a **profile** (project shape) composed with **blocks** (concrete frameworks, libraries, hardware families) and **bridges** (pairwise wirings between blocks). All three ship in the plugin and are inlined into the project's own `specs/specdev/` tree by deterministic CLI operations; once inlined, the project owns its content.
 
-Pairs with the [`specdev-analyzer`](https://github.com/cosmikwolf/specdev-analyzer) CLI, which does validation, extraction, audit, inline, bootstrap, prompt assembly, derived-file emission, build-manifest emission (Cargo.toml / pubspec.yaml / package.json), and running the compile gates. The plugin provides the interactive authoring workflow; the analyzer provides the mechanical operations.
+Pairs with the `specdev-analyzer` CLI — a private repository alongside this one, in the same organization — which does validation, extraction, audit, inline, bootstrap, prompt assembly, derived-file emission, build-manifest emission (Cargo.toml / pubspec.yaml / package.json), and running the compile gates. The plugin provides the interactive authoring workflow; the analyzer provides the mechanical operations.
 
 ## Install
 
-1. Install the analyzer (requires a stable Rust toolchain):
+**Both repositories are private, and they are one unit.** `specdev` (this
+plugin) and `specdev-analyzer` (the CLI) ship together and must be installed
+as a matched pair — see "Keeping it current" below for why.
+
+Replace `<org>` in the commands below with the GitHub organization you were
+granted access to. For Kink Engineering that is `kink-engineering`; the
+upstream is `cosmikwolf`. If `git` cannot read the URL, you do not have
+access yet — ask for it rather than working around it, because the two
+repositories must come from the *same* org or the analyzer will validate your
+project against schemas the plugin does not ship.
+
+1. Install the analyzer (requires a stable Rust toolchain, at least 1.86):
 
    ```
-   cargo install --git https://github.com/cosmikwolf/specdev-analyzer
+   cargo install --git https://github.com/<org>/specdev-analyzer
    ```
+
+   Already have a checkout? `cargo install --path <analyzer-checkout>`
+   needs no network and no org access, and is the supported path for
+   anyone developing against the pair.
+
+   **Keeping it current.** The analyzer embeds the JSON Schemas it
+   validates the plugin's files against, so the two are one unit: pull the
+   plugin and you must re-install the analyzer. Re-run the same command with
+   `--force` (or `cargo install --path <analyzer-checkout> --force`) — an
+   install at an unchanged version still replaces the binary.
+
+   A stale analyzer announces itself two ways:
+
+   - `[MANIFEST-002] … declares contract_version N; this specdev-analyzer
+     understands M` — the plugin is ahead. Re-install.
+   - `[MANIFEST-001]` naming a file **under the plugin tree** — an analyzer
+     older than the `contract_version` handshake. Re-install.
+
+   Neither means anything is wrong with your project. `specdev-analyzer`
+   and the plugin both report `0.1.0` and always have, so the version
+   numbers cannot tell you which is older; `contract_version` can.
 
 2. Add the marketplace and install the plugin in Claude Code:
 
    ```
-   /plugin marketplace add cosmikwolf/specdev
+   /plugin marketplace add <org>/specdev
    /plugin install specdev@specdev
    ```
 
@@ -45,7 +77,7 @@ From an empty directory:
 /spec-gen StatusLed           # assemble prompt → Claude emits source → analyzer emits Cargo.toml
 ```
 
-From an existing codebase:
+From an existing **Rust** codebase (reverse engineering is Rust-only today):
 
 ```
 /spec-init                    # bootstrap a profile first
@@ -64,7 +96,7 @@ From an existing codebase:
 | `/spec-question`       | Raise an open question in `open_questions.toml`, downgrade it to a committed default, or close it. |
 | `/spec-validate`       | Run `specdev-analyzer validate` and translate findings into actionable fixes.      |
 | `/spec-gen`            | Assemble a deterministic codegen prompt, emit source, then emit the build manifest and run the profile's declared compile gates. Refuses on incomplete specs (no stub bodies). |
-| `/spec-reverse`        | One-shot migration: reverse-engineer module specs from an existing codebase. Single-module or `--all`. |
+| `/spec-reverse`        | One-shot migration: reverse-engineer module specs from an existing **Rust** codebase. Single-module or `--all`. |
 | `/spec-inline`         | Inline a canonical block from `${CLAUDE_PLUGIN_ROOT}/blocks/<name>/` into `specs/specdev/inlined/blocks/<name>/`. |
 | `/spec-inline-bridge`  | Inline a canonical bridge between two already-inlined blocks. Bridge name is `<a>+<b>` with `a` and `b` lex-ordered. |
 | `/spec-drift`          | Read-only report on which inlined files diverge from the plugin tree or have been hand-edited. |
@@ -163,7 +195,7 @@ User-contributed blocks and bridges are first-class: `--from <url|path>` works a
 
 - **v1 is single-package** for every profile except `rust-workspace`. That profile coordinates multi-member Rust projects; per-member skills (`/spec-design`, `/spec-edit`, `/spec-gen`) run from the member's directory. A typescript package can sit inside a pnpm workspace — the manifest step emits the root `package.json` + `pnpm-workspace.yaml` from `[workspace].members[]` — but no shipped profile declares `package_json.shape: workspace`, so that root needs a user-authored profile.
 - **Codegen languages: `rust`, `dart`, `typescript`.** `c` and `cpp` have an audit tier (`languages/<lang>/audit.scm`) but no profile generates them yet.
-- **`/spec-reverse`** is a one-shot migration tool — moves an existing codebase into the spec-driven world. It is a person-in-the-loop authoring flow against the inlined-block schemas, not a continuous source-vs-spec audit. For ongoing source-vs-spec drift on a module's `[[items]]`, use `/spec-sync-items`.
+- **`/spec-reverse`** is a one-shot migration tool — moves an existing **Rust** codebase into the spec-driven world. Rust profiles only; a TypeScript or Dart project authors its modules with `/spec-design` instead. It is a person-in-the-loop authoring flow against the inlined-block schemas, not a continuous source-vs-spec audit. For ongoing source-vs-spec drift on a module's `[[items]]`, use `/spec-sync-items`.
 
 ## Permissions (optional hardening)
 

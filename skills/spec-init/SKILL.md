@@ -1,6 +1,6 @@
 ---
 name: spec-init
-description: This skill should be used when the user asks to "init specdev", "set up a new spec project", "scaffold a spec-driven project", "bootstrap a profile", "create spec.toml", "initialize specs/", or starts a new specdev project from scratch. Wraps `specdev-analyzer bootstrap`, picks a profile from whatever ships under `${CLAUDE_PLUGIN_ROOT}/profiles/` (including end-user-authored profiles), and seeds the `specs/specdev/` tree. Use for empty or greenfield projects. Pass `--non-interactive --profile <name> --language <lang> --name <project> [<target>]` to skip the interview (for automation or fluent users who already know the answers). To bootstrap specs from an existing source tree, use /spec-reverse.
+description: This skill should be used when the user asks to "init specdev", "set up a new spec project", "scaffold a spec-driven project", "bootstrap a profile", "create spec.toml", "initialize specs/", or starts a new specdev project from scratch. Wraps `specdev-analyzer bootstrap`, picks a profile from whatever ships under `${CLAUDE_PLUGIN_ROOT}/profiles/` (including end-user-authored profiles), and seeds the `specs/specdev/` tree. Use for empty or greenfield projects. Pass `--non-interactive --profile <name> --language <lang> --name <project> [<target>]` to skip the interview (for automation or fluent users who already know the answers). To bootstrap specs from an existing *Rust* source tree, use /spec-reverse; it is Rust-only today, so for a TypeScript or Dart codebase stay with /spec-init and author the modules with /spec-design.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 argument-hint: [--non-interactive --profile <name> --language <lang> --name <project> [<target-dir>]]
 ---
@@ -11,7 +11,7 @@ Initialize a new spec-driven project by interviewing the user, then delegating f
 
 The current model is **profiles + blocks + bridges**: profiles own project shape; blocks contribute concrete frameworks/libraries/hardware; bridges wire pairs of blocks.
 
-If `specdev-analyzer` is not on PATH, tell the user to install it (`cargo install --git https://github.com/cosmikwolf/specdev-analyzer`) and stop. Do not attempt to write files without the analyzer.
+If `specdev-analyzer` is not on PATH, tell the user to install it (follow `${CLAUDE_PLUGIN_ROOT}/shared/analyzer-install.md` — it derives the org from the plugin's own remote; both repositories are private) and stop. If it IS on PATH but reports `MANIFEST-002`, or a `MANIFEST-001` naming a file under the plugin tree, then the analyzer is older than the plugin — not a problem with any project file. Tell the user to re-run the install command with `--force` (or `cargo install --path <checkout> --force` from a local checkout), then retry. Do not attempt to write files without the analyzer.
 
 ---
 
