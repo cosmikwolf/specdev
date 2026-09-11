@@ -15,7 +15,7 @@
 ;;   per items[] design: modules are first-class spec entities; extern
 ;;   crate is an architecture-level concern.
 ;;
-;; Scope (D70): most patterns are anchored under `(source_file ...)` so
+;; Scope (D70): most patterns are anchored under `(source_file ...)` so  ;; PLANNING-OK: query file, plugin-internal — never copied into a project
 ;; only direct children of the file are extracted; nested `mod` blocks and
 ;; function-body locals are never items. The deliberate exception is
 ;; inherent `impl` bodies — a method is a function, so a PUBLIC associated
@@ -75,14 +75,14 @@
     name: (type_identifier) @trait.name) @trait.def)
 
 ;; impl — TRAIT impls only: one item per `impl Trait for Type` (the
-;; conformance is the contract; D70). The `trait:` field must be present,
+;; conformance is the contract; D70). The `trait:` field must be present,  ;; PLANNING-OK: plugin-internal
 ;; so inherent impls do NOT match this pattern.
 (source_file
   (impl_item
     trait: (_) @impl.trait
     type: (_) @impl.type) @impl.def)
 
-;; inherent impl associated items (D70): `impl Type { pub fn m }` produces
+;; inherent impl associated items (D70): `impl Type { pub fn m }` produces  ;; PLANNING-OK: plugin-internal
 ;; no impl item — each PUBLIC associated fn/const/type is an item named
 ;; `<Type>::<member>`. `!trait` restricts these to inherent impls;
 ;; `inherent.host` carries the `<Type>` for the qualified-name prefix.
