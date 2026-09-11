@@ -98,10 +98,35 @@ relations:
 ```
 
 **Invariants:** `entities: []` always; exactly the relations, each `extends` a
-canonical kind; `for_each` uses the quoted `"<a>+<b>"` segment; `endpoints`
-interpolate `${root.name}` (co-residency makes endpoints intra-module). A binding
-that references a nonexistent block entity surfaces as `REDUCE_UNRESOLVED` at
+canonical kind; `for_each` uses the quoted `"<a>+<b>"` segment. A binding that
+references a nonexistent block entity surfaces as `REDUCE_UNRESOLVED` at
 validate — no new graph-check primitive needed.
+
+**Endpoints: two shapes, and `${root.name}` on both sides is only the first.**
+The template above is the **intra-module** shape, which is what the five bridges
+before `next-auth+prisma` all use. A **named cross-module** endpoint is equally
+valid: one side stays `${root.name}.<...>` and the other is a name the binding
+carries, resolved against another module's entity. `bridges/next-auth+prisma`
+is the worked precedent, verified by dumping `specdev-analyzer reduce` — the
+edge materializes with `from: Auth.auth` and `to: Db.datasource`, two different
+modules.
+
+⚠️ **Select the field the endpoint reads.** In the cross-module shape, point
+`for_each` at the naming field itself and read `${.}`:
+
+```yaml
+    for_each: 'bindings."<a>+<b>".<field>'   # the STRING, not the table
+    endpoints:
+      from: "${root.name}.<suffix>"
+      to: "${.}.<suffix>"
+```
+
+If `for_each` instead selects the binding **object** and an endpoint template
+reads a **child** field, omitting that field aborts the reducer —
+`template path ... resolved to nothing`, exit 2 — **even when the field is
+`required`**, because reduction runs before schema enforcement. Selecting the
+field makes that unreachable: absent field, no pick, no iteration, and the
+author gets the ordinary "required property" error instead of a crash.
 
 ⚠️ **Hyphen/underscore trap on `from_kind`/`to_kind`.** These are qualified by the
 block's **directory name** — which may be hyphenated (`nih-plug.Parameter`,

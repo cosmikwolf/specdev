@@ -90,15 +90,48 @@ say so and stop. The cost of getting this wrong is asymmetric: an unnecessary
 bridge is six files, a reference crate, and a permanent maintenance surface,
 while a missing one is a few lines someone writes by hand.
 
-1. **Co-residency (mechanical — check this first, it is a hard gate).** A
-   bridge's bindings table lives on **one module**, and its reduction qualifies
-   **both** endpoints with that same module's name (`${root.name}` on each side).
-   So both endpoint declarations must resolve on the module carrying the table.
-   Ask the user where the two things being wired actually live. If they sit on
-   **different modules** — or in **different crates** — a bridge cannot express
-   that wiring, and no `binding_locality` value changes it (that field selects a
-   diagnostic template; it does not relax the requirement). Stop here and use one
-   of the shapes in test 2 or 3 instead. Do not scaffold and hope.
+1. **Endpoint resolvability (mechanical — check this first, it is a hard gate).**
+   A bridge's bindings table lives on **one module**, and both endpoints must
+   **resolve** against materialized entities. That is the requirement. It is
+   *not* a requirement that both endpoints live on the binding's own module.
+
+   Two shapes work, and they are gated differently:
+
+   - **Intra-module** (all five bridges shipped before `next-auth+prisma`):
+     the reduction qualifies both endpoints with `${root.name}`, so both
+     declarations must sit on the module carrying the table. Ask the user where
+     the two things live; if they are on different modules, this shape cannot
+     express it.
+   - **Named cross-module**: one endpoint is `${root.name}.<...>` and the other
+     is a **name the binding itself carries**, resolved against another module's
+     entity. `bridges/next-auth+prisma` is the worked precedent — an Auth.js
+     config module binding to whichever module owns the Prisma datasource.
+     Verified by dumping `specdev-analyzer reduce`, not by a silent `validate`:
+     the edge materializes with `from: Auth.auth` (module `Auth`) and
+     `to: Db.datasource` (module `Db`), and a wrong name gives an ordinary
+     `REDUCE_UNRESOLVED` with the contract's hint rendered.
+
+   **The real trap is not locality, it is which field `for_each` selects.** If
+   `for_each` selects the binding OBJECT and an endpoint template reads a CHILD
+   field of it, then omitting that field aborts the reducer —
+   `template path ... resolved to nothing`, a plugin-author message, exit 2 —
+   **even when the field is `required`**, because reduction runs before schema
+   enforcement. Isolated on one file during `next-auth+prisma`'s build: omitting
+   a required field read only as an `attrs` selector gave a clean SCHEMA error at
+   exit 1; omitting a required field read by the endpoint template crashed. So
+   **select the naming field itself** (`for_each: 'bindings."<a>+<b>".client'`,
+   endpoint `${.}`), which makes the crash unreachable — an absent field yields
+   no pick, no iteration, and the author gets the ordinary "required property"
+   error. This is the same construction that makes the `prisma` block's own
+   relation safe.
+
+   `binding_locality` changes none of this. That field selects a diagnostic
+   template and is otherwise inert — it has zero consumers in the analyzer's
+   `src/`, measured. Neither of its two values describes a named cross-module
+   endpoint; pick the closer one and say so in `contract.yaml`.
+
+   If neither shape fits — the two things are in **different crates**, say — a
+   bridge cannot express the wiring. Stop and use test 2 or 3 instead.
 
 2. **Asymmetry.** Estimate each side's contribution. If one side is small enough
    to hand-author — on the order of a dozen lines of glue — the pairing does not
