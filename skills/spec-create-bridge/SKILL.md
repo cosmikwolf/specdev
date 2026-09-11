@@ -21,7 +21,7 @@ User input: `$ARGUMENTS` — the bridge name `<a>+<b>` (lex-ordered, `a < b`). I
 empty, ask for the two blocks to wire before doing anything else.
 
 If `specdev-analyzer` is not on PATH, tell the user to install it
-(`cargo install --git https://github.com/cosmikwolf/specdev-analyzer`) and stop. If it IS on PATH but reports `MANIFEST-002`, or a `MANIFEST-001` naming a file under the plugin tree, then the analyzer is older than the plugin — not a problem with any project file. Tell the user to re-run the install command with `--force` (or `cargo install --path <checkout> --force` from a local checkout), then retry.
+(follow `${CLAUDE_PLUGIN_ROOT}/shared/analyzer-install.md` — it derives the org from the plugin's own remote; both repositories are private) and stop. If it IS on PATH but reports `MANIFEST-002`, or a `MANIFEST-001` naming a file under the plugin tree, then the analyzer is older than the plugin — not a problem with any project file. Tell the user to re-run the install command with `--force` (or `cargo install --path <checkout> --force` from a local checkout), then retry.
 
 Before any analyzer invocation, run the env preamble from
 `${CLAUDE_PLUGIN_ROOT}/shared/plugin-root-preamble.md`:
