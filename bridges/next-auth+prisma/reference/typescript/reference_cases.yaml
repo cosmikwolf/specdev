@@ -1,0 +1,9 @@
+# Reference-package coverage manifest. Plugin-author / CI-only; never
+# inlined. Drives REF-COVERAGE-001 (each name -> src/<name>.ts).
+#
+# Two cases, not four: this package certifies the JOIN, and the halves
+# are already certified by each block's own reference. `db` is the client
+# the adapter wraps; `adapter` is the join product itself.
+reference_cases:
+  - db
+  - adapter
