@@ -36,7 +36,10 @@
 ;;   fields / properties, interface members, `export default <expression>`
 ;;   of an anonymous value, `declare` blocks, `namespace` bodies (every
 ;;   top-level pattern is anchored under `program`, so an `export` inside
-;;   a namespace never matches), destructured bindings.
+;;   a namespace never matches), and destructuring NESTED more than one
+;;   level (`export const { a: { b } } = x`). A destructured export at one
+;;   level IS captured — one item per bound identifier; see the `const`
+;;   section.
 ;;
 ;; Grammar ground truth (tree-sitter-typescript 0.23.2, read from
 ;; `node-types.json` and probed live):
@@ -104,15 +107,103 @@
     (enum_declaration
       name: (identifier) @enum.name)) @enum.def)
 
-;; const — exported `const` / `let` bindings with a plain identifier name.
+;; const — exported `const` / `let` bindings.
 ;; One match per declarator (`export const a = 1, b = 2;` yields two).
-;; Destructuring patterns have no `identifier` name and are skipped.
 (program
   (export_statement
     "export" @const.vis
     (lexical_declaration
       (variable_declarator
         name: (identifier) @const.name))) @const.def)
+
+;; const — DESTRUCTURED exports. One item per bound identifier.
+;;
+;; A destructured export exports its bindings exactly as a plain one does,
+;; and this is not an exotic shape the tree can avoid: the `next-auth`
+;; block gives `export const { handlers, auth, signIn, signOut } =
+;; NextAuth({…})` as THE configuration form, the `next-auth+prisma` bridge
+;; repeats it with the adapter, and the block's route file is
+;; `export const { GET, POST } = handlers;` under "Never add a third
+;; export". While these were unmatched, every item on such a module sat in
+;; `in_spec_only` drift that no source could ever clear.
+;;
+;; The bound name sits on a DIFFERENT node per binding form, so each form
+;; needs its own pattern — tree-sitter has no descendant axis, so one
+;; pattern cannot cover them. Probed against tree-sitter-typescript
+;; 0.23.2, the seven forms at one level of destructuring are below.
+;;
+;; Boundary, and it is deliberate: ONE level. `{ a: { b } }` nests an
+;; `object_pattern` inside a `pair_pattern`, and each further level would
+;; need its own pattern again. No shipped unit prescribes a nested export,
+;; and the schema says so rather than leaving it to be discovered.
+
+;; { a, b }
+(program
+  (export_statement
+    "export" @const.vis
+    (lexical_declaration
+      (variable_declarator
+        name: (object_pattern
+          (shorthand_property_identifier_pattern) @const.name)))) @const.def)
+
+;; { a: renamed } — the item is the local binding, never the source key
+(program
+  (export_statement
+    "export" @const.vis
+    (lexical_declaration
+      (variable_declarator
+        name: (object_pattern
+          (pair_pattern
+            value: (identifier) @const.name))))) @const.def)
+
+;; { a = 1 }
+(program
+  (export_statement
+    "export" @const.vis
+    (lexical_declaration
+      (variable_declarator
+        name: (object_pattern
+          (object_assignment_pattern
+            left: (shorthand_property_identifier_pattern) @const.name))))) @const.def)
+
+;; { a, ...rest }
+(program
+  (export_statement
+    "export" @const.vis
+    (lexical_declaration
+      (variable_declarator
+        name: (object_pattern
+          (rest_pattern
+            (identifier) @const.name))))) @const.def)
+
+;; [a, b]
+(program
+  (export_statement
+    "export" @const.vis
+    (lexical_declaration
+      (variable_declarator
+        name: (array_pattern
+          (identifier) @const.name)))) @const.def)
+
+;; [a, ...rest]
+(program
+  (export_statement
+    "export" @const.vis
+    (lexical_declaration
+      (variable_declarator
+        name: (array_pattern
+          (rest_pattern
+            (identifier) @const.name))))) @const.def)
+
+;; [a = 1]
+(program
+  (export_statement
+    "export" @const.vis
+    (lexical_declaration
+      (variable_declarator
+        name: (array_pattern
+          (assignment_pattern
+            left: (identifier) @const.name))))) @const.def)
 
 ;; ──────────────────────────────────────────────────────────────────
 ;; Re-exports — no `.vis`: every form is `export` by construction
