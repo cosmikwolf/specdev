@@ -59,6 +59,7 @@ Pass the input contract from `agents/module-designer.md`:
 
 - `module_name` — the PascalCase name.
 - `project_root` — absolute project root.
+- `plugin_root` — the absolute plugin-tree path, i.e. `${CLAUDE_PLUGIN_ROOT}` expanded. **Pass it explicitly.** A subagent is a separate process: it inherits neither `CLAUDE_PLUGIN_ROOT` nor the `SPECDEV_PLUGIN_ROOT` the preamble exports, because that export lands in a Bash subshell on this thread. Omit it and the subagent has to hunt for the tree — measured, two agents in one batch found two different paths.
 - `profile`, `language` — from `spec.toml` (Step 0).
 - `description` — the one-line `$ARGUMENTS`.
 - `interview_answers` — the answers gathered in Step 1, inline or as YAML. Include the type + public-member names so the subagent can scaffold per-method items.
@@ -106,7 +107,7 @@ One paragraph:
 
 ## Additional resources
 
-- `${CLAUDE_PLUGIN_ROOT}/agents/module-designer.md` — the subagent dispatched in Step 2. Single source of truth for its input/output contract (`module_name` / `project_root` / `profile` / `language` / `description` / `interview_answers` / optional `existing_toml` / `package` / `source_hint`; three-section `## Candidate TOML` / `## Evidence` / `## Notes` output). Also dispatched by `/spec-edit`.
+- `${CLAUDE_PLUGIN_ROOT}/agents/module-designer.md` — the subagent dispatched in Step 2. Single source of truth for its input/output contract (`module_name` / `project_root` / `plugin_root` / `profile` / `language` / `description` / `interview_answers` / optional `existing_toml` / `package` / `source_hint`; three-section `## Candidate TOML` / `## Evidence` / `## Notes` output). Also dispatched by `/spec-edit`.
 - `references/interview-shapes.md` — illustrative interview shapes per shipped profile (firmware-layered, library-api) and the rust-workspace routing rule.
 - `references/toml-authoring-rules.md` — priority-ordered authoring rules shared with `/spec-edit` and the `module-designer` subagent: schema-as-contract, required fields, the per-method item model, naming conventions, layer discipline, comment policy.
 

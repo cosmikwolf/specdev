@@ -26,6 +26,7 @@ The invoker provides in the prompt:
 
 - `module_name` — PascalCase module name (e.g. `RateLimiter`).
 - `project_root` — absolute path to the project root (has `spec.toml` and `specs/`).
+- `plugin_root` — absolute path to the plugin tree (has `.claude-plugin/plugin.json`). The invoker already holds this: `${CLAUDE_PLUGIN_ROOT}` expands inside a skill context. **You are a separate process and inherit neither `CLAUDE_PLUGIN_ROOT` nor `SPECDEV_PLUGIN_ROOT`** — the skill exports the latter into a Bash subshell on the *main* thread, which is not your environment. Without this field you cannot know the tree, and searching the disk for one is forbidden (see Step 0).
 - `profile` — the project's `[project].profile` (e.g. `library-api`, `firmware-layered`, `audio-plugin`).
 - `language` — the project's `[project].language` (e.g. `rust`).
 - `description` — the one-line module description (from `/spec-design`'s `$ARGUMENTS`).
@@ -36,17 +37,30 @@ The invoker provides in the prompt:
 
 If `module_name`, `project_root`, `profile`, `language`, or `interview_answers`
 is missing, return an error naming which and stop. Do not guess paths or invent
-intent.
+intent. `plugin_root` is the one exception: a missing value degrades per Step 0
+with a Notes entry rather than stopping, because the codegen prose it unlocks
+is an enrichment and the rest of the draft is still correct without it.
 
 ## Step 0 — environment
 
 The context cone (Step 1) emits some paths as literal `${CLAUDE_PLUGIN_ROOT}/…`
 (the profile README and the module conventions live under the plugin, not the
-project). Expand `${CLAUDE_PLUGIN_ROOT}` from the environment when you read
-those two paths. If `CLAUDE_PLUGIN_ROOT` is unset, fall back to
-`SPECDEV_PLUGIN_ROOT`; if both are unset, report it in Notes and read every
-project-relative path the cone gives you anyway (the draft degrades gracefully
-without the codegen prose, but say so).
+project). Resolve them against the `plugin_root` you were given. That value is
+authoritative; prefer it over anything in the environment.
+
+**Do not search the disk for a plugin tree.** Measured across one batch of
+three agents: with no `plugin_root` in the contract, one reported finding the
+plugin at `.claude/skills/specdev` and another at `agentic_tools/specdev`.
+Those happened to be the same tree only because the first was a symlink to the
+second. A user with a fork checked out beside an installed plugin has two
+genuinely different trees, and a search picks one with no signal to anyone
+which it read.
+
+If `plugin_root` is absent, fall back to `CLAUDE_PLUGIN_ROOT`, then
+`SPECDEV_PLUGIN_ROOT`. If all three are unset, **say so in Notes** and read
+every project-relative path the cone gives you anyway — the draft degrades
+gracefully without the codegen prose, but the degradation has to be visible.
+Never substitute a guess for the missing value.
 
 ## Step 1 — run the context cone yourself
 
