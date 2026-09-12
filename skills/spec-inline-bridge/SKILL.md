@@ -7,7 +7,7 @@ argument-hint: <bridge-name> [--merge]
 
 # /spec-inline-bridge — Thin wrapper over `specdev-analyzer inline-bridge`
 
-Inline a canonical bridge between two already-inlined blocks. Bridges live at `${CLAUDE_PLUGIN_ROOT}/bridges/<a>+<b>/` (lex-ordered: `a < b`). They contribute schema for the `bindings.<a>+<b>.*` table on each module plus reduction rules and codegen prose for the wiring pattern.
+Inline a canonical bridge between two already-inlined blocks. Bridges live at `${CLAUDE_PLUGIN_ROOT}/bridges/<a>+<b>/` (lex-ordered: `a < b`). They contribute schema for the `bindings.<a>+<b>.*` table on each module plus reduction rules and codegen prose for the wiring pattern. A bridge's inlined content is **split across** four locations in the project (there is no single `inlined/bridges/<a>+<b>/` directory): `schemas/inlined/bridges/<a>+<b>.schema.yaml`, `reductions/bridges/<a>+<b>.yaml` (plus its `.contract.yaml`), `codegen/<lang>/bridges/<a>+<b>/`, and an `upstream/bridges/<a>+<b>/` snapshot.
 
 If `specdev-analyzer` is not on PATH, tell the user to install it (follow `${CLAUDE_PLUGIN_ROOT}/shared/analyzer-install.md` — it derives the org from the plugin's own remote; both repositories are private) and stop. If it IS on PATH but reports `MANIFEST-002`, or a `MANIFEST-001` naming a file under the plugin tree, then the analyzer is older than the plugin — not a problem with any project file. Tell the user to re-run the install command with `--force` (or `cargo install --path <checkout> --force` from a local checkout), then retry.
 
@@ -68,7 +68,7 @@ Bridges introduce a new `bindings.<a>+<b>.*` schema slot on each module; modules
 Report:
 
 - Bridge inlined (and whether `--merge` was used).
-- Files written under `specs/specdev/inlined/bridges/<a>+<b>/`.
+- Files written, naming all four locations: `schemas/inlined/bridges/<a>+<b>.schema.yaml`, `reductions/bridges/<a>+<b>.yaml` (plus its `.contract.yaml`), `codegen/<lang>/bridges/<a>+<b>/`, and an `upstream/bridges/<a>+<b>/` snapshot.
 - New `lineage.toml` entry.
 - Validate result.
 - Suggested next: edit a module spec to add a `bindings."<a>+<b>".*` table, then `/spec-validate`. Or `/spec-design <new-module>` for a module that uses the bridge from the start.

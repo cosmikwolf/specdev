@@ -36,7 +36,7 @@ Capture stdout and the exit code. Three outcomes:
 
 ## Step 2 — present the four drift classes
 
-The analyzer classifies each tracked inlined file (under `specs/specdev/inlined/{blocks,bridges}/<unit>/`) into exactly one of four classes:
+The analyzer classifies each tracked inlined file into exactly one of four classes. A unit's files are **split across** four locations and there is no single `inlined/<unit>/` directory: `schemas/inlined/{blocks,bridges}/<unit>.schema.yaml`, `reductions/{blocks,bridges}/<unit>.yaml`, `codegen/<lang>/{blocks,bridges}/<unit>/`, and the `upstream/{blocks,bridges}/<unit>/` snapshot.
 
 1. **clean** — local file matches the recorded upstream snapshot byte-for-byte; the plugin's current version of the same file also matches. Nothing to do.
 2. **plugin-moved** — local file matches upstream snapshot, but the plugin tree has a newer version. `--merge` would fast-forward. Suggest: `/spec-inline <block> --merge` (or `/spec-inline-bridge <bridge> --merge`).
@@ -117,9 +117,9 @@ Do not edit files. Do not run `--merge` from this skill — drift is a read-only
 
 ## On `LINEAGE-001` errors
 
-If drift errors with `LINEAGE-001`, the project's `lineage.toml` is inconsistent with the inlined tree (e.g., a block was hand-deleted but lineage still claims it; or a file was added under `specs/specdev/inlined/blocks/<x>/` without a matching lineage entry). Surface the message verbatim. Resolving lineage is a manual step:
+If drift errors with `LINEAGE-001`, the project's `lineage.toml` is inconsistent with the inlined tree (e.g., a block was hand-deleted but lineage still claims it; or a file was added under one of a block's four locations without a matching lineage entry). Surface the message verbatim. Resolving lineage is a manual step:
 
-- Restoring a deleted block: re-inline with `/spec-inline <block>` (refused if `specs/specdev/inlined/blocks/<block>/` exists; remove it first).
+- Restoring a deleted block: prefer `/spec-inline <block> --merge`, which updates in place. A plain `/spec-inline` is refused with `INLINE-001` while the block is still inlined, and clearing that means removing the block's files across **all four** locations (`schemas/inlined/blocks/<block>.schema.yaml`, `reductions/blocks/<block>.yaml`, `codegen/<lang>/blocks/<block>/`, `upstream/blocks/<block>/`) — rare, and `/spec-inline`'s own `INLINE-001` text says the same. Prefer `--merge`.
 - Cleaning up an unexpected file under an inlined unit: delete it (it isn't a block-emitted file) and re-run `/spec-drift` to confirm.
 
 Do not auto-edit `lineage.toml`.
