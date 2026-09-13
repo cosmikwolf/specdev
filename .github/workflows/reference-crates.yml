@@ -12,13 +12,50 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+
+      # The runner ships with ~14GB free, and this job needs more: ~23 Rust
+      # target dirs plus pnpm's store plus Prisma's engine binaries. The last
+      # run died at ENOSPC copying a Prisma schema-engine, 22 crates in. These
+      # three directories are the standard reclaim on ubuntu-latest and none of
+      # them is used by this job.
+      - name: Reclaim runner disk
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /opt/hostedtoolcache/CodeQL
+          df -h /
+
+      # The host-built references (egui, eframe, egui-plot and the egui bridges)
+      # link a real window stack: eframe's `glow` feature pulls winit/glutin,
+      # whose `x11` crate resolves `x11.pc` through pkg-config. Without these the
+      # build fails at "failed to run custom build command for `x11`".
+      - name: Install the window-stack system deps the egui references link
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libx11-dev libxcursor-dev libxrandr-dev libxi-dev \
+            libxkbcommon-dev libwayland-dev libgl1-mesa-dev pkg-config
+
       - uses: dtolnay/rust-toolchain@nightly
         with:
           # Rust reference crates cross-compile per their .cargo/config.toml:
           # embedded libs pin the firmware target (embassy task macros are
           # exercised on nightly, matching the firmware dogfood toolchain);
           # web-facing FFI companion crates pin wasm32 (the wasm-purity gate).
-          targets: thumbv8m.main-none-eabihf, wasm32-unknown-unknown
+          #
+          # This list must cover EVERY triple pinned under
+          # blocks/*/reference/*/.cargo/config.toml and bridges/*/... . It did
+          # not: mk20dx pins thumbv7em-none-eabi and rtic pins thumbv7m-none-eabi,
+          # neither was installed, and both failed with
+          # "error[E0463]: can't find crate for `core`" on every run this
+          # workflow has ever had. To re-derive the list:
+          #
+          #   find blocks bridges -path '*/reference/*/.cargo/config.toml' \
+          #     -exec grep -h '^ *target *=' {} \; | sort -u
+          targets: >-
+            thumbv7em-none-eabi,
+            thumbv7m-none-eabi,
+            thumbv8m.main-none-eabihf,
+            wasm32-unknown-unknown
       - uses: subosito/flutter-action@v2
         with:
           # Dart/Flutter reference packages (reference/dart/pubspec.yaml)
