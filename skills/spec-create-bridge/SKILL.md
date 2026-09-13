@@ -68,7 +68,7 @@ the orchestration; that file is the material.
    Check `<root>/blocks/<a>/` and `<root>/blocks/<b>/`. If either is missing,
    stop and tell the user to author the missing block first (hand-author it,
    using an existing block under `<root>/blocks/` as the worked precedent; a
-   `/spec-create-block` sibling is planned but may not be available yet). Do not
+   author it with `/spec-create-block <name>`). Do not
    scaffold a bridge to a nonexistent block — its `from_kind`/`to_kind` would
    reference entity kinds that don't exist.
 
@@ -364,7 +364,7 @@ Report:
 ## What this skill does NOT do
 
 - **Author a block.** A bridge wires two *existing* blocks — hand-author the
-  block first (a `/spec-create-block` sibling is planned). This skill refuses if
+  block first — author it with `/spec-create-block <name>`. This skill refuses if
   either endpoint block is missing.
 - **Inline the bridge.** Use `/spec-inline-bridge <a>+<b>`.
 - **Author a project-local ad-hoc bridge.** Those live under
