@@ -48,6 +48,16 @@ while :; do
         cat "${RULES}"
         exit 0
     fi
+    # Repository boundary. Checked AFTER the marker test, never before: a
+    # specdev project normally has its own `.git` at the same directory as
+    # `spec.toml`, and stopping there first would mean never matching anything.
+    # This only fires when we are about to climb ABOVE a repository without
+    # having found the markers — i.e. the session started inside a vendored or
+    # nested project that is not spec-managed. Without it, such a session got
+    # the enclosing project's rules, which describe a tree it is not in.
+    if [ -e "${dir}/.git" ]; then
+        exit 0
+    fi
     parent="$(dirname "${dir}")"
     [ "${parent}" = "${dir}" ] && break
     dir="${parent}"

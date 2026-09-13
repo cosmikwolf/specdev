@@ -2,21 +2,24 @@
 
 **Profile in this walkthrough:** `firmware-layered`. Rule names and severities come from the project's `specs/specdev/domain.toml` `[validation.rules]` table — read that file for the authoritative list. The *presentation pattern* shown below is profile-agnostic.
 
-## Raw analyzer output (hypothetical)
+## Raw analyzer output (illustrative findings, real line shape)
+
+The findings below are invented for the walkthrough; the **line shape is not**. Each finding is one
+line — lowercase severity, colon, bracketed rule, absolute path (no `#` pointer), colon, message —
+and the tail is a count line whose error count alone drives the exit code.
 
 ```
 $ specdev-analyzer validate --no-color
-error [layer_dependency]: module `AudioPipeline` (layer=middleware) depends on `FlightController` (layer=application) — middleware cannot depend on application.
-  at specs/modules/AudioPipeline.toml#/depends_on/0
-error [SCHEMA]: required property `metadata.ConcurrencyModel` missing.
-  at specs/modules/I2sOutput.toml
-error [connection_endpoints_resolve]: connection endpoint `AudioPipeline.led_command` does not name a known port.
-  at specs/architecture.toml#/connections/2/to
-warning [requirement_satisfies_resolves]: requirement `REQ-AUDIO-003` not in any module's `satisfies[]`.
-  at specs/requirements.toml#/requirement/4
+error: [layer_dependency] /path/to/proj/specs/modules/AudioPipeline.toml: module `AudioPipeline` (layer=middleware) depends on `FlightController` (layer=application) — middleware cannot depend on application.
+error: [SCHEMA] /path/to/proj/specs/modules/I2sOutput.toml: required property `metadata.ConcurrencyModel` missing.
+error: [connection_endpoints_resolve] /path/to/proj/specs/architecture.toml: connection endpoint `AudioPipeline.led_command` does not name a known port.
+warning: [requirement_satisfies_resolves] /path/to/proj/specs/requirements.toml: requirement `REQ-AUDIO-003` not in any module's `satisfies[]`.
 
-3 errors, 1 warning — exit 1
+loaded 9 modules / 12 requirements / 9 sources / 12 graph checks
+3 error(s), 1 warning(s), 14 info(s)
 ```
+
+Exit 1, because the error count is non-zero.
 
 ## Step 3 presentation pattern
 

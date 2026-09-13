@@ -250,7 +250,15 @@ Read its **exit code**. The three outcomes are different facts and must not be m
 
 - **`0` — the gate passed.** Rows are written. Any `stderr` the runner printed is a warning the tool emitted, not a failure; carry it into Step 9.
 - **the tool's own non-zero code** (`1`, `3`, …) — **a step ran and exited non-zero**: a compile error, an analyzer error, a network failure during an install step. The gate **failed** and fail rows are written for every module named. Report the printed output verbatim and stop.
-- **`2` — the gate did not run.** A step's executable could not start (SDK missing, target not installed), a token resolved to nothing, the registry declares no module-scope gate, or the rows could not be written. **No row was written**, and that is correct: an unrecorded gate reads `verified: false` next run and simply re-gates. Surface the hint in the printed message as a one-line action item — do not install anything yourself.
+- **`2` — usually means the gate did not run.** A step's executable could not start (SDK missing, target not installed), a token resolved to nothing, the registry declares no module-scope gate, or the rows could not be written. In that case no row was written, which is correct: an unrecorded gate reads `verified: false` next run and simply re-gates. Surface the hint in the printed message as a one-line action item — do not install anything yourself.
+
+  **Confirm it from stdout, not from the code alone.** The runner passes a failing step's own exit code through unchanged, so a gate tool that legitimately exits 2 is indistinguishable by code from the runner's own exit-2 classes — and in that case a `fail` row **was** written. The rows are what separate the two:
+
+  ```
+  gate <label> fail module <Name> key sha256:...   <- it ran, and failed
+  ```
+
+  A `gate ... fail ...` line at exit 2 means "ran and failed" (report it as a failure), and no such line means "did not run" (report the hint). No shipped gate does this today — `cargo check` fails 101, `tsc` and `flutter analyze` fail 1 — so treat it as a check to make rather than a case to expect.
 
 A `scope: module` gate runs **once per run**; the `--module` list scopes its rows, not the number of executions. One `cargo check` covers the whole tree and that is fine, so name **every** module in the run, not just the one an error mentions — under-claiming is the safe direction. Modules *outside* the run keep their earlier pass rows; the batch row is what tells Step 9 the tree does not build.
 
