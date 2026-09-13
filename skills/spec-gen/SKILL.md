@@ -65,11 +65,22 @@ It emits one deterministic verdict per module under `specs/modules/` — no judg
 
 - `unchanged` — output clean and inputs match the last gen. **Skip.**
 - `edited` — a generated output file was hand-edited (carries the `files`). **Skip** — regenerating would clobber the edit. Surface it and tell the user to reconcile via `/spec-drift`.
+- `unrecorded` — no lineage row, but the module's declared `source_file` **already exists on disk** (carries the `files`). **Stop and ask.** See below.
 - `stale` — output clean but the spec or assembled prompt changed since the last gen. **Regenerate.**
 - `missing` — a recorded output file is gone. **Regenerate.**
-- `new` — never generated. **Regenerate.**
+- `new` — never generated, and nothing at the declared path. **Regenerate.**
 
-Your **regenerate set** is every module whose category is `new`, `stale`, or `missing`. The rest are skipped on this axis (carry the `unchanged` and `edited` counts into the Step 9 report).
+Your **regenerate set** is every module whose category is `new`, `stale`, or `missing`. The rest are skipped on this axis (carry the `unchanged`, `edited` and `unrecorded` counts into the Step 9 report).
+
+**`unrecorded` is not a slow `new`.** It means this project adopted specdev over code it already had: the file at the module's `source_file` is hand-authored, and `/spec-gen` has never written it. Generating would overwrite working source that the plan never warned about. Do not put these modules in the regenerate set, and do not silently skip them either — a skipped module reads as done.
+
+For each `unrecorded` module, name the file and ask the user which of these they want:
+
+1. **Keep the hand-written source.** Bring the spec up to match what is there — `/spec-sync-items` reconciles the module's `items[]` against what tree-sitter finds — and leave the body alone. The module stays `unrecorded` until something records it, which is correct: nothing generated it.
+2. **Adopt the file as generated output.** `specdev-analyzer gen-record --accept-edits --module <Name> <file>` declares the current bytes the baseline. From then on it is an ordinary `unchanged` module and regenerates normally. Only do this when the user confirms the file already matches what the spec describes — recording is what makes a file `clean`, so a wrong record hides the mismatch forever.
+3. **Replace it.** The user moves or deletes the file, and the module becomes `new` on the next run.
+
+Never choose for them. This is the one verdict where the analyzer cannot tell whose work is at stake.
 
 Each module also carries a second, independent field — **`verified`** — which is `true` only when a **passing** compile-gate result is recorded for it at the current inputs, the current lockfile *and* the current profile substrate (Step 8 writes those). It answers a different question from `category`: not "would regeneration produce something new?" but "did what is there ever compile, against the dependencies that are there now?". A module that failed its gate last run, or whose lockfile moved since (`cargo update`, a new dependency), is `unchanged` **and** `verified: false`.
 
@@ -155,6 +166,10 @@ When the target file already exists from a prior generation run, read it before 
 ```sh
 specdev-analyzer manifest --write
 ```
+
+**If this refuses with `[MANIFEST-003] … unrecorded file at target`,** the project has a hand-authored `Cargo.toml` / `pubspec.yaml` / `package.json` that `/spec-gen` did not write and whose bytes differ from what the spec renders — the same brownfield situation as an `unrecorded` module in Step 3.5. Do **not** reach for `--accept-edits` to get past it; that discards whatever the file declares that the spec does not yet carry. Surface the refusal verbatim, show the user what is in their file that the spec has no home for, and fold those declarations into the spec (`[[external_deps]]` in `architecture.toml` for project-wide dependencies, `external_deps[]` in a module for module-scoped ones). `--accept-edits` is for when the user has confirmed the file is disposable.
+
+Identical bytes and already-recorded manifests are never refused, so the ordinary regenerate loop never sees this.
 
 The analyzer renders the project's build manifest deterministically from the spec, dispatching on `[project].language` and writing the language's canonical filename in the project root — `Cargo.toml` for rust (from `spec.toml [project]` + `architecture.toml` `[platform]`/`[runtime]`/`[logger]`/`[[external_deps]]`/`[msrv]`/`[[features]]` + per-module `external_deps[]`), `pubspec.yaml` for dart (from `[project]` + `architecture.toml` `[environment]`/`[[external_deps]]`/`[[dependency_overrides]]` + per-module `external_deps[]`), `package.json` for typescript (from `[project]` + `architecture.toml` `version`/`[environment]`/`[scripts]`/`[[external_deps]]` + per-module `external_deps[]`). Lex-sorted; byte-stable. A typescript workspace root also writes `pnpm-workspace.yaml` beside `package.json`; it is gen-owned and overwritten on every write — record it in Step 6.5 with the manifest.
 
