@@ -48,7 +48,19 @@ Run from the workspace root. The analyzer detects `[workspace]` and renders work
 Then record it (the per-member walk already records member files via single-package Step 6.5; the workspace-root Cargo.toml needs its own record against the workspace root's `specs/specdev/`):
 
 ```sh
-specdev-analyzer gen-record Cargo.toml
+specdev-analyzer gen-record --accept-edits Cargo.toml
+```
+
+`--accept-edits` is not optional here, and it is the same flag single-package Step 6.5 uses for the
+same file. `gen-record` refuses to move a baseline that `gen-drift` reports as `edited`, and `edited`
+means only "bytes differ from the last recorded hash" — it cannot tell a fresh emission from a hand
+edit. W5 just wrote these bytes, so they are the intended baseline by definition. Without the flag,
+every workspace halts here on its **second** `/spec-gen`, as soon as anything moves the workspace-root
+Cargo.toml (a version bump, a new hoisted dependency):
+
+```
+gen-record: refusing to re-record 1 file(s) that gen-drift reports as `edited`:
+  - Cargo.toml
 ```
 
 ## W6 — workspace-level summary
