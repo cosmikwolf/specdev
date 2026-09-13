@@ -25,15 +25,33 @@ jobs:
           df -h /
 
       # The host-built references (egui, eframe, egui-plot and the egui bridges)
-      # link a real window stack: eframe's `glow` feature pulls winit/glutin,
-      # whose `x11` crate resolves `x11.pc` through pkg-config. Without these the
-      # build fails at "failed to run custom build command for `x11`".
-      - name: Install the window-stack system deps the egui references link
+      # link a real window stack, so this job needs the same system libraries a
+      # desktop build does. Two stacks, two sets:
+      #
+      #   eframe's `glow` feature -> winit/glutin -> x11 / xkbcommon / GL
+      #   nih-plug's editor       -> baseview     -> x11-xcb + the xcb family
+      #
+      # The list is empirical, not guessed. The first attempt installed
+      # libx11-dev and the build still failed, because the crate asks pkg-config
+      # for `x11-xcb` specifically:
+      #
+      #   pkg-config --libs --cflags x11-xcb 'x11-xcb >= 1.6'
+      #   Package x11-xcb was not found in the pkg-config search path.
+      #   The system library `x11-xcb` required by crate `x11` was not found.
+      #
+      # `x11.pc` comes from libx11-dev; `x11-xcb.pc` comes from libx11-xcb-dev.
+      # If a later run names a different .pc file, add the -dev package that
+      # ships it rather than widening this list by guesswork.
+      - name: Install the window-stack system deps the egui and nih-plug references link
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            libx11-dev libxcursor-dev libxrandr-dev libxi-dev \
-            libxkbcommon-dev libwayland-dev libgl1-mesa-dev pkg-config
+            pkg-config \
+            libx11-dev libx11-xcb-dev libxcursor-dev libxrandr-dev libxi-dev \
+            libxcb1-dev libxcb-dri2-0-dev libxcb-icccm4-dev libxcb-shape0-dev \
+            libxcb-xfixes0-dev libxcb-xkb-dev \
+            libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev \
+            libgl1-mesa-dev libgl-dev libasound2-dev libjack-jackd2-dev
 
       - uses: dtolnay/rust-toolchain@nightly
         with:
