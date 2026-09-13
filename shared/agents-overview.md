@@ -1,7 +1,31 @@
-# agents/
+# Agents shipped by the specdev plugin
 
-Subagents shipped by the specdev plugin. Files directly under this directory are auto-discovered by Claude Code.
+`${CLAUDE_PLUGIN_ROOT}/agents/` holds the plugin's subagents. **Every `.md` file
+anywhere under that directory is auto-discovered by Claude Code and offered to
+users** — including files in subdirectories, and including files that are not
+agents at all.
 
-## `.deferred/`
+That is why this document lives in `shared/` rather than in `agents/`: as
+`agents/README.md` it was itself registered, and users saw an agent named
+"README" in the picker.
 
-Subdirectories whose names start with `.` are skipped by the loader. `.deferred/` is used to stage agent designs that aren't yet wired into a live skill workflow — the files are kept under version control for review and iteration but are not user-invocable. Promote an agent by moving its `.md` file out of `.deferred/` into `agents/` once the calling skill is ready.
+## Shipped
+
+- `module-designer` — drafts a single module TOML from an interview. The
+  read-isolated drafting step of `/spec-design` and `/spec-edit`.
+
+## Staging an agent that is not ready
+
+Do **not** use a dot-prefixed subdirectory. `agents/.deferred/` was used for this
+and did not work: the loader registered the file as
+`specdev:.deferred:module-reverser` and offered a half-built agent, with an input
+contract three renames out of date, to anyone who opened the picker.
+
+Stage the file **outside `agents/`** instead — next to the skill that will
+eventually call it, under that skill's `references/`, with a `.deferred.md`
+suffix and a header saying it is not active. `module-reverser` is staged that way
+at `skills/spec-reverse/references/module-reverser-agent.deferred.md`.
+
+Promote by moving the file to `agents/<name>.md` and dropping the header. Check
+first that the calling skill's `allowed-tools` can actually dispatch a subagent —
+registration alone does not make an agent reachable.
