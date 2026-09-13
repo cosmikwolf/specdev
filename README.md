@@ -42,9 +42,15 @@ project against schemas the plugin does not ship.
    - `[MANIFEST-001]` naming a file **under the plugin tree** — an analyzer
      older than the `contract_version` handshake. Re-install.
 
-   Neither means anything is wrong with your project. `specdev-analyzer`
-   and the plugin both report `0.1.0` and always have, so the version
-   numbers cannot tell you which is older; `contract_version` can.
+   Neither means anything is wrong with your project.
+
+   **Do not use the version numbers to answer this.** Both repositories are
+   at `0.2.0` and are revved together per release, so the two numbers match
+   whenever they were released together — and a matching pair says nothing
+   about the binary you actually have installed, which can be any older
+   release. `specdev-analyzer --version` reports what is on your PATH, not
+   what the plugin needs, and nothing compares them for you.
+   `contract_version` is the real handshake, and it is the one that fires.
 
 2. Add the marketplace and install the plugin in Claude Code:
 
