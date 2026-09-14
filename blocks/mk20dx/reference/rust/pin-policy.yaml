@@ -39,8 +39,33 @@ held:
   # UNBLOCKING CONDITION: mk20dx-hal publishes a release requiring fugit ^0.6.
   # Its newest is 0.1.1 (published 2026-08-31, not yanked), requiring ^0.3.
   # That crate is maintained in this same org
-  # (github.com/cosmikwolf/mk20dx-hal), so clearing this hold is within our
-  # control rather than a wait on a third party: bump fugit there, publish,
-  # then bump here and delete this entry.
+  # (github.com/cosmikwolf/mk20dx-hal), so this is within our control rather
+  # than a wait on a third party.
+  #
+  # AND IT IS CHEAP. Measured 2026-09-14, not estimated:
+  #
+  #   - The HAL's whole fugit surface is FOUR references, and exactly ONE
+  #     public signature (src/timer.rs:54). Types used: MicrosDurationU32,
+  #     HertzU32, KilohertzU32, MegahertzU32.
+  #   - All four aliases are byte-identical in 0.3.9 and 0.6.0, e.g.
+  #       pub type MicrosDurationU32 = Duration<u32, 1, 1_000_000>;
+  #     Only the underlying struct's const-generic width changed (u32 -> u64),
+  #     which the alias hides. So no HAL source needs touching.
+  #   - Verified by building: a scratch copy of the HAL with `fugit = "0.6"`
+  #     and nothing else changed compiles clean for thumbv7em-none-eabi.
+  #   - Verified end to end: this reference crate at `fugit = "0.6"`, with
+  #     mk20dx-hal `[patch]`ed to that build, compiles clean. Zero source
+  #     edits in either crate.
+  #
+  # So clearing this hold is two one-line manifest changes and a publish:
+  #   1. `fugit = "0.3"` -> `"0.6"` in mk20dx-hal/Cargo.toml
+  #   2. publish the HAL. Note this is a BREAKING change for the HAL's own
+  #      consumers -- fugit types are in its public API -- so it wants 0.2.0
+  #      rather than 0.1.2.
+  #   3. `fugit = "0.3"` -> `"0.6"` in this crate's Cargo.toml
+  #   4. delete this entry
+  #
+  # The hold stands only because step 2 has not happened. It is not a
+  # statement that the upgrade is hard.
   - crate: fugit
     reason: mk20dx-hal 0.1.1 takes fugit 0.3 types in its public API; 0.6 changed Duration's const generics u32 -> u64
