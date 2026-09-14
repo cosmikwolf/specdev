@@ -1,8 +1,8 @@
 ---
 name: spec-reverse
-description: This skill should be used when the user asks to "reverse-engineer specs", "generate specs from code", "document this existing codebase", "reverse <ModuleName>", or "spec-reverse --all". One-shot migration tool — moves an existing Rust codebase into the spec-driven world; not a continuous source-vs-spec audit (use /spec-sync-items for that). Rust profiles only: the field guidance here is written against Rust module schemas, so a TypeScript or Dart project must use /spec-init plus /spec-design instead — the analyzer's `reverse` pre-flight admits those trees, but this skill's guidance does not fit their schemas. Extracts architecture and module TOML specs against a Rust profile, using the analyzer's tree-sitter `extract-items` surface plus inlined block READMEs as authoring context.
+description: "This skill should be used when the user asks to \"reverse-engineer specs\", \"generate specs from code\", \"document this existing codebase\", \"reverse <ModuleName>\", or \"spec-reverse --all\". One-shot migration tool — moves an existing Rust codebase into the spec-driven world; not a continuous source-vs-spec audit (use /spec-sync-items for that). Rust profiles only: the field guidance here is written against Rust module schemas, so a TypeScript or Dart project must use /spec-init plus /spec-design instead — the analyzer's `reverse` pre-flight admits those trees, but this skill's guidance does not fit their schemas. Extracts architecture and module TOML specs against a Rust profile, using the analyzer's tree-sitter `extract-items` surface plus inlined block READMEs as authoring context."
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
-argument-hint: [<ModuleName> | --all] [--into <a,b,...>]
+argument-hint: "[<ModuleName> | --all] [--into <a,b,...>]"
 ---
 
 # /spec-reverse — Extract specs from source

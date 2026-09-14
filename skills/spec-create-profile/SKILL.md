@@ -1,6 +1,6 @@
 ---
 name: spec-create-profile
-description: This skill should be used when the user asks to "create a profile", "author a new profile", "scaffold a profile", "write a profile for <project-shape>", "add a profile that produces <kind of project>", or "/spec-create-profile <name>" — i.e. authoring a NEW profile unit (the one-shot project-shape scaffolding: profile.yaml manifest + schemas + reduction + templates + codegen conventions) for a project shape not already covered. New profiles only — refuses if `profiles/<name>/` already exists. To bootstrap an EXISTING profile into a project, use /spec-init. This skill authors profiles only, not blocks or bridges.
+description: "This skill should be used when the user asks to \"create a profile\", \"author a new profile\", \"scaffold a profile\", \"write a profile for <project-shape>\", \"add a profile that produces <kind of project>\", or \"/spec-create-profile <name>\" — i.e. authoring a NEW profile unit (the one-shot project-shape scaffolding: profile.yaml manifest + schemas + reduction + templates + codegen conventions) for a project shape not already covered. New profiles only — refuses if `profiles/<name>/` already exists. To bootstrap an EXISTING profile into a project, use /spec-init. This skill authors profiles only, not blocks or bridges."
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 argument-hint: <profile-name> (e.g. firmware-layered, library-api)
 ---
