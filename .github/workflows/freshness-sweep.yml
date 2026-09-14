@@ -38,13 +38,50 @@ jobs:
         # Pinned explicitly rather than relying on what the runner image
         # happens to ship — the sweep reads every deps.yaml through it.
         run: pip install --quiet pyyaml
+      # The build-against-latest leg compiles reference crates, so this job
+      # needs the SAME environment reference-crates.yml builds in. When the two
+      # drift, this sweep does not merely fail — it reports `BREAKS` against
+      # dependencies that are fine, which is the one outcome the header above
+      # says it must never produce.
+      #
+      # That is not hypothetical. The first scheduled run (2026-09-14) reported:
+      #
+      #   ✗ blocks/mk20dx          fugit 0.3 -> 0.6.0        BREAKS (E0463: can't find crate for `core`)
+      #   ✗ bridges/egui+nih-plug  nih_plug_egui             BREAKS (custom build command for `x11`)
+      #
+      # Neither upgrade was tested. The runner could not build those crates at
+      # all: mk20dx pins thumbv7em-none-eabi and the egui stack needs the X11
+      # window libraries, and this job installed neither.
+      - name: Install the window-stack system deps the egui references link
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            pkg-config \
+            libx11-dev libx11-xcb-dev libxcursor-dev libxrandr-dev libxi-dev \
+            libxcb1-dev libxcb-dri2-0-dev libxcb-icccm4-dev libxcb-shape0-dev \
+            libxcb-xfixes0-dev libxcb-xkb-dev \
+            libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev \
+            libgl1-mesa-dev libgl-dev libasound2-dev libjack-jackd2-dev
       - uses: dtolnay/rust-toolchain@nightly
         with:
-          # The build-against-latest leg builds reference crates, which
-          # cross-compile per their own .cargo/config.toml. Same targets as
-          # reference-crates.yml; keep the two lists in step.
-          targets: thumbv8m.main-none-eabihf, wasm32-unknown-unknown
-      - uses: Swatinem/rust-cache@v2
+          # Must cover every triple pinned under blocks/*/reference/*/ and
+          # bridges/*/reference/*/. Identical to reference-crates.yml; both
+          # lists are derived from the same command, so re-run it in BOTH when
+          # a unit pins a new triple:
+          #
+          #   find blocks bridges -path '*/reference/*/.cargo/config.toml' \
+          #     -exec grep -h '^ *target *=' {} \; | sort -u
+          targets: >-
+            thumbv7em-none-eabi,
+            thumbv7m-none-eabi,
+            thumbv8m.main-none-eabihf,
+            wasm32-unknown-unknown
+      # No Swatinem/rust-cache here. It shells out to cargo at the repository
+      # root, and this repository has no root Cargo.toml (reference crates are
+      # nested), so it exits 101 with "could not find `Cargo.toml`" and caches
+      # nothing. reference-crates.yml does not use it either. An action that
+      # logs an error and does no work is worse than an absent one — it makes
+      # a healthy log look broken.
       - name: Check the version-satisfaction rule before trusting its verdicts
         run: python3 .github/scripts/freshness_sweep.py --self-test
       - name: Sweep
