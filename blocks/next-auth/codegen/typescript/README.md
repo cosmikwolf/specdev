@@ -73,6 +73,20 @@ reaches something the Edge runtime cannot load. Split the config in two:
 an edge-safe half with providers and callbacks, and the full call that
 adds the rest.
 
+**There is no middleware module.** The `nextjs-app` profile's roles are
+`app`, `layout`, `page`, `route_handler`, `boundary`, `component`,
+`server_action`, `service` and `model`; none of them is the
+`middleware.ts` (Next 16: `proxy.ts`) file, and no derived-file rule
+writes one. A spec-managed project therefore does not gate routes in
+middleware. Gate them per module instead: each protected `page` or
+`route_handler` calls `auth()` in its body (or a small `service` module
+that wraps `auth()` and checks the role) and redirects or returns 401
+itself. That path works today, keeps every guard inside a module the
+spec knows about, and makes `edge_split` a question of where the config
+loads rather than a promise that middleware exists. With no middleware
+calling `auth`, `edge_split = true` is still valid and still the
+conservative choice.
+
 ```ts
 import type { NextAuthConfig } from "next-auth";
 import NextAuth from "next-auth";
