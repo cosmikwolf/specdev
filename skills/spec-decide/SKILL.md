@@ -9,9 +9,9 @@ argument-hint: <one-line title for the decision>
 
 Record one decision per invocation. User input: `$ARGUMENTS` (a one-line title — what was decided). If `$ARGUMENTS` is empty, ask first.
 
-A decision pins an implementation choice over the alternatives that were considered. It carries the *how* and *why* alongside the requirements (the *what*) and modules (where the *what* is satisfied). Decisions cross-reference the rest of the spec via `requirement.decided_by[]` (added later via `/spec-edit`), `module.guided_by[]` (similarly), `architecture.project_decisions[]`, and the decision's own `closes_questions[]` / `defaults_for[]` / `supersedes[]` arrays.
+A decision pins an implementation choice over the alternatives that were considered. It carries the *how* and *why* alongside the requirements (the *what*) and modules (where the *what* is satisfied). Decisions cross-reference the rest of the spec via `requirement.decided_by[]` (added later via `/spec-edit`), `module.guided_by[]` (similarly), and the decision's own `closes_questions[]` / `defaults_for[]` / `supersedes[]` arrays. `architecture.project_decisions[]` is a declaration only: `validate` checks that its ids resolve, but no prompt reads it, so a decision listed there alone reaches no module.
 
-The codegen prompt walk inlines `accepted` decisions into every reachable module's prompt. Authoring a decision here is how you make that text show up at codegen time.
+The codegen prompt walk inlines `accepted` decisions into a module's prompt through exactly three paths: the module's own `guided_by[]`, the `decided_by[]` of every requirement the module `satisfies`, and the workspace tier. Authoring a decision here and then wiring it through one of those paths is how you make that text show up at codegen time. For a cross-slice rule ("read the service, not the Db"), wire it through `decided_by[]` on the requirements the affected modules satisfy. **Do not add it to `architecture.project_decisions[]` for that purpose:** the whole of `architecture.toml` is pasted into every module's prompt, so any edit to that file changes every module's input hash and `gen-plan` reports every generated module as stale.
 
 If `specdev-analyzer` is not on PATH, tell the user to install it and stop.
 
@@ -60,7 +60,7 @@ If the user describes a decision that supersedes an existing accepted decision, 
 
 ## Step 3 — write the TOML
 
-Append a `[[decision]]` block to `specs/decisions.toml`. Refuse and stop if the proposed `id` already appears in the file. Use TOML's multi-line string syntax for prose fields (`text`, `context`, `consequences`, `alternatives`, `verification`):
+Append a `[[decision]]` block to `specs/decisions.toml`. Refuse and stop only if an **uncommented** `id = "<id>"` line already exists — check with `grep -E '^id = "DEC-NNN"' specs/decisions.toml`. The bootstrapped template carries `# id = "DEC-001"` inside a comment; that is an example, not a decision, and it must not block the first `DEC-001`. Use TOML's multi-line string syntax for prose fields (`text`, `context`, `consequences`, `alternatives`, `verification`):
 
 ```toml
 [[decision]]
