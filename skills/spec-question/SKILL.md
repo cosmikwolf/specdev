@@ -79,7 +79,7 @@ Per the authoring convention in `open_questions.toml.template`: pick ONE directi
 
 ## Step 4 — write the TOML (path A)
 
-Append an `[[open_question]]` block to `specs/open_questions.toml`. Refuse and stop if the proposed `id` already appears.
+Append an `[[open_question]]` block to `specs/open_questions.toml`. Refuse and stop only if an **uncommented** `id = "<id>"` line already exists — check with `grep -E '^id = "OQ-NNN"' specs/open_questions.toml`. A commented example id in the bootstrapped template is not an entry.
 
 Use TOML's multi-line string syntax for prose fields (`text`, `verify`):
 
