@@ -1,0 +1,46 @@
+# Deliberate version holds for the mk20dx reference crate.
+#
+# Plugin-author state, not project state: `inline` never copies `reference/`,
+# so nothing here reaches a user tree. Read by
+# `.github/scripts/freshness_sweep.py`, which reports a held pin as `held`
+# (silent) instead of `behind` / `BREAKS`.
+#
+# A hold claims the newer version is known-unusable for a reason on file — not
+# "we have not looked". Keep `reason` to ONE LINE: the sweep prints it inline in
+# the report row, and a paragraph there buries every other row. Put the evidence
+# in a comment above the entry, where a reader of this file finds it and the
+# report does not.
+
+held:
+  # fugit 0.3 -> 0.6 (checked 2026-09-14)
+  #
+  # The version is not ours to choose. mk20dx-hal takes fugit types in its
+  # PUBLIC API, and fugit 0.6 changed `Duration<T, const NOM, const DENOM>`
+  # from u32 const generics to u64 (fugit-0.3.9/src/duration.rs:17 vs
+  # fugit-0.6.0/src/duration.rs:36). Both versions then coexist in the graph
+  # and the types do not unify. Reproduced on thumbv7em-none-eabi:
+  #
+  #   error[E0308]: mismatched types
+  #     --> src/timer.rs:17:26
+  #      |
+  #   17 |     sequencer_tick.start(600u32.micros());
+  #      |                    ----- ^^^^^^^^^^^^^^^
+  #      |     expected `Duration<u32, 1, 1000000>`, found `Duration<u32, _, _>`
+  #   note: method defined here
+  #     --> mk20dx-hal-0.1.1/src/timer.rs:54
+  #      |
+  #   54 |     pub fn start(&mut self, period: fugit::MicrosDurationU32)
+  #
+  # This is NOT a defect in the block's codegen prose. The prose calls
+  # `start(600u32.micros())`, which is correct against the HAL it targets;
+  # bumping fugit alone only changes which of two incompatible `Duration`
+  # types the call site produces.
+  #
+  # UNBLOCKING CONDITION: mk20dx-hal publishes a release requiring fugit ^0.6.
+  # Its newest is 0.1.1 (published 2026-08-31, not yanked), requiring ^0.3.
+  # That crate is maintained in this same org
+  # (github.com/cosmikwolf/mk20dx-hal), so clearing this hold is within our
+  # control rather than a wait on a third party: bump fugit there, publish,
+  # then bump here and delete this entry.
+  - crate: fugit
+    reason: mk20dx-hal 0.1.1 takes fugit 0.3 types in its public API; 0.6 changed Duration's const generics u32 -> u64
