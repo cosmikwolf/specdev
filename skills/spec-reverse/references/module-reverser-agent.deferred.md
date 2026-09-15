@@ -1,9 +1,25 @@
 ---
 name: module-reverser
-description: Use when reverse-engineering a single module spec from existing source code. Given a module name, project root, and schema/domain/language paths, it reads the source, extracts name/layer/description/depends_on/actions/state_machines/ports/hardware/errors/metadata with evidence, and returns a candidate module TOML with LOW-confidence annotations. Designed for parallel fan-out from `/spec-reverse --all`. Read-only — the spawning session writes the TOML after user confirmation.
+description: STAGED, NOT ACTIVE. Reverse-engineers a single module spec from existing source. Lives outside `agents/` on purpose so the loader cannot register it — see the header below before moving it back.
 model: sonnet
 tools: Read, Grep, Glob
 ---
+
+> **Staged, not shipped.** This file is deliberately **not** under `agents/`.
+>
+> It used to live at `agents/.deferred/module-reverser.md`, on the belief that a
+> dot-prefixed subdirectory is skipped by Claude Code's agent loader. That belief
+> was wrong: the agent was discovered and offered to users as
+> `specdev:.deferred:module-reverser`, half-built, with an input contract three
+> renames out of date. Staging by *directory name* does not work; staging by
+> *living outside `agents/`* does.
+>
+> To promote it: move this file to `agents/module-reverser.md`, drop this block,
+> and give `/spec-reverse` a tool that can dispatch a subagent — its current
+> `allowed-tools` cannot, so nothing can call this even once it is registered.
+> `references/module-reverser-subagent.md` is the authoritative contract; keep
+> the two in step.
+
 
 # module-reverser
 
@@ -15,10 +31,11 @@ The invoker provides in the prompt:
 
 - `module_name` — PascalCase module name (e.g. `StatusLed`).
 - `project_root` — absolute path to the project root (has `spec.toml` and `specs/`).
-- `schema_dir` — absolute path to the resolved schema directory.
-- `domain_dir` — absolute path to the resolved domain directory.
-- `language_dir` — absolute path to the resolved language directory.
-- `source_hint` — optional path to source file(s); if absent, infer from the module name.
+- `profile` — the project's profile name, from `spec.toml [project].profile`.
+- `language` — the project's language, from `spec.toml [project].language`.
+- `inlined_blocks` — array of block names inlined in this project. Their READMEs
+  under `specs/specdev/codegen/<language>/blocks/<name>/` are the authoring context.
+- `inlined_bridges` — array of `<a>+<b>` bridge names inlined in this project.
 - `package` — optional snake_case package name (multi-package projects only). When provided, the Candidate TOML is written by the invoker to `specs/modules/<package>/<ModuleName>.toml`; do **not** add a `package` field to the TOML itself — the analyzer derives it from the filesystem path.
 - `source_path` — optional absolute or project-relative path. When provided, restrict all Read / Grep / Glob searches to this subtree; do not scan other package trees. Used to scope evidence for one package in a multi-package fan-out.
 

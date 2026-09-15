@@ -17,6 +17,6 @@ Scan the project root for evidence in this order:
 7. **Peripherals and pins** — grep for peripheral initialization (`Peripherals::take`, `gpio_init`, `twi_init`, etc.), collect pin numbers and peripheral names.
 8. **Connections** — look for wiring between modules (calls from module A into module B's public surface).
 
-Present candidate `specs/architecture.toml` with confidence (HIGH/MEDIUM/LOW) per field. Wait for confirmation. Write clean TOML per `specdev/shared/comment-policy.md` — in particular, LOW markers are permitted inline next to LOW-confidence fields and are removed after the user confirms each one. Scaffold `specs/modules/` and `specs/requirements/` if absent.
+Present candidate `specs/architecture.toml` with confidence (HIGH/MEDIUM/LOW) per field. Wait for confirmation. Write clean TOML per `${CLAUDE_PLUGIN_ROOT}/shared/comment-policy.md` — in particular, LOW markers are permitted inline next to LOW-confidence fields and are removed after the user confirms each one. Scaffold `specs/modules/` and `specs/requirements/` if absent.
 
 Report: language, build system, target, RTOS, packages, modules discovered. Suggested next step: `/spec-reverse <Module>` or `/spec-reverse --all`.

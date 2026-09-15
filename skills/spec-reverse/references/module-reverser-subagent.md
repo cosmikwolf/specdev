@@ -4,7 +4,7 @@
 
 ## Status
 
-The subagent file is currently staged at `${CLAUDE_PLUGIN_ROOT}/agents/.deferred/module-reverser.md` (not active). Until it ships under `agents/`, `--all` mode runs sequentially: the per-module loop in `mode-full-project.md` invokes `specdev-analyzer context --module <Name>` once per module and authors each spec from the main thread.
+The subagent file is currently staged at `${CLAUDE_PLUGIN_ROOT}/skills/spec-reverse/references/module-reverser-agent.deferred.md` (not active — staged outside `agents/` so the loader cannot register it). Until it ships under `agents/`, `--all` mode runs sequentially: the per-module loop in `mode-full-project.md` invokes `specdev-analyzer context --module <Name>` once per module and authors each spec from the main thread.
 
 For now, prefer `/spec-reverse <ModuleName>` (single-module mode) for the human-driven workflow. Use `/spec-reverse --all` with the understanding that it walks modules sequentially without subagent fan-out.
 
@@ -22,4 +22,4 @@ The subagent does not validate, does not write files, and does not run the analy
 
 Input keys: `module_name`, `project_root`, `profile`, `language`, `inlined_blocks` (array), `inlined_bridges` (array), optional `source_path` scoping.
 
-The subagent should not be invoked until the file under `agents/` is promoted from `.deferred/` and rewritten to consume these inputs.
+The staged file now documents exactly these inputs, so promotion is a move plus dropping its header — but `/spec-reverse`'s `allowed-tools` still cannot dispatch a subagent, so that must change too before anything can call it.

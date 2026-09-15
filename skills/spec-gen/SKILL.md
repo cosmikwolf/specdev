@@ -65,11 +65,22 @@ It emits one deterministic verdict per module under `specs/modules/` — no judg
 
 - `unchanged` — output clean and inputs match the last gen. **Skip.**
 - `edited` — a generated output file was hand-edited (carries the `files`). **Skip** — regenerating would clobber the edit. Surface it and tell the user to reconcile via `/spec-drift`.
+- `unrecorded` — no lineage row, but the module's declared `source_file` **already exists on disk** (carries the `files`). **Stop and ask.** See below.
 - `stale` — output clean but the spec or assembled prompt changed since the last gen. **Regenerate.**
 - `missing` — a recorded output file is gone. **Regenerate.**
-- `new` — never generated. **Regenerate.**
+- `new` — never generated, and nothing at the declared path. **Regenerate.**
 
-Your **regenerate set** is every module whose category is `new`, `stale`, or `missing`. The rest are skipped on this axis (carry the `unchanged` and `edited` counts into the Step 9 report).
+Your **regenerate set** is every module whose category is `new`, `stale`, or `missing`. The rest are skipped on this axis (carry the `unchanged`, `edited` and `unrecorded` counts into the Step 9 report).
+
+**`unrecorded` is not a slow `new`.** It means this project adopted specdev over code it already had: the file at the module's `source_file` is hand-authored, and `/spec-gen` has never written it. Generating would overwrite working source that the plan never warned about. Do not put these modules in the regenerate set, and do not silently skip them either — a skipped module reads as done.
+
+For each `unrecorded` module, name the file and ask the user which of these they want:
+
+1. **Keep the hand-written source.** Bring the spec up to match what is there — `/spec-sync-items` reconciles the module's `items[]` against what tree-sitter finds — and leave the body alone. The module stays `unrecorded` until something records it, which is correct: nothing generated it.
+2. **Adopt the file as generated output.** `specdev-analyzer gen-record --accept-edits --module <Name> <file>` declares the current bytes the baseline. From then on it is an ordinary `unchanged` module and regenerates normally. Only do this when the user confirms the file already matches what the spec describes — recording is what makes a file `clean`, so a wrong record hides the mismatch forever.
+3. **Replace it.** The user moves or deletes the file, and the module becomes `new` on the next run.
+
+Never choose for them. This is the one verdict where the analyzer cannot tell whose work is at stake.
 
 Each module also carries a second, independent field — **`verified`** — which is `true` only when a **passing** compile-gate result is recorded for it at the current inputs, the current lockfile *and* the current profile substrate (Step 8 writes those). It answers a different question from `category`: not "would regeneration produce something new?" but "did what is there ever compile, against the dependencies that are there now?". A module that failed its gate last run, or whose lockfile moved since (`cargo update`, a new dependency), is `unchanged` **and** `verified: false`.
 
@@ -156,6 +167,10 @@ When the target file already exists from a prior generation run, read it before 
 specdev-analyzer manifest --write
 ```
 
+**If this refuses with `[MANIFEST-003] … unrecorded file at target`,** the project has a hand-authored `Cargo.toml` / `pubspec.yaml` / `package.json` that `/spec-gen` did not write and whose bytes differ from what the spec renders — the same brownfield situation as an `unrecorded` module in Step 3.5. Do **not** reach for `--accept-edits` to get past it; that discards whatever the file declares that the spec does not yet carry. Surface the refusal verbatim, show the user what is in their file that the spec has no home for, and fold those declarations into the spec (`[[external_deps]]` in `architecture.toml` for project-wide dependencies, `external_deps[]` in a module for module-scoped ones). `--accept-edits` is for when the user has confirmed the file is disposable.
+
+Identical bytes and already-recorded manifests are never refused, so the ordinary regenerate loop never sees this.
+
 The analyzer renders the project's build manifest deterministically from the spec, dispatching on `[project].language` and writing the language's canonical filename in the project root — `Cargo.toml` for rust (from `spec.toml [project]` + `architecture.toml` `[platform]`/`[runtime]`/`[logger]`/`[[external_deps]]`/`[msrv]`/`[[features]]` + per-module `external_deps[]`), `pubspec.yaml` for dart (from `[project]` + `architecture.toml` `[environment]`/`[[external_deps]]`/`[[dependency_overrides]]` + per-module `external_deps[]`), `package.json` for typescript (from `[project]` + `architecture.toml` `version`/`[environment]`/`[scripts]`/`[[external_deps]]` + per-module `external_deps[]`). Lex-sorted; byte-stable. A typescript workspace root also writes `pnpm-workspace.yaml` beside `package.json`; it is gen-owned and overwritten on every write — record it in Step 6.5 with the manifest.
 
 The same command also writes the profile's **paired files** — config files the profile ships as templates (`nextjs-app`: `tsconfig.json`, `next.config.ts`, `vitest.config.ts`, `playwright.config.ts`, `.gitignore`, `app/.gitkeep`). Each is written **only when absent**, one `wrote paired file <path>` line each; a file already on disk is left untouched. After that first write they are externally owned — never rewritten, never gen-recorded, and never listed in Step 6.5. They are in the gate key, so a user editing one re-gates every module, which is correct: the gate now proves something different.
@@ -235,7 +250,15 @@ Read its **exit code**. The three outcomes are different facts and must not be m
 
 - **`0` — the gate passed.** Rows are written. Any `stderr` the runner printed is a warning the tool emitted, not a failure; carry it into Step 9.
 - **the tool's own non-zero code** (`1`, `3`, …) — **a step ran and exited non-zero**: a compile error, an analyzer error, a network failure during an install step. The gate **failed** and fail rows are written for every module named. Report the printed output verbatim and stop.
-- **`2` — the gate did not run.** A step's executable could not start (SDK missing, target not installed), a token resolved to nothing, the registry declares no module-scope gate, or the rows could not be written. **No row was written**, and that is correct: an unrecorded gate reads `verified: false` next run and simply re-gates. Surface the hint in the printed message as a one-line action item — do not install anything yourself.
+- **`2` — usually means the gate did not run.** A step's executable could not start (SDK missing, target not installed), a token resolved to nothing, the registry declares no module-scope gate, or the rows could not be written. In that case no row was written, which is correct: an unrecorded gate reads `verified: false` next run and simply re-gates. Surface the hint in the printed message as a one-line action item — do not install anything yourself.
+
+  **Confirm it from stdout, not from the code alone.** The runner passes a failing step's own exit code through unchanged, so a gate tool that legitimately exits 2 is indistinguishable by code from the runner's own exit-2 classes — and in that case a `fail` row **was** written. The rows are what separate the two:
+
+  ```
+  gate <label> fail module <Name> key sha256:...   <- it ran, and failed
+  ```
+
+  A `gate ... fail ...` line at exit 2 means "ran and failed" (report it as a failure), and no such line means "did not run" (report the hint). No shipped gate does this today — `cargo check` fails 101, `tsc` and `flutter analyze` fail 1 — so treat it as a check to make rather than a case to expect.
 
 A `scope: module` gate runs **once per run**; the `--module` list scopes its rows, not the number of executions. One `cargo check` covers the whole tree and that is fine, so name **every** module in the run, not just the one an error mentions — under-claiming is the safe direction. Modules *outside* the run keep their earlier pass rows; the batch row is what tells Step 9 the tree does not build.
 

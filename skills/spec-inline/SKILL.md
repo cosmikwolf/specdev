@@ -43,9 +43,9 @@ Capture stdout, stderr, and exit code.
 Exit codes:
 - `0` — clean. Go to Step 3.
 - non-zero — surface stderr verbatim. Common error families:
-  - `INLINE-001` — block already inlined; rerun with `--merge` to update (recommended). A fresh inline would require removing the block's inlined files across `specs/specdev/` (schema, reduction, codegen, `upstream/` snapshot) — rare; prefer `--merge`.
-  - `INLINE-002` — block name not found under the plugin's `blocks/` tree. Verify spelling; list available blocks with `ls "${CLAUDE_PLUGIN_ROOT}/blocks/"`.
-  - `INLINE-003` — file collision in the destination tree (a hand-authored file at the same path as a block-emitted file). Surface the path; let the user resolve.
+  - `INLINE-001` — block name not found under the plugin's `blocks/` tree (or the block is missing its `schema.yaml` / `reduction.yaml`). Verify spelling; list available blocks with `ls "${CLAUDE_PLUGIN_ROOT}/blocks/"`.
+  - `INLINE-002` — block already inlined; rerun with `--merge` to update (recommended). Also covers a file collision in the destination — a file already sitting where a block-emitted file goes, including an existing `upstream/` snapshot. A fresh inline would require removing the block's inlined files across `specs/specdev/` (schema, reduction, codegen, `upstream/` snapshot) — rare; prefer `--merge`.
+  - `INLINE-003` — a bridge's endpoint block is not inlined yet. Inline the named block first, then retry.
   - `MERGE-001..003`, `MERGE-FILESET` — `--merge` conflict or fileset evolution. Show verbatim; the conflict markers are left in place for retry.
   - `LINEAGE-001` — lineage file inconsistent with the inlined tree. Plugin-author bug or local hand-edit; surface for the user.
   - `PLUGIN-001` — plugin root not resolvable. Re-run the preamble.

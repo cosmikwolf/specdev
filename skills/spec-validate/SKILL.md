@@ -37,11 +37,26 @@ Exit codes:
 
 ## Step 2 — present findings
 
-For each finding, the analyzer emits a line like:
+For each finding, the analyzer emits **one line**: lowercase severity, a colon, the bracketed rule,
+the location (an absolute path, with no `#` pointer), a colon, then the message. Captured from a real
+run, not paraphrased:
 
 ```
-ERROR [RULE_ID] path/to/file.toml#/pointer — message
+error: [SCHEMA] /path/to/proj/specs/modules/Broken.toml/visibility: "public" is not one of "pub", "crate" or "private"
+warning: [CONTEXT-100] /path/to/proj/specs/modules/Good.toml: module `Good` has no `context_files`. Strict codegen has no out-of-band prose to anchor on; consider adding `context_files = ["docs/<...>.md"]`.
+info: [ITEMS-001] /path/to/proj/specs/modules/Good.toml: module `Good` has 0 items[] entries — `gen` has nothing to anchor codegen to.
 ```
+
+The run ends with a count line, and the exit code follows the **error** count alone — warnings and
+infos do not change it:
+
+```
+loaded 2 modules / 0 requirements / 0 sources / 12 graph checks
+1 error(s), 2 warning(s), 21 info(s)
+```
+
+`1 error(s)` → exit 1; `0 error(s)` → exit 0, whatever the warning and info counts are. Measure the
+exit code without a pipe — `validate | tail` reports `tail`'s status, not the analyzer's.
 
 Group findings in this order, each group with one sentence of context before the verbatim findings:
 

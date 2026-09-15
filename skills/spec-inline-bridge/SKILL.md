@@ -47,11 +47,20 @@ Capture stdout, stderr, and exit code.
 Exit codes:
 - `0` — clean. Go to Step 3.
 - non-zero — surface stderr verbatim. Common error families:
-  - `INLINE-001` — bridge already inlined; rerun with `--merge`.
-  - `INLINE-002` — bridge name not found in plugin tree.
-  - `INLINE-003` — file collision in destination.
+  - `INLINE-003` — **the one you will actually see.** An endpoint block is not inlined; the message
+    names it. Run `/spec-inline <block>` first, then retry. Note this is also what a *misspelled
+    bridge name* produces: the endpoint check runs before the bridge-exists check, so a typo becomes
+    an un-inlined endpoint name. `inline-bridge egui+nih-plugXX` reports
+    ``requires `nih-plugXX` to be inlined first``, not "no such bridge". If the named endpoint looks
+    like a typo rather than a real block, treat it as a bad bridge name and check
+    `ls "${CLAUDE_PLUGIN_ROOT}/bridges/"`.
+  - `INLINE-002` — bridge already inlined; rerun with `--merge`. Also covers a file collision in the
+    destination (a file already sitting where a bridge-emitted file goes, including an existing
+    `upstream/` snapshot).
+  - `INLINE-001` — the bridge directory is missing from the plugin tree, or is missing its
+    `bindings.schema.yaml` / `reduction.yaml`. A plugin-author bug rather than a user typo — a typo
+    surfaces as `INLINE-003` above.
   - `BRIDGE-LEX-001` — bridge directory in plugin tree violates lex-ordering. Plugin-author bug; surface for the user (and consider `specdev-analyzer plugin-lint`).
-  - One or both endpoint blocks not yet inlined — message names the missing block; instruct `/spec-inline <block>` first.
   - `MERGE-001..003` — `--merge` conflict; see the conflict-resolution guidance under `/spec-inline`.
   - `PLUGIN-001` — plugin root not resolvable.
 
