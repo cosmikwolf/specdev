@@ -73,12 +73,12 @@ reaches something the Edge runtime cannot load. Split the config in two:
 an edge-safe half with providers and callbacks, and the full call that
 adds the rest.
 
-**There is no middleware module.** The `nextjs-app` profile's roles are
-`app`, `layout`, `page`, `route_handler`, `boundary`, `component`,
-`server_action`, `service` and `model`; none of them is the
-`middleware.ts` (Next 16: `proxy.ts`) file, and no derived-file rule
-writes one. A spec-managed project therefore does not gate routes in
-middleware. Gate them per module instead: each protected `page` or
+**There is usually no middleware module.** A spec-managed project has
+only the roles its profile defines. Read the project's profile role list
+before assuming middleware exists: where no role produces the
+`middleware.ts` (Next 16: `proxy.ts`) file, nothing does — no
+derived-file rule writes one either — and the project cannot gate routes
+in middleware. Gate them per module instead: each protected `page` or
 `route_handler` calls `auth()` in its body (or a small `service` module
 that wraps `auth()` and checks the role) and redirects or returns 401
 itself. That path works today, keeps every guard inside a module the
