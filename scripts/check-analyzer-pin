@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+#
+# check-analyzer-pin — do the install instructions name the analyzer version
+# that actually sits beside us?
+#
+# Three files in THIS repository tell a user which specdev-analyzer to install.
+# All three name a version this repository does not own, so nothing here can
+# check them without the sibling checkout. That makes this script LOCAL-ONLY,
+# the same class as `every_fixture_file_matches_the_live_plugin_tree`, whose
+# `live_plugin()` panics when the sibling tree is absent.
+#
+# Why it exists: a stale pin is a SILENT failure. The install succeeds, the
+# user gets the wrong analyzer, and nothing complains until `contract_version`
+# moves — at which point the error names a schema key, not a version mismatch.
+#
+# Usage:
+#   scripts/check-analyzer-pin [path-to-specdev-analyzer]
+#
+# Exit 0 = every site names the sibling's declared version.
+# Exit 1 = a site is stale, missing, or disagrees. Each is named.
+# Exit 2 = could not run (no sibling checkout, unreadable Cargo.toml).
+
+set -uo pipefail
+
+plugin_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+analyzer="${1:-$(dirname "$plugin_root")/specdev-analyzer}"
+
+if [ ! -f "$analyzer/Cargo.toml" ]; then
+  echo "check-analyzer-pin: no analyzer checkout at $analyzer" >&2
+  echo "  Pass one explicitly: scripts/check-analyzer-pin <path>" >&2
+  echo "  This check cannot run without it, and a skipped check is not a pass." >&2
+  exit 2
+fi
+
+# The [package] version, not the first `version =` in the file — a dependency
+# table would otherwise win.
+declared="$(awk -F'"' '/^\[package\]/{p=1;next} /^\[/{p=0} p && /^version[[:space:]]*=/{print $2; exit}' "$analyzer/Cargo.toml")"
+
+if [ -z "$declared" ]; then
+  echo "check-analyzer-pin: could not read [package].version from $analyzer/Cargo.toml" >&2
+  exit 2
+fi
+
+want="v$declared"
+rc=0
+
+# Every file that tells a user how to install the analyzer. Adding a fourth
+# site and forgetting this list is the failure mode; the count is asserted
+# below so the list cannot silently shrink.
+sites=(
+  "README.md"
+  "shared/analyzer-install.md"
+  "scripts/resolve-context"
+)
+
+found_total=0
+for rel in "${sites[@]}"; do
+  f="$plugin_root/$rel"
+  if [ ! -f "$f" ]; then
+    echo "MISSING  $rel — the site moved or was renamed; update this script" >&2
+    rc=1
+    continue
+  fi
+  # Count install lines, then check each one carries the right tag. A file with
+  # two install lines and one pin is the case a grep -q would call clean.
+  while IFS= read -r line; do
+    found_total=$((found_total + 1))
+    if ! printf '%s' "$line" | grep -q -- "--tag $want"; then
+      echo "STALE    $rel" >&2
+      echo "         want --tag $want (from $analyzer/Cargo.toml)" >&2
+      echo "         got  $(printf '%s' "$line" | sed 's/^ *//')" >&2
+      rc=1
+    fi
+  done < <(grep -h -- "cargo install --git" "$f")
+done
+
+if [ "$found_total" -eq 0 ]; then
+  echo "check-analyzer-pin: walked zero install lines — a walk bug reads as a clean pass" >&2
+  exit 2
+fi
+
+if [ "$rc" -eq 0 ]; then
+  echo "check-analyzer-pin: $found_total install site(s) all pin --tag $want"
+fi
+exit "$rc"
