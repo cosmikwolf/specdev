@@ -70,10 +70,12 @@ That table is why the field is here. The next-auth block cannot see which
 driver adapter was chosen, and the prisma block cannot see whether
 middleware calls `auth`.
 
-In a spec-managed `nextjs-app` project the answer to "does middleware
-call `auth`" is **no** until the profile grows a middleware role: no
-role produces `middleware.ts` / `proxy.ts`, so route gating happens per
+In a spec-managed project the answer to "does middleware call `auth`" is
+**no** wherever the project's profile defines no middleware role: nothing
+then produces `middleware.ts` / `proxy.ts`, so route gating happens per
 `page` / `route_handler` module (the next-auth codegen README says how).
+Check the profile's role list; where it does define one, read the table
+as written.
 Read the table with the middleware column as not applicable: any adapter
 row works with `database`, and `jwt` remains the choice when you want no
 session query per request. `edge_split = true` with `jwt` is the
