@@ -119,7 +119,7 @@ Do not edit files. Do not run `--merge` from this skill — drift is a read-only
 
 If drift errors with `LINEAGE-001`, the project's `lineage.toml` is inconsistent with the inlined tree (e.g., a block was hand-deleted but lineage still claims it; or a file was added under one of a block's four locations without a matching lineage entry). Surface the message verbatim. Resolving lineage is a manual step:
 
-- Restoring a deleted block: prefer `/spec-inline <block> --merge`, which updates in place. A plain `/spec-inline` is refused with `INLINE-001` while the block is still inlined, and clearing that means removing the block's files across **all four** locations (`schemas/inlined/blocks/<block>.schema.yaml`, `reductions/blocks/<block>.yaml`, `codegen/<lang>/blocks/<block>/`, `upstream/blocks/<block>/`) — rare, and `/spec-inline`'s own `INLINE-001` text says the same. Prefer `--merge`.
+- Restoring a deleted block: prefer `/spec-inline <block> --merge`, which updates in place. A plain `/spec-inline` is refused with `INLINE-002` while the block is still inlined, and clearing that means removing the block's files across **all four** locations (`schemas/inlined/blocks/<block>.schema.yaml`, `reductions/blocks/<block>.yaml`, `codegen/<lang>/blocks/<block>/`, `upstream/blocks/<block>/`) — rare, and `/spec-inline`'s own `INLINE-002` text says the same. Prefer `--merge`.
 - Cleaning up an unexpected file under an inlined unit: delete it (it isn't a block-emitted file) and re-run `/spec-drift` to confirm.
 
 Do not auto-edit `lineage.toml`.

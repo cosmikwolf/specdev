@@ -42,9 +42,15 @@ project against schemas the plugin does not ship.
    - `[MANIFEST-001]` naming a file **under the plugin tree** — an analyzer
      older than the `contract_version` handshake. Re-install.
 
-   Neither means anything is wrong with your project. `specdev-analyzer`
-   and the plugin both report `0.1.0` and always have, so the version
-   numbers cannot tell you which is older; `contract_version` can.
+   Neither means anything is wrong with your project.
+
+   **Do not use the version numbers to answer this.** Both repositories are
+   at `0.2.0` and are revved together per release, so the two numbers match
+   whenever they were released together — and a matching pair says nothing
+   about the binary you actually have installed, which can be any older
+   release. `specdev-analyzer --version` reports what is on your PATH, not
+   what the plugin needs, and nothing compares them for you.
+   `contract_version` is the real handshake, and it is the one that fires.
 
 2. Add the marketplace and install the plugin in Claude Code:
 
@@ -59,7 +65,7 @@ project against schemas the plugin does not ship.
    claude --plugin-dir /path/to/specdev
    ```
 
-3. Verify the install: type `/` in Claude Code and confirm the specdev commands appear in the slash-command menu. The shipped surface is `/spec-init`, `/spec-design`, `/spec-edit`, `/spec-decide`, `/spec-question`, `/spec-validate`, `/spec-gen`, `/spec-reverse`, `/spec-inline`, `/spec-inline-bridge`, `/spec-drift`, `/spec-sync-items`. If they do not appear, re-run the marketplace add or check `/plugin` for installation errors.
+3. Verify the install: type `/` in Claude Code and confirm the specdev commands appear in the slash-command menu. **Seventeen** commands ship; the Commands table below lists them all. Rather than counting them by eye, compare the menu against the install: `ls "${CLAUDE_PLUGIN_ROOT}/skills/"`. If none appear, re-run the marketplace add or check `/plugin` for installation errors.
 
 ## Quickstart
 
@@ -101,8 +107,15 @@ From an existing **Rust** codebase (reverse engineering is Rust-only today):
 | `/spec-inline-bridge`  | Inline a canonical bridge between two already-inlined blocks. Bridge name is `<a>+<b>` with `a` and `b` lex-ordered. |
 | `/spec-drift`          | Read-only report on which inlined files diverge from the plugin tree or have been hand-edited. |
 | `/spec-sync-items`     | Three-stage sync (deterministic diff → AI-advisory rationale → human approval → spec mutation) reconciling a module's `[[items]]` with what tree-sitter finds in source. |
+| `/spec-config`         | Write the two files the project owns from then on — `.claude/rules/specdev.md` (the project rules, so they survive with hooks disabled) and `specdev-feedback.md` (an append-only log for the specdev developer). Each only when absent; never overwrites, never merges. `/spec-init` runs it for you. |
+| `/spec-add-member`     | Adopt a validated single-crate spec into `crates/<member>/` under a `rust-workspace` root, preserving requirement / decision / open-question ids. For a greenfield workspace use `/spec-init --profile rust-workspace` instead. |
+| `/spec-create-block`   | **Plugin authoring.** Scaffold a NEW block unit (schema + reduction + codegen prose + deps + README, and a compiled reference crate) for a framework, library or hardware family. To inline an existing block, use `/spec-inline`. |
+| `/spec-create-bridge`  | **Plugin authoring.** Scaffold a NEW canonical bridge between two blocks that already exist in the plugin tree. To inline an existing bridge, use `/spec-inline-bridge`. |
+| `/spec-create-profile` | **Plugin authoring.** Scaffold a NEW profile (manifest + schemas + reduction + templates + codegen conventions) for a project shape not already covered. To bootstrap an existing profile, use `/spec-init`. |
 
 `/spec-inline` and `/spec-inline-bridge` are the user-facing block / bridge inlining surface; both are thin wrappers over `specdev-analyzer inline` / `inline-bridge`.
+
+The last three are **plugin-authoring** commands: they extend the plugin's own `blocks/`, `bridges/` and `profiles/` trees. A project consuming specdev never needs them. To check this table against what is installed, `ls "${CLAUDE_PLUGIN_ROOT}/skills/"` — it must list the same names.
 
 ## Project layout
 
@@ -187,7 +200,7 @@ What this repo currently ships at HEAD (subject to change as new profiles / bloc
 
 ### Authoring your own profile / block / bridge
 
-Drop it under `blocks/<name>/` or `bridges/<a>+<b>/` or `profiles/<name>/` in the plugin tree (or any git repo / local path), then pull it into a project via `specdev-analyzer inline <block> --from <url|path>` or its `/spec-inline` wrapper. Plugin CI lints the layout via `specdev-analyzer plugin-lint`.
+Drop it under `blocks/<name>/` or `bridges/<a>+<b>/` or `profiles/<name>/` in the plugin tree (or any git repo / local path), then pull it into a project via `specdev-analyzer inline <block> --from <url|path>` or its `/spec-inline` wrapper. The layout is linted by `specdev-analyzer plugin-lint`, gated in the **analyzer's** CI (`tests/plugin_lint.rs::live_plugin_lint_passes`, which checks this tree out as a sibling) rather than in this repository's. Run it yourself with `specdev-analyzer plugin-lint --plugin "${CLAUDE_PLUGIN_ROOT}"` — that gate is currently blocked on the same cross-repo token as the rest of the analyzer's CI, so do not read a missing run as a passing one.
 
 User-contributed blocks and bridges are first-class: `--from <url|path>` works against any git repo or local checkout, lineage records the origin, and `/spec-drift` / `/spec-inline --merge` handle updates with 3-way merge against `specs/specdev/upstream/`.
 

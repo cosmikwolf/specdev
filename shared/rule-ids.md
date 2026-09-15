@@ -41,7 +41,26 @@ Distinct from rule names, the analyzer emits framework-level codes that are NOT 
 | `AGGREGATOR-005` | The aggregator failed to compile after inline. |
 | `DOMAIN-003`, `REDUCE_UNRESOLVED` | A reduction's `extends` chain or relation endpoint references a kind/name that doesn't exist. |
 | `BLOCK-LINT-001..007`, `BRIDGE-LEX-001`, `REF-COVERAGE-001`, `REF-ARITY-001`, `PROSE-PROFILE-001` | Plugin-author-time lint codes (run via `specdev-analyzer plugin-lint --plugin <root>`). `REF-COVERAGE-001`/`REF-ARITY-001` = reference-crate coverage + generic-arity consistency; `PROSE-PROFILE-001` = inlined codegen prose must not name a profile. |
-| `BOOTSTRAP-001..002`, `INLINE-001..003`, `MERGE-001..003`, `PLUGIN-001`, `LINEAGE-001`, `DRIFT-INVARIANT-001..003` | Build-time CLI errors (returned as exit-2). |
+| `BOOTSTRAP-001..003`, `INLINE-001..003`, `MERGE-001..003`, `LINEAGE-001`, `DRIFT-INVARIANT-001..003`, `MANIFEST-003` | Build-time CLI refusals. **Exit 1**, not 2 — the tool ran and refused on your data. |
+| `PLUGIN-001` | Plugin root could not be resolved. Exit 2 — nothing ran. |
+
+Two of these protect files the tool did not write, and both were added after a brownfield project lost
+hand-authored content to them:
+
+- **`BOOTSTRAP-003`** — `bootstrap` found a file already sitting where it planned to write. It names
+  every collision at once and writes nothing. `--force` overwrites.
+- **`MANIFEST-003`** — `manifest --write` found a build manifest with no row in `gen-lineage.toml`
+  whose bytes differ from what the spec renders, i.e. a hand-authored `Cargo.toml` / `package.json`.
+  `--accept-edits` overwrites. Identical bytes, or a recorded manifest, are never a refusal, so the
+  ordinary regenerate loop is unaffected.
+
+`INLINE-001..003` are easy to cite backwards; the binary's meanings are:
+
+| Code | Means |
+|---|---|
+| `INLINE-001` | The block or bridge is not in the plugin tree, or is missing `schema.yaml` / `reduction.yaml`. |
+| `INLINE-002` | Already inlined (use `--merge`), **or** a file collision at a destination path. |
+| `INLINE-003` | A bridge endpoint block is not inlined yet. Also what a misspelled bridge name produces — the endpoint check runs first, so the typo is reported as a missing endpoint. |
 
 These codes are stable across profiles and live in the analyzer source (`specdev-analyzer/src/lib.rs` docstring).
 
