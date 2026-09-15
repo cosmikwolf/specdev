@@ -115,9 +115,9 @@ checksum = "a21dea9854beb860f3062d10228ce9b976da520a73474aed3171ec276bc0c032"
 
 [[package]]
 name = "fugit"
-version = "0.3.9"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e639847d312d9a82d2e75b0edcc1e934efcc64e6cb7aa94f0b1fbec0bc231d6"
+checksum = "60ee0e9ed8a394868ee05cde8705cbd8dbfc95f88e14a57134323e799bd3912a"
 dependencies = [
  "gcd",
 ]
@@ -173,9 +173,9 @@ dependencies = [
 
 [[package]]
 name = "mk20dx-hal"
-version = "0.1.1"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "27b954f9cc3e1dc14510f0a6feeb43927b2bb6e42848a09ee2fbd98a22342ad9"
+checksum = "aa093a36b244281a13b3446d1f59372f3e4be4c8fd1a5aa0b846157a206dca0b"
 dependencies = [
  "cortex-m",
  "cortex-m-rt",
