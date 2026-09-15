@@ -2,7 +2,7 @@
 name: spec-add-member
 description: This skill should be used when the user asks to "adopt an existing crate as a workspace member", "add a member to a workspace", "promote a single-crate project to a workspace", "migrate a single-crate spec into a workspace", "make this crate the first member of a workspace", "fold an existing spec into crates/", or "move a validated crate under a rust-workspace root". Adopts a *validated* single-crate spec (library-api / firmware-layered / audio-plugin) into a `crates/<member>/` slot under a `rust-workspace` root, preserving requirement / decision / open-question ids by moving the tree wholesale. Orchestrates `git mv` + `specdev-analyzer bootstrap` + workspace wiring — no new analyzer surface. For a brand-new greenfield workspace (no existing crate to adopt), use /spec-init with `--profile rust-workspace` instead.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
-argument-hint: [<existing-crate-dir>] [--into crates/<member-name>]
+argument-hint: "[<existing-crate-dir>] [--into crates/<member-name>]"
 ---
 
 # /spec-add-member — Adopt an existing crate as a workspace member

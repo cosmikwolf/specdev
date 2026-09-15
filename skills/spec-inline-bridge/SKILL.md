@@ -1,6 +1,6 @@
 ---
 name: spec-inline-bridge
-description: This skill should be used when the user names any `<a>+<b>` bridge (lex-ordered: `a < b`; e.g. `embassy+stm32h5-rs`, `egui+nih-plug`, or any user-authored bridge), or asks to "inline a bridge", "wire two blocks together", "wire <X> to <Y>", "connect two blocks", "add `<a>+<b>` to the spec", or "run specdev inline-bridge". Thin wrapper over `specdev-analyzer inline-bridge`. Resolves bridge names dynamically against `${CLAUDE_PLUGIN_ROOT}/bridges/` so user-authored bridges work the same as plugin-shipped ones.
+description: "This skill should be used when the user names any `<a>+<b>` bridge (lex-ordered: `a < b`; e.g. `embassy+stm32h5-rs`, `egui+nih-plug`, or any user-authored bridge), or asks to \"inline a bridge\", \"wire two blocks together\", \"wire <X> to <Y>\", \"connect two blocks\", \"add `<a>+<b>` to the spec\", or \"run specdev inline-bridge\". Thin wrapper over `specdev-analyzer inline-bridge`. Resolves bridge names dynamically against `${CLAUDE_PLUGIN_ROOT}/bridges/` so user-authored bridges work the same as plugin-shipped ones."
 allowed-tools: Read, Bash, Glob, Grep
 argument-hint: <bridge-name> [--merge]
 ---

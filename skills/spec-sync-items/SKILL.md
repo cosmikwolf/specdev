@@ -1,7 +1,7 @@
 ---
 name: spec-sync-items
 argument-hint: <ModuleName>
-description: This skill should be used when the user asks "is my source out of sync with the spec items", "sync items", "reconcile spec items with source", "run items propose", "audit module items", "what's drifted between my spec and source", or wants to align a module's `[[items]]` array with what tree-sitter actually finds in the source file. Three stages: deterministic detect → Claude-advisory propose with rationale → human-approved apply. Refuses to skip stages. For schema/graph-check errors, use /spec-validate. For inlined-block-vs-plugin drift, use /spec-drift.
+description: "This skill should be used when the user asks \"is my source out of sync with the spec items\", \"sync items\", \"reconcile spec items with source\", \"run items propose\", \"audit module items\", \"what's drifted between my spec and source\", or wants to align a module's `[[items]]` array with what tree-sitter actually finds in the source file. Three stages: deterministic detect → Claude-advisory propose with rationale → human-approved apply. Refuses to skip stages. For schema/graph-check errors, use /spec-validate. For inlined-block-vs-plugin drift, use /spec-drift."
 allowed-tools: Read, Edit, Write, Bash, Glob, Grep
 ---
 

@@ -68,6 +68,7 @@ Report:
 - Files written / changed (count or short list under `specs/specdev/` — schema, reduction, codegen prose, `upstream/` snapshot).
 - New `lineage.toml` entry confirmed (or merged with existing).
 - Validate result.
+- **User actions the block leaves to the user.** Read the block's `README.md` and `codegen/*/README.md` for anything marked a *user action* (a CLI to install, a code generator to run, a config file to create) and list each one with its command. A block cannot add a step to the profile's gates, so a user action that must run before the fast gate (a generated client, for example) has to be run by hand before `/spec-gen`'s gate step, and the report is where the user learns that.
 - If a paired bridge exists in the plugin tree for this block + an already-inlined block, suggest the corresponding `/spec-inline-bridge <a>+<b>` (lex-ordered). Discover paired bridges with `ls "${CLAUDE_PLUGIN_ROOT}/bridges/" | grep <block-name>` — surface only bridges where the *other* endpoint is already inlined in the project. Otherwise no follow-up suggestion.
 
 ## On merge conflicts

@@ -1,6 +1,6 @@
 ---
 name: spec-question
-description: This skill should be used in three situations. (A) NEW open question — when the user asks to "log an open question", "record an OQ", "we don't know yet", "TODO: figure out X", "this is unresolved", "open question about Y", "OQ-NNN", "we need to decide later". Authors one new entry under `specs/open_questions.toml` then validates; refuses if an OQ with the proposed id already exists. (B) DOWNGRADE / commit a default — when the user says "commit a default for OQ-NNN", "I need to unblock OQ-NNN", "unblock codegen on OQ-NNN", "gen refused on OQ-NNN", "I need to commit a working assumption", or pastes a `Refusing to generate code for module ... open question ... is unresolved` refusal. The skill walks them through flipping `status = "open"` to `status = "default_committed"` — the only in-spec escape from the codegen gate. (C) CLOSE — when the user says "close OQ-NNN", "OQ-NNN is resolved", "mark OQ-NNN closed", "OQ-NNN is moot now". The skill flips `status` to `closed` against an existing accepted Decision.
+description: "This skill should be used in three situations. (A) NEW open question — when the user asks to \"log an open question\", \"record an OQ\", \"we don't know yet\", \"TODO: figure out X\", \"this is unresolved\", \"open question about Y\", \"OQ-NNN\", \"we need to decide later\". Authors one new entry under `specs/open_questions.toml` then validates; refuses if an OQ with the proposed id already exists. (B) DOWNGRADE / commit a default — when the user says \"commit a default for OQ-NNN\", \"I need to unblock OQ-NNN\", \"unblock codegen on OQ-NNN\", \"gen refused on OQ-NNN\", \"I need to commit a working assumption\", or pastes a `Refusing to generate code for module ... open question ... is unresolved` refusal. The skill walks them through flipping `status = \"open\"` to `status = \"default_committed\"` — the only in-spec escape from the codegen gate. (C) CLOSE — when the user says \"close OQ-NNN\", \"OQ-NNN is resolved\", \"mark OQ-NNN closed\", \"OQ-NNN is moot now\". The skill flips `status` to `closed` against an existing accepted Decision."
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 argument-hint: <one-line title for the question>
 ---
@@ -79,7 +79,7 @@ Per the authoring convention in `open_questions.toml.template`: pick ONE directi
 
 ## Step 4 — write the TOML (path A)
 
-Append an `[[open_question]]` block to `specs/open_questions.toml`. Refuse and stop if the proposed `id` already appears.
+Append an `[[open_question]]` block to `specs/open_questions.toml`. Refuse and stop only if an **uncommented** `id = "<id>"` line already exists — check with `grep -E '^id = "OQ-NNN"' specs/open_questions.toml`. A commented example id in the bootstrapped template is not an entry.
 
 Use TOML's multi-line string syntax for prose fields (`text`, `verify`):
 
