@@ -44,12 +44,12 @@ project against schemas the plugin does not ship.
 
    Neither means anything is wrong with your project.
 
-   **Do not use the version numbers to answer this.** Both repositories are
-   at `0.2.0` and are revved together per release, so the two numbers match
-   whenever they were released together — and a matching pair says nothing
-   about the binary you actually have installed, which can be any older
-   release. `specdev-analyzer --version` reports what is on your PATH, not
-   what the plugin needs, and nothing compares them for you.
+   **Do not use the version numbers to answer this.** The two repositories
+   version independently (the plugin moves faster than the analyzer), so the
+   numbers are not meant to match — and neither number says anything about
+   the binary you actually have installed, which can be any older release.
+   `specdev-analyzer --version` reports what is on your PATH, not what the
+   plugin needs, and nothing compares them for you.
    `contract_version` is the real handshake, and it is the one that fires.
 
 2. Add the marketplace and install the plugin in Claude Code:

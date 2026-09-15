@@ -129,6 +129,7 @@ Step 2 is the authority; this is the contract you draft to:
 - **The struct/enum/trait the methods hang off is its own item** —
   `pub struct RateLimiter` → item `RateLimiter` (`kind = "struct"`).
 - **Private / helper members are not items.** Only `pub` surface is contract.
+- **A file whose exports the framework constrains gets only the exports the framework allows.** When the conventions doc says a role's items are a fixed set of named exports — `nextjs-app` `role = "route_handler"`: the HTTP method functions (`GET`, `POST`, …) and route-segment config only, because the derived `route.ts` is `export *` and the framework's build rejects any other export — draft **only** those as items. Do not export helpers to satisfy the item model. A helper the module needs is either unexported (and so not an item) or it belongs in a `service` module that the handler depends on; if the helpers are substantial, stop and say "this should be two modules" instead of drafting them onto the handler. Flagging the tension in `## Notes` and drafting the exports anyway is the wrong call — `validate` passes that draft and the build gate is where it fails.
 - **Prose-first, always.** Each item carries a `description` of *what it does*,
   never a mirror of how it is typed. Do not name parameters, return types,
   struct fields, or generics — that is the source's job. The `signature_hint`

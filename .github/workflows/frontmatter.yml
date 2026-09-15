@@ -1,0 +1,25 @@
+# Every skill and agent frontmatter must parse as YAML.
+#
+# Claude Code drops a skill whose `---` block does not parse, and it does so
+# silently: the session listing is shorter, nothing is logged, and
+# `claude plugin validate` does not read these files. A co-worker's session on
+# 2026-09-13 saw 10 of 17 skills for this reason. This job runs on every push
+# and pull request and fails on the first bad block.
+name: frontmatter
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Install PyYAML
+        run: pip install --quiet pyyaml
+      - name: Check skill and agent frontmatter
+        run: python3 .github/scripts/check_frontmatter.py
