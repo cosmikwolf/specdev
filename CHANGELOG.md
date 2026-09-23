@@ -14,6 +14,14 @@ and it is `1`.
 
 ## [Unreleased]
 
+### Added
+
+- **`shared/min-analyzer-version`** names the oldest `specdev-analyzer` this
+  plugin works with. The analyzer reads it and warns when it is older;
+  `scripts/check-analyzer-pin` keeps it equal to the version the install
+  docs pin. The shared preamble tells a skill what to do with the warning:
+  tell the user once, continue.
+
 ### Changed
 
 - **`/spec-gen` reads the analyzer's new exit codes.** `derive` exit 3 (a
