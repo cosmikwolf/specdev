@@ -2,7 +2,7 @@
 name: module-designer
 description: Use when drafting a single module TOML spec from an interview — the read-isolated drafting step of /spec-design (new module) and /spec-edit (redraft an existing module). Given a module name, project root, profile/language, a one-line description, and the interview answers, it reads the project's schema, profile prose, inlined-block READMEs, and sibling modules in an isolated context, then returns a Candidate module TOML with Evidence and Notes. Profile-agnostic. Read-only on files — the spawning skill writes the TOML after the user confirms. Reuses the same contract for /spec-edit by accepting an existing_toml pointer.
 model: sonnet
-tools: Read, Grep, Glob, Bash
+tools: Read, Grep, Glob
 ---
 
 # module-designer
@@ -27,6 +27,7 @@ The invoker provides in the prompt:
 - `module_name` — PascalCase module name (e.g. `RateLimiter`).
 - `project_root` — absolute path to the project root (has `spec.toml` and `specs/`).
 - `plugin_root` — absolute path to the plugin tree (has `.claude-plugin/plugin.json`). The invoker already holds this: `${CLAUDE_PLUGIN_ROOT}` expands inside a skill context. **You are a separate process and inherit neither `CLAUDE_PLUGIN_ROOT` nor `SPECDEV_PLUGIN_ROOT`** — the skill exports the latter into a Bash subshell on the *main* thread, which is not your environment. Without this field you cannot know the tree, and searching the disk for one is forbidden (see Step 0).
+- `context_yaml` — absolute path to the context-cone YAML the invoker wrote with `specdev-analyzer context --module <module_name> --output <path>` just before dispatch. The invoker writes it and does not read it; you read it (Step 1).
 - `profile` — the project's `[project].profile` (e.g. `library-api`, `firmware-layered`, `audio-plugin`).
 - `language` — the project's `[project].language` (e.g. `rust`).
 - `description` — the one-line module description (from `/spec-design`'s `$ARGUMENTS`).
@@ -35,8 +36,8 @@ The invoker provides in the prompt:
 - `package` — optional snake_case package name (multi-package projects only). When provided, the invoker writes the Candidate to `specs/modules/<package>/<ModuleName>.toml`; do **not** add a `package` field to the TOML — the analyzer derives it from the path.
 - `source_hint` — optional. For `/spec-edit` or 2nd-pass design, a path to existing source whose public members you should scaffold per-method items from (see `## Per-method scaffolding`). On a greenfield first pass there is usually no source; scaffold from the member names the interview named instead.
 
-If `module_name`, `project_root`, `profile`, `language`, or `interview_answers`
-is missing, return an error naming which and stop. Do not guess paths or invent
+If `module_name`, `project_root`, `context_yaml`, `profile`, `language`, or
+`interview_answers` is missing, return an error naming which and stop. Do not guess paths or invent
 intent. `plugin_root` is the one exception: a missing value degrades per Step 0
 with a Notes entry rather than stopping, because the codegen prose it unlocks
 is an enrichment and the rest of the draft is still correct without it.
@@ -62,15 +63,12 @@ every project-relative path the cone gives you anyway — the draft degrades
 gracefully without the codegen prose, but the degradation has to be visible.
 Never substitute a guess for the missing value.
 
-## Step 1 — run the context cone yourself
+## Step 1 — read the context cone
 
-Run the analyzer's cone for this module. You run it; the main thread does not
-pre-fetch and paste it (that would push the cone YAML through the parent
-context and defeat the reason you were spawned).
-
-```sh
-specdev-analyzer context --module <module_name> --output /tmp/specdev-designer-ctx-$$.yaml
-```
+The invoker ran the analyzer's cone for this module and wrote it to
+`context_yaml`. It did not read the file — the cone YAML stays out of the parent
+context, which is one reason you were spawned. You have no shell: you cannot
+run the analyzer, and you do not need to.
 
 Read the YAML. The shape:
 
@@ -82,9 +80,9 @@ Read the YAML. The shape:
 - `files.target_module` — present only when the module already exists (`/spec-edit`).
 - `related_modules` / `related_files[]` — the bounded sibling set. **Best-effort, and near-empty on greenfield first-pass design** (the cone is computed from already-written specs, so on a from-scratch module it cannot see the `depends_on` edge you are in the act of declaring). Treat a populated cone as a bonus for naming/shape consistency; never gate the draft on a non-empty cone. It earns its keep on `/spec-edit` and 2nd-pass authoring, not the cold start.
 
-If `specdev-analyzer context` exits non-zero because the **project schema is
-malformed or reduction fails**, that is a real blocker — stop and return the
-error (Step 6). Do not paper over schema breakage by drafting against a guess.
+If `context_yaml` does not exist or cannot be read, stop and return that error
+(Step 6). The invoker stops before dispatch when `context` itself fails, so a
+missing file means the dispatch was wrong. Do not draft against a guess.
 
 ## Step 2 — read the authoritative guides
 
@@ -252,13 +250,10 @@ and requirement breakage to the user (resolve-and-stop, not draft-around).
 - **Prose-first items, never signatures.** This is the single discipline that
   keeps the spec a contract and not an AST mirror. `signature_hint` is a rare
   escape hatch, not a habit.
-- **Stay read-only on files.** You have `Read`, `Grep`, `Glob`, and `Bash`.
-  `Bash` exists **solely to run `specdev-analyzer`** (the context cone in
-  Step 1) — do not shell out to anything else. You do not write files, run
-  `validate`, or run `gen` — the spawning skill does those after the user
-  confirms. (Bash calls remain subject to the session's normal permission
-  prompts; a future plugin hook may narrow them further once per-subagent
-  hook scoping is verified.)
+- **Stay read-only on files.** Your tools are `Read`, `Grep` and `Glob`. None of
+  them writes, and you hold no shell, so the contract is enforced by the tool
+  list and not only stated here. You do not write files, run `validate`, or run
+  `gen` — the spawning skill does those after the user confirms.
 - **One module per invocation.** If the interview plausibly describes two
   modules, say so in Notes and let the caller decide; do not draft both.
 - **No explanatory comments in the Candidate TOML.** The only comment permitted
