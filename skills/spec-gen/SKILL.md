@@ -49,9 +49,16 @@ Validate may also emit `codegen_unblocked` **warnings** — open questions in `s
 
 Discover module list via `ls specs/modules/*.toml`. (Workspace mode handles cross-member coordination; see "Workspace mode" below.)
 
-## Step 3.5 — incremental plan (`--all` only)
+## Step 3.5 — incremental plan
 
-A single-module invocation always regenerates that module — **skip this step**. For `--all`, don't re-author modules whose generation inputs are unchanged and whose output is still clean; regenerating them only churns the files against the minimize-diff intent (Step 5).
+**Single-module invocation.** Run `specdev-analyzer report gen-plan` and read **only the target module's row**. Two verdicts stop the run before anything is generated:
+
+- `edited` — a recorded output was changed after the last gen. Name the files and ask which the user wants: (1) **fold the change into the spec**, then regenerate; (2) **regenerate and discard the change** — right when the edit only repaired broken generated output (a syntax error, a missing import), because the spec already describes the correct code; (3) **cancel**. Do not assume (2): the file cannot tell you whether a person changed the design or repaired the output.
+- `unrecorded` — hand-written source is already at the module's path. Ask with the three options under "`unrecorded` is not a slow `new`" below.
+
+Every other verdict regenerates the module — a named module is always a target. Skip the rest of this step, including the regenerate and re-gate sets.
+
+For `--all`, don't re-author modules whose generation inputs are unchanged and whose output is still clean; regenerating them only churns the files against the minimize-diff intent (Step 5).
 
 If `$ARGUMENTS` includes `--force`, **skip the plan** — every module is a target; go to Step 4. (Use `--force` when an upstream codegen-prose change hasn't been re-inlined into `specs/specdev/codegen/`: the project's inputs are then correctly unchanged, so the plan would skip, but you want a blanket regenerate. Re-inlining stale plugin prose is `/spec-drift`'s job; `--force` is the override.)
 
@@ -65,14 +72,14 @@ It emits one deterministic verdict per module under `specs/modules/` — no judg
 
 - `unchanged` — output clean and inputs match the last gen. **Skip.**
 - `edited` — a generated output file was hand-edited (carries the `files`). **Skip** — regenerating would clobber the edit. Surface it and tell the user to reconcile via `/spec-drift`.
-- `unrecorded` — no lineage row, but the module's declared `source_file` **already exists on disk** (carries the `files`). **Stop and ask.** See below.
+- `unrecorded` — no lineage row, but a file **already exists at the module's source path** — its `source_file`, else the language's convention path under `[paths].source` (e.g. `src/<snake_name>.ts`), the same path `extract-items` reads (carries the `files`). **Stop and ask.** See below.
 - `stale` — output clean but the spec or assembled prompt changed since the last gen. **Regenerate.**
 - `missing` — a recorded output file is gone. **Regenerate.**
-- `new` — never generated, and nothing at the declared path. **Regenerate.**
+- `new` — never generated, and nothing at the module's source path. **Regenerate.**
 
 Your **regenerate set** is every module whose category is `new`, `stale`, or `missing`. The rest are skipped on this axis (carry the `unchanged`, `edited` and `unrecorded` counts into the Step 9 report).
 
-**`unrecorded` is not a slow `new`.** It means this project adopted specdev over code it already had: the file at the module's `source_file` is hand-authored, and `/spec-gen` has never written it. Generating would overwrite working source that the plan never warned about. Do not put these modules in the regenerate set, and do not silently skip them either — a skipped module reads as done.
+**`unrecorded` is not a slow `new`.** It means this project adopted specdev over code it already had: the file at the module's source path is hand-authored, and `/spec-gen` has never written it. Generating would overwrite working source that the plan never warned about. Do not put these modules in the regenerate set, and do not silently skip them either — a skipped module reads as done.
 
 For each `unrecorded` module, name the file and ask the user which of these they want:
 
@@ -122,7 +129,7 @@ Read the preamble once. It is the contract for **every** module you generate thi
 specdev-analyzer gen --module <Name> --tail
 ```
 
-`--tail` enforces two gates before assembling, and it does so in every mode — a single-module run and `--force` skip Step 3.5, not this.
+`--tail` enforces two gates before assembling, and it does so in every mode — a single-module run reads only its own plan row and `--force` skips the plan, but neither skips this.
 
 - **The gate registry.** If `specs/specdev/profile.yaml` declares no gate with `scope: module` (no `gates:` key, a batch-only registry, or no inlined profile at all), `--tail` aborts non-zero. The message carries the fix: the plugin's `gates:` block for this profile to paste into the inlined profile, or — for a profile that ships none — the minimal shape to write. Present it verbatim and stop the run; nothing is generated ungated. The user pastes and re-runs.
 - **The codegen gate.** If the module is reachable from an open question (`status = "open"` in `specs/open_questions.toml`), it aborts non-zero with a refusal naming the question, the module, and the exit options. Present the refusal verbatim and stop for that module. The user resolves via `/spec-question` (close the question, or commit a provisional default to downgrade it to `default_committed`); then re-run this step.
