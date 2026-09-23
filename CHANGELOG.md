@@ -12,6 +12,16 @@ The plugin and `specdev-analyzer` version **independently**. They are not
 meant to match. `contract_version` is the compatibility number between them,
 and it is `1`.
 
+## [Unreleased]
+
+### Changed
+
+- **`/spec-gen` reads the analyzer's new exit codes.** `derive` exit 3 (a
+  target held back as `edited` / `conflict`) is carried to the report as an
+  action item and the run continues to lineage recording; `gen --tail` exit 2
+  (could not run) is reported as a tree or tool defect, not as a spec
+  refusal. Needs the `specdev-analyzer` release that introduces those codes.
+
 ## [0.2.1] — 2026-09-15
 
 First tagged release. Requires `specdev-analyzer` **v0.2.0** or later.
