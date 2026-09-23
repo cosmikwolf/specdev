@@ -90,5 +90,20 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22.18.0
+      # One target dir for every reference crate. Each crate still resolves
+      # from its own committed Cargo.lock, so nothing about what is checked
+      # changes; cargo only stops rebuilding a dependency unit it built for
+      # the previous crate (same version, features, target and profile). The
+      # locked graphs repeat 39% of their compile units (measured with
+      # `cargo build --unit-graph` on 13 of the 17 crates; the egui group,
+      # which shares most of its tree, could not resolve locally, so the real
+      # figure is higher). Cold local build of 12 crates: 195 s and 4.1 GB with
+      # one dir each, 150 s and 3.1 GB shared, 0 failures either way (#194).
+      #
+      # No cache across runs: the toolchain is nightly, so a target-dir cache
+      # keyed on it misses every day, and its size against the 10 GB repo
+      # cache limit is unmeasured. freshness-sweep.yml stays as it is.
       - name: Build reference crates
+        env:
+          CARGO_TARGET_DIR: ${{ runner.temp }}/reference-target
         run: bash .github/scripts/build-reference-crates.sh
