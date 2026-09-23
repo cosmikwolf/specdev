@@ -53,12 +53,21 @@ Batch all relevant questions in one message. Show defaults so a fluent user can 
 
 ## Step 2 — dispatch the `module-designer` subagent, then write
 
-Dispatch the `module-designer` subagent to draft the Candidate TOML. It runs the analyzer's context cone itself and reads the schema, profile prose, inlined-block READMEs, and sibling modules in an *isolated* context — keeping that 5–15-file read out of this conversation. Do **not** run `specdev-analyzer context` here and paste the cone into the prompt; pre-fetching defeats the reason the subagent exists.
+Dispatch the `module-designer` subagent to draft the Candidate TOML. It reads the context cone, the schema, profile prose, inlined-block READMEs, and sibling modules in an *isolated* context — keeping that 5–15-file read out of this conversation.
+
+The subagent has no shell, so it cannot run the analyzer — that is what makes its read-only contract enforced rather than stated. Write the cone to a file for it first, and **do not read that file here**; reading or pasting it defeats the reason the subagent exists:
+
+```sh
+ctx=$(mktemp -t specdev-designer-ctx.XXXXXX) && specdev-analyzer context --module <ModuleName> --output "$ctx" && echo "$ctx"
+```
+
+If `context` exits non-zero (malformed project schema, reduction failure), relay its error and stop — do not dispatch.
 
 Pass the input contract from `agents/module-designer.md`:
 
 - `module_name` — the PascalCase name.
 - `project_root` — absolute project root.
+- `context_yaml` — the absolute path the command above printed.
 - `plugin_root` — the absolute plugin-tree path, i.e. `${CLAUDE_PLUGIN_ROOT}` expanded. **Pass it explicitly.** A subagent is a separate process: it inherits neither `CLAUDE_PLUGIN_ROOT` nor the `SPECDEV_PLUGIN_ROOT` the preamble exports, because that export lands in a Bash subshell on this thread. Omit it and the subagent has to hunt for the tree — measured, two agents in one batch found two different paths.
 - `profile`, `language` — from `spec.toml` (Step 0).
 - `description` — the one-line `$ARGUMENTS`.
