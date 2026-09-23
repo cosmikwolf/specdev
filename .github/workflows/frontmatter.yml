@@ -7,9 +7,16 @@
 # and pull request and fails on the first bad block.
 name: frontmatter
 
+# A pull request runs these checks once, against the PR merged with main.
+# A push runs them only on main: a PR merge is a push there, so the commit
+# that ships gets its own run (two PRs can pass apart and fail together).
+# A bare `push:` also ran every PR-branch push a second time.
 on:
   push:
+    branches: [main]
   pull_request:
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
   check:
