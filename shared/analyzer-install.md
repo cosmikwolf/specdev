@@ -1,8 +1,14 @@
 # Installing `specdev-analyzer`
 
 Use this when `specdev-analyzer` is not on PATH, or when it must be
-re-installed because it is older than the plugin (`MANIFEST-002`, or a
-`MANIFEST-001` naming a file under the plugin tree).
+re-installed because it is older than the plugin (`ANALYZER-VERSION-001` on
+stderr, `MANIFEST-002`, or a `MANIFEST-001` naming a file under the plugin
+tree).
+
+`ANALYZER-VERSION-001` is a warning: the command still ran. The analyzer
+prints it when its own version is older than `shared/min-analyzer-version`
+in this plugin tree. Tell the user, and offer the install below; do not
+stop the skill for it.
 
 **The plugin and the analyzer are one unit and must come from the same
 GitHub organization.** The analyzer embeds the JSON Schemas it validates the

@@ -26,3 +26,9 @@ If `[PLUGIN-001]` fires:
 2. If the export was set but resolution still fails, the value points at the wrong directory — verify `${SPECDEV_PLUGIN_ROOT}/.claude-plugin/plugin.json` exists. If not, ask the user for the correct plugin-tree path and pass `--plugin-root <path>` explicitly.
 
 Do not work around `[PLUGIN-001]` by hand-writing files the analyzer would have produced.
+
+## On `[ANALYZER-VERSION-001]` warnings
+
+Once the export above is in place, every analyzer command compares its own version with `shared/min-analyzer-version` in this plugin tree. When the binary is older, it prints one `warning: [ANALYZER-VERSION-001]` line on stderr. The command still ran, and its exit code and stdout are unchanged.
+
+Tell the user **once per session**: the installed analyzer is older than this plugin needs, and some commands can behave as the skills do not expect. Give the re-install command from `${CLAUDE_PLUGIN_ROOT}/shared/analyzer-install.md`. Then continue the skill. Do not repeat the warning for each later command. Do not read it as the command's failure.
