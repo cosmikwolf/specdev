@@ -16,10 +16,10 @@ and it is `1`.
 
 ### Added
 
-- **`shared/min-analyzer-version`** names the oldest `specdev-analyzer` this
-  plugin works with. The analyzer reads it and warns when it is older;
-  `scripts/check-analyzer-pin` keeps it equal to the version the install
-  docs pin. The shared preamble tells a skill what to do with the warning:
+- **`shared/min-analyzer-version`** names the `specdev-analyzer` version
+  this plugin is released with — the one its install docs pin, which
+  `scripts/check-analyzer-pin` asserts. The analyzer reads it and warns when
+  it is older. The shared preamble tells a skill what to do with the warning:
   tell the user once, continue.
 
 ### Changed
