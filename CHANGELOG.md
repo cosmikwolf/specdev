@@ -12,6 +12,24 @@ The plugin and `specdev-analyzer` version **independently**. They are not
 meant to match. `contract_version` is the compatibility number between them,
 and it is `1`.
 
+## [Unreleased]
+
+### Added
+
+- **`shared/min-analyzer-version`** names the `specdev-analyzer` version
+  this plugin is released with — the one its install docs pin, which
+  `scripts/check-analyzer-pin` asserts. The analyzer reads it and warns when
+  it is older. The shared preamble tells a skill what to do with the warning:
+  tell the user once, continue.
+
+### Changed
+
+- **`/spec-gen` reads the analyzer's new exit codes.** `derive` exit 3 (a
+  target held back as `edited` / `conflict`) is carried to the report as an
+  action item and the run continues to lineage recording; `gen --tail` exit 2
+  (could not run) is reported as a tree or tool defect, not as a spec
+  refusal. Needs the `specdev-analyzer` release that introduces those codes.
+
 ## [0.2.1] — 2026-09-15
 
 First tagged release. Requires `specdev-analyzer` **v0.2.0** or later.
