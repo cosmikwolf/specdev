@@ -16,6 +16,9 @@
 # Usage:
 #   scripts/check-analyzer-pin [path-to-specdev-analyzer]
 #
+# Also checks shared/min-analyzer-version, the file the analyzer reads to warn
+# when it is older than the plugin.
+#
 # Exit 0 = every site names the sibling's declared version.
 # Exit 1 = a site is stale, missing, or disagrees. Each is named.
 # Exit 2 = could not run (no sibling checkout, unreadable Cargo.toml).
@@ -79,7 +82,25 @@ if [ "$found_total" -eq 0 ]; then
   exit 2
 fi
 
+# The version the analyzer itself checks against. Every analyzer command reads
+# this file and warns when the installed binary is older, so it must name the
+# release the install lines above pin: lower and an old binary passes silently
+# (#179), higher and every correct install warns.
+min_file="$plugin_root/shared/min-analyzer-version"
+if [ ! -f "$min_file" ]; then
+  echo "MISSING  shared/min-analyzer-version — the analyzer's version check reads it" >&2
+  rc=1
+else
+  min="$(tr -d '[:space:]' < "$min_file")"
+  if [ "$min" != "$declared" ]; then
+    echo "STALE    shared/min-analyzer-version" >&2
+    echo "         want $declared (from $analyzer/Cargo.toml)" >&2
+    echo "         got  $min" >&2
+    rc=1
+  fi
+fi
+
 if [ "$rc" -eq 0 ]; then
-  echo "check-analyzer-pin: $found_total install site(s) all pin --tag $want"
+  echo "check-analyzer-pin: $found_total install site(s) all pin --tag $want; min-analyzer-version is $declared"
 fi
 exit "$rc"

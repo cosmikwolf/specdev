@@ -134,6 +134,8 @@ specdev-analyzer gen --module <Name> --tail
 - **The gate registry.** If `specs/specdev/profile.yaml` declares no gate with `scope: module` (no `gates:` key, a batch-only registry, or no inlined profile at all), `--tail` aborts non-zero. The message carries the fix: the plugin's `gates:` block for this profile to paste into the inlined profile, or — for a profile that ships none — the minimal shape to write. Present it verbatim and stop the run; nothing is generated ungated. The user pastes and re-runs.
 - **The codegen gate.** If the module is reachable from an open question (`status = "open"` in `specs/open_questions.toml`), it aborts non-zero with a refusal naming the question, the module, and the exit options. Present the refusal verbatim and stop for that module. The user resolves via `/spec-question` (close the question, or commit a provisional default to downgrade it to `default_committed`); then re-run this step.
 
+Both gates refuse with **exit 1**. **Exit 2** is not a gate: the command could not run (a module file that does not parse, an unreadable `context_files` entry, no plugin root). Report the error as a defect in the tree or the tool, not as a spec decision for the user, and stop for that module.
+
 Do not fall back to `prompt --module` or the whole-prompt `gen --module` to sidestep either gate.
 
 When the gate passes, the tail is a deterministic concatenation of:
@@ -202,7 +204,7 @@ One line per path on stdout:
 - `conflict <path>: unrecorded file at target` — a file the spec did not produce sits at the target. Kept, nothing recorded. **Action item for Step 9.**
 - `deleted <path>` — a stale derived file and its row removed.
 
-**Never pass `--accept-edits` from this skill.** A derived file is never a legitimate hand-edit target (route segment config belongs in the body, where `export *` carries it); the user runs `specdev-analyzer derive --write --accept-edits` by hand after an `edited` or `conflict` line. A non-zero exit is a refusal — two modules on one target, a page and a route handler in one segment, an unreachable rule set, a stale inlined profile (the message carries the block to paste) — surface it verbatim and stop.
+**Never pass `--accept-edits` from this skill.** A derived file is never a legitimate hand-edit target (route segment config belongs in the body, where `export *` carries it); the user runs `specdev-analyzer derive --write --accept-edits` by hand after an `edited` or `conflict` line. **Exit 3 is not a refusal:** the run completed, every other target was written, and one or more `edited` / `conflict` lines remain. Carry those lines to Step 9 as action items and **continue to Step 6.5**. Any other non-zero exit is a refusal — two modules on one target, a page and a route handler in one segment, an unreachable rule set, a stale inlined profile (the message carries the block to paste) — surface it verbatim and stop.
 
 ## Step 6.5 — record generation lineage
 
