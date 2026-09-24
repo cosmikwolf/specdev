@@ -6,6 +6,8 @@ Run this once, before any `specdev-analyzer` invocation in the session:
 export SPECDEV_PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT}"
 ```
 
+If `CLAUDE_PLUGIN_ROOT` is empty (Cursor sets it for plugin hooks only, not in the agent's shell), set `SPECDEV_PLUGIN_ROOT` to the directory above `skills/` in the path of the `SKILL.md` you are running, check that `.claude-plugin/plugin.json` exists there, and use that path wherever these skills write `${CLAUDE_PLUGIN_ROOT}`.
+
 ## Why
 
 `CLAUDE_PLUGIN_ROOT` is auto-set inside skill execution contexts but is **not** inherited by the Bash subshells the analyzer is typically invoked from on later turns. Without this export, the analyzer hits `[PLUGIN-001] plugin root not resolvable` on its first run, and every subsequent invocation repeats the failure until the user pieces together the env-propagation gap. Capturing `CLAUDE_PLUGIN_ROOT` into `SPECDEV_PLUGIN_ROOT` once makes plugin-root resolution work for the rest of the session.
