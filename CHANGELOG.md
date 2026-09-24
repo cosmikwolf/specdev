@@ -16,6 +16,25 @@ and it is `1`.
 
 ### Added
 
+- **nextjs-app: the `app` module's context cone lists every layout, page and
+  boundary** (#208). A `renders` relation, built from the roles and extending
+  `contains`, hangs them off the composition root; `context --module <app>`
+  shows them under `contains`. Needs `specdev-analyzer` with `match:`
+  relations. Existing projects get it through `migrate --refresh`.
+- **nextjs-app: `single_app_module`** (warning) — exactly one module has
+  `role = "app"`. With none the cone above is empty; with two every page
+  hangs off both.
+- **`/spec-gen` Step 6.1 checks imports against declared dependencies**
+  (`report imports`, #207). Each undeclared package is an action item in the
+  report: an `external_deps[]` entry on that module. The run does not stop.
+- **`imports.scm`** for the TypeScript and Dart language tiers.
+- `/spec-edit` and `module-designer` read the new `contains` /
+  `contained_by` context buckets; the impact matrix has a row for editing a
+  module that contains others.
+- `/spec-validate` explains `PLUGIN-AHEAD-001` (the plugin holds newer copies
+  of inlined or profile files; run `/spec-drift`, #210) and
+  `METASCHEMA-006`.
+
 - **Skills check their write against the disk** (`scripts/write-check`,
   `shared/write-check.md`). `/spec-design`, `/spec-edit`, `/spec-decide` and
   `/spec-question` snapshot content hashes before the write and compare
