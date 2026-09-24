@@ -30,6 +30,22 @@ and it is `1`.
   (could not run) is reported as a tree or tool defect, not as a spec
   refusal. Needs the `specdev-analyzer` release that introduces those codes.
 
+### Fixed
+
+- **`pnpm-workspace.yaml` has one owner per project shape, and the docs now
+  agree.** In a single `nextjs-app` app it is a paired file: written once,
+  then the project's, never gen-recorded. Only at a TypeScript workspace root
+  (`[workspace]` in `spec.toml`) does `manifest` write it and `/spec-gen`
+  record it. `/spec-gen` and the profile's conventions doc used to disagree.
+- **`/spec-validate` explains `REDUCE-001`:** a spec file did not parse, so
+  no graph check ran, and a report without graph-check findings proves
+  nothing until the next run.
+
+### Added
+
+- The README points at `specdev-analyzer report graph`, the module map
+  grouped by the profile's declared layers with wrong-way dependencies in red.
+
 ## [0.2.1] — 2026-09-15
 
 First tagged release. Requires `specdev-analyzer` **v0.2.0** or later.
