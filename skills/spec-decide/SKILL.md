@@ -56,6 +56,8 @@ Batch all relevant questions in one message. Show defaults so a fluent user can 
 - **defaults_for[]** (optional) — open-question ids this decision commits a working default for. The OQ's status flips to `default_committed` separately. **Per the authoring convention in `decisions.toml.template`, prefer the OQ-side pointer (`OQ.default_via = "DEC-..."`) over `defaults_for[]` here** — the OQ-side pointer is what the codegen-gate walk reads.
 - **codegen_include[]** (optional) — opt-in expansion of which prose fields the codegen prompt walk inlines. Default is `[text, consequences]`. Add `verification` when the decision should drive test-stub emission; add `alternatives` only when the rejected paths inform the implementation.
 
+If the decision is about **where a list of domain values lives** (a closed list in the spec, or a table in the database), use `${CLAUDE_PLUGIN_ROOT}/shared/vocabulary-placement.md`: the `text` names the list and the placement, and the `context` records the answer to its test (does a non-engineer need to add a value without a deploy?).
+
 If the user describes a decision that supersedes an existing accepted decision, fill `supersedes = [...]` with that id AND remind the user that they need to flip the OLD decision's status from `accepted` to `superseded` via direct edit of `specs/decisions.toml`. Do NOT flip the old decision's status from this skill — `/spec-decide` only creates.
 
 ## Step 3 — write the TOML
