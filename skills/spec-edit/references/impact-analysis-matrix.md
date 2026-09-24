@@ -1,6 +1,6 @@
 # spec-edit — impact analysis matrix
 
-Step 5 of `/spec-edit` audits downstream effects before writing. The cone's `related_modules` block (`upstream` / `downstream` / `port_endpoints` / `binding_endpoints` / `hardware_owners` / `re_export_targets`) is the bounded input set — these are the modules that a change to the target may break.
+Step 5 of `/spec-edit` audits downstream effects before writing. The cone's `related_modules` block (`upstream` / `downstream` / `port_endpoints` / `binding_endpoints` / `hardware_owners` / `re_export_targets` / `contains` / `contained_by`) is the bounded input set — these are the modules that a change to the target may break.
 
 For each change type the user proposes, surface findings grouped under the matching row.
 
@@ -27,3 +27,5 @@ For each change type the user proposes, surface findings grouped under the match
 ## Reporting
 
 If any issue surfaces, present them grouped by change-type row above and **wait for user confirmation** before editing. Do not silently accept a change that breaks downstream callers — the user decides whether to fix the dependents or revise the proposed edit.
+
+- **Editing a module whose `contains` list is not empty** (a composition root, e.g. the nextjs-app `app` module that owns the root layout) — every module in `contains` renders inside it, though none names it in `depends_on`. A change to what it provides (providers, fonts, metadata defaults, the frame around `children`) reaches all of them; list them. Changing its `role` away from the containing role removes those edges, and the profile's count check (e.g. `single_app_module`) reports the missing root.

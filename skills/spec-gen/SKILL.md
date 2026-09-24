@@ -188,6 +188,20 @@ The analyzer's progress lines (`wrote package.json …`, `kept N existing paired
 
 **Do not edit the generated manifest by hand.** If you need a dep that isn't there, add it to the spec — `[[external_deps]]` in `architecture.toml` for project-wide infra, or `external_deps[]` in a module file for module-scoped deps — and re-run this step.
 
+## Step 6.1 — check imports against declared dependencies
+
+For each module generated in Step 5:
+
+```sh
+specdev-analyzer report imports --module <Name>
+```
+
+Exit `0`: every package the module's source imports is one it may rely on — its own `external_deps`, the architecture-level `external_deps`, or a dep of a block or bridge it uses. Exit `1`: the YAML lists each `undeclared` package. Exit `2`: surface the error verbatim and continue.
+
+An undeclared package resolves today only because another module declares it, so the manifest, the build and every gate pass. It breaks the day that module drops the dependency, in this module, which nobody touched. It is not a build failure, so do not stop the run — but every line is an **action item** in the Step 9 report: name the module, the package, and the fix, which is an `external_deps[]` entry in that module's spec (`/spec-edit`), then Step 6 again. Do not edit the spec from this skill, and do not remove the import from the generated code to silence the line — the body needs it.
+
+`checked: false` means the project's language ships no import query (Rust, today — cargo already refuses a crate a package does not declare); say nothing.
+
 ## Step 6.2 — derive the profile's derived files
 
 ```sh
@@ -282,6 +296,8 @@ Do not auto-edit code to fix build errors stemming from missing scaffolding outs
 ## Step 9 — report
 
 For an incremental `--all`, open with a one-line summary of the plan from Step 3.5: `N unchanged + verified (skipped), R re-gated (unchanged, gate re-run), M regenerated, K edited (skipped — reconcile via /spec-drift)`, naming the `edited` modules and their files so the user can act on them. If the plan carried a `batch:` row with `pass: false`, say so on its own line: the tree did not build the last time a gate ran. A `--force` or single-module run has no plan summary.
+
+Every `undeclared` line from Step 6.1 is an **action item**, one line each: module, package, and the `external_deps[]` entry that fixes it.
 
 Every `edited` and `conflict` line Step 6.2 printed is an **action item**, one line each: the path, what stands there (a hand edit in a derived file; an unrecorded file at a derived target), and the exit — `specdev-analyzer derive --write --accept-edits`, or move the file. A `conflict` records nothing, so the module reads `unchanged` and this line is the only signal that its route file is not the spec's.
 

@@ -62,11 +62,11 @@ Group findings in this order, each group with one sentence of context before the
 
 1. **Layout / setup** — `LAYOUT-001..006`, `PLUGIN-001`. Project tree is incomplete or the plugin root is unresolvable.
 2. **Schema errors** — `SCHEMA`, `SCHEMA-ARCH`, `SCHEMA-REQ`. A TOML file violates its JSON Schema (unknown field, bad enum, missing required key, pattern mismatch).
-3. **Metaschema / aggregator** — `METASCHEMA-001..005`, `AGGREGATOR-005`. Inlined block/bridge schemas are misshapen or fail to compile into the aggregator. Usually a plugin-author bug surfaced after `inline`.
+3. **Metaschema / aggregator** — `METASCHEMA-001..006`, `AGGREGATOR-005`. Inlined block/bridge schemas are misshapen or fail to compile into the aggregator. Usually a plugin-author bug surfaced after `inline`.
 4. **Kind resolution** — `DOMAIN-003`, `REDUCE_UNRESOLVED`. A reduction's `extends` chain or relation endpoint references a kind/name that doesn't exist in the materialized graph.
    `REDUCE-001` is different: a spec file did not parse (the message names it; for a module, `LAYOUT-005` names it too), so the graph was never built and **no graph check ran**. A report with no group-5 findings proves nothing while `REDUCE-001` is present. Fix the parse error first and re-run; graph-check findings can appear only on the next run.
 5. **Graph checks** — rule names declared in `specs/specdev/domain.toml` `[validation.rules]` (e.g. for firmware-layered: `unique_qualified_names`, `modules_acyclic`, `layer_dependency`, `connection_endpoints_resolve`; for library-api: `feature_unique_names`, `feature_dependencies_resolve`, `module_feature_gates_resolve`, etc.). These come after the spec parses cleanly and depend on cross-file invariants.
-6. **Warnings and info** — including `codegen_unblocked`: a module is reachable from an open question (`status = "open"` in `specs/open_questions.toml`) and `/spec-gen` will refuse it. This is a warning at validate time and a hard refusal at gen time; the fix lives in `/spec-question` (close the question, or commit a provisional default), not in this skill.
+6. **Warnings and info** — including `PLUGIN-AHEAD-001`: the plugin holds newer copies of inlined or profile files than this project. Name the count and offer `/spec-drift`, which shows each file and the command that brings it forward; do not merge or refresh from this skill. Also `codegen_unblocked`: a module is reachable from an open question (`status = "open"` in `specs/open_questions.toml`) and `/spec-gen` will refuse it. This is a warning at validate time and a hard refusal at gen time; the fix lives in `/spec-question` (close the question, or commit a provisional default), not in this skill.
 
 Do not paraphrase analyzer messages — the raw text is the most precise.
 
