@@ -14,6 +14,13 @@ and it is `1`.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Cursor: the plugin-root preamble handles an empty `CLAUDE_PLUGIN_ROOT`**
+  (#220). Cursor sets that variable for plugin hooks only, so the agent's
+  shell copied an empty value into `SPECDEV_PLUGIN_ROOT`. The preamble now
+  says to take the directory above `skills/` from the `SKILL.md` path.
+
 ## [0.2.2] — 2026-09-24
 
 ### Added
