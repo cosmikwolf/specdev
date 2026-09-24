@@ -115,6 +115,8 @@ From an existing **Rust** codebase (reverse engineering is Rust-only today):
 
 `/spec-inline` and `/spec-inline-bridge` are the user-facing block / bridge inlining surface; both are thin wrappers over `specdev-analyzer inline` / `inline-bridge`.
 
+**To see how the modules fit together**, run `specdev-analyzer report graph` (Mermaid) or `report graph --format dot`. It draws every module, grouped by the layers your profile's `domain.toml` declares, with each dependency that points the wrong way through the layers in thick red — the same edges `/spec-validate` reports. The output is deterministic: commit it (`report graph -o docs/module-map.mmd`) and a pull request shows every new edge.
+
 The last three are **plugin-authoring** commands: they extend the plugin's own `blocks/`, `bridges/` and `profiles/` trees. A project consuming specdev never needs them. To check this table against what is installed, `ls "${CLAUDE_PLUGIN_ROOT}/skills/"` — it must list the same names.
 
 ## Project layout
