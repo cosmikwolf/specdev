@@ -96,6 +96,8 @@ Two paths, by change size:
 
 Either path follows the priority-ordered TOML authoring rules in `${CLAUDE_PLUGIN_ROOT}/skills/spec-design/references/toml-authoring-rules.md` (schema-as-contract, required fields, the per-method item model, inline-table preference, naming conventions, layer discipline, one-module-per-file, comment policy). The "When editing existing TOML" section at the bottom is the spec-edit-specific carve-out: preserve existing indentation/key order where not semantically changed; an item-surface change adds/removes whole `<Type>::<member>` items rather than expanding one into a signature; strip disallowed comments as part of the edit; leave `# LOW:` markers from `/spec-reverse` alone until the user has confirmed each one.
 
+**Check the write against the disk,** on both paths: wrap the edit of the module file in the snapshot/compare pair in `${CLAUDE_PLUGIN_ROOT}/shared/write-check.md`. The focused diff below is `git diff -- <file>` from the disk, not the change you intended.
+
 Show a focused diff of the change (for the subagent path, diff its redrafted Candidate against the original — it should show only the intended change). For non-trivial edits, wait for user confirmation before running validate.
 
 ## Step 7 — validate

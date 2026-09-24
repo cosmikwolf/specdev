@@ -80,6 +80,8 @@ The subagent returns three sections: `## Candidate TOML`, `## Evidence`, `## Not
 
 Review the Candidate against the Evidence and Notes. Surface anything the Notes flag (per-method descriptions to refine, requirements to author, downstream follow-ups). On the user's confirmation, write the Candidate TOML verbatim to `specs/modules/<ModuleName>.toml` (under `specs/modules/<package>/` for multi-package). The authoring rules in `references/toml-authoring-rules.md` are the subagent's contract; the main thread's job here is the comment-policy carve-out (the Candidate carries only the `#:schema` directive) and the file write.
 
+**Check the write against the disk.** Wrap the write of `specs/modules/<ModuleName>.toml` in the snapshot/compare pair in `${CLAUDE_PLUGIN_ROOT}/shared/write-check.md`, and build the Step 5 report from the file read back, not from the Candidate.
+
 If the user raises a structural issue ("actually this should be two modules"), stop, write a short plan, and wait for confirmation before re-dispatching.
 
 ## Step 3 — validate
