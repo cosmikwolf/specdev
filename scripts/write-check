@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+#
+# write-check — does a skill's report of what it wrote match the disk?
+#
+# A skill that writes spec files used to build its report from what it meant
+# to write. In the field one report named a file that was never written, and
+# one write changed a file the report never named. This script compares the
+# work tree before and after the write step.
+#
+#   write-check snapshot <target>...          > "$snap"
+#   write-check compare  "$snap" <target>...
+#
+# `snapshot` records a content hash for each <target> (the files the skill is
+# about to write) and for every modified or untracked file in the tree. Content
+# hashes, not `git status` lines: a second write to a file that is already
+# modified leaves `git status` unchanged.
+#
+# `compare` prints one line per finding, paths relative to the repository root:
+#
+#   wrote <path>         a target whose content changed (or that is new)
+#   not-written <path>   a target whose content did not change
+#   unexpected <path>    another file whose content changed, or that appeared
+#
+# and exits 0 when every target was written and nothing unexpected changed,
+# 1 when any `not-written` or `unexpected` line was printed, and 2 when it
+# could not run (not a git work tree, unreadable snapshot). A skill stops on
+# `not-written` and warns on `unexpected`: a dev server or a person can
+# change a file in the same tree.
+
+set -uo pipefail
+
+die() { echo "write-check: $*" >&2; exit 2; }
+
+root="$(git rev-parse --show-toplevel 2>/dev/null)" || die "not a git work tree; the check did not run"
+
+# Repository-relative form of a path given relative to the current directory.
+# Resolves through the directory when it exists (symlinks, `..`); for a
+# target in a directory not created yet, joins it to the current directory.
+rel() {
+  local p d
+  if d="$(cd "$(dirname "$1")" 2>/dev/null && pwd -P)"; then
+    p="$d/$(basename "$1")"
+  else
+    case "$1" in /*) p="$1" ;; *) p="$(pwd -P)/${1#./}" ;; esac
+  fi
+  echo "${p#"$(cd "$root" && pwd -P)"/}"
+}
+
+# "<hash> <path>" for one repository-relative path; hash `absent` when missing.
+hash_line() {
+  if [ -f "$root/$1" ]; then
+    printf '%s %s\n' "$(git -C "$root" hash-object -- "$1")" "$1"
+  else
+    printf 'absent %s\n' "$1"
+  fi
+}
+
+snapshot() {
+  {
+    for t in "$@"; do hash_line "$(rel "$t")"; done
+    git -C "$root" ls-files -z -m -o --exclude-standard |
+      while IFS= read -r -d '' f; do hash_line "$f"; done
+  } | sort -u -k2
+}
+
+cmd="${1:-}"; shift || true
+case "$cmd" in
+  snapshot)
+    snapshot "$@"
+    ;;
+  compare)
+    snap="${1:-}"; shift || true
+    [ -r "$snap" ] || die "cannot read snapshot \`$snap\`"
+    after="$(mktemp)"; tlist="$(mktemp)"
+    trap 'rm -f "$after" "$tlist"' EXIT
+    snapshot "$@" > "$after"
+    for t in "$@"; do rel "$t"; done > "$tlist"
+    # Plain awk, no bash 4 features: macOS still ships bash 3.2 as /bin/bash.
+    awk -v SNAP="$snap" -v TGT="$tlist" '
+      BEGIN {
+        while ((getline l < SNAP) > 0) { i = index(l, " "); before[substr(l, i + 1)] = substr(l, 1, i - 1) }
+        while ((getline l < TGT) > 0) target[l] = 1
+        rc = 0
+      }
+      {
+        i = index($0, " "); h = substr($0, 1, i - 1); p = substr($0, i + 1)
+        b = (p in before) ? before[p] : "absent"
+        if (p in target) {
+          if (b == h) { print "not-written " p; rc = 1 } else print "wrote " p
+        } else if (b != h) { print "unexpected " p; rc = 1 }
+      }
+      END { exit rc }
+    ' "$after"
+    ;;
+  *)
+    echo "usage: write-check snapshot <target>... | compare <snapshot-file> <target>..." >&2
+    exit 2
+    ;;
+esac

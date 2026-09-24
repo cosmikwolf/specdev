@@ -143,6 +143,8 @@ Prerequisite: an accepted Decision exists that resolves the question. If not, st
    - Remove `verify` and `default_via` if present (the schema's `allOf` forbids them on closed entries — leaving them tripped the schema check).
 3. Run `specdev-analyzer validate --no-color` and confirm it passes.
 
+**Every path writes `specs/open_questions.toml`.** Wrap that write (the append in path A, the in-place edit in paths B and C) in the snapshot/compare pair in `${CLAUDE_PLUGIN_ROOT}/shared/write-check.md`, and report the entry as read back from the file.
+
 ## Step 7 — validate (all paths)
 
 Run from the project root:
