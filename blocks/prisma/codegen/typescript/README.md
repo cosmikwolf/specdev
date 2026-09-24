@@ -186,6 +186,42 @@ that outruns `timeout` is rolled back.
 Pass an array instead of a callback for independent writes that must land
 together. The array form is one round trip and cannot read between steps.
 
+### A call into another module inside the transaction
+
+A function in another module that must take part in the transaction has to
+take the transaction client as a parameter. Called with no client, it runs on
+the outer `prisma`: a second pooled connection that cannot see the
+transaction's uncommitted rows, and that commits on its own whatever the
+transaction later does.
+
+```ts
+import { Prisma } from "./generated/prisma/client";
+import { prisma } from "./db";
+
+// The callee takes the client it runs on; outside a transaction it
+// defaults to the outer client.
+export async function addBooking(
+  eventId: string,
+  seat: string,
+  db: Prisma.TransactionClient = prisma,
+): Promise<void> {
+  await db.booking.create({ data: { eventId, seat } });
+}
+
+// The caller passes `tx`.
+await prisma.$transaction(async (tx) => {
+  const event = await tx.event.create({ data: { name, startsAt } });
+  await addBooking(event.id, seat, tx);
+});
+```
+
+**This is a spec-time rule, not only a codegen one.** When a module spec says
+it calls `<Module>.<function>` "within the same transaction", the callee's own
+item must name the transaction-client parameter. If it does not, the two specs
+contradict each other and no correct code exists for the caller: stop, and fix
+the callee's spec (`/spec-edit <Module>`) before generating either module. Do
+not work around it by inlining the callee's writes into the caller.
+
 ## Error mapping
 
 Catch `Prisma.PrismaClientKnownRequestError` and branch on `.code`. The
