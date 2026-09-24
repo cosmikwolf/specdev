@@ -79,6 +79,8 @@ source_ref = "..."
 
 Strip optional fields the user didn't author. The schema accepts their absence; padding the file with empty placeholders is noise.
 
+**Check the write against the disk.** Wrap the append to `specs/decisions.toml` in the snapshot/compare pair in `${CLAUDE_PLUGIN_ROOT}/shared/write-check.md`, and quote the entry in Step 5 from the file read back.
+
 ## Step 4 — validate
 
 Run from the project root:
