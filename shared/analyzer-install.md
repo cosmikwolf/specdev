@@ -49,7 +49,7 @@ cargo install --path <analyzer-checkout>
 From the private repository, with the org from Step 1:
 
 ```sh
-cargo install --git https://github.com/<org>/specdev-analyzer --tag v0.2.0
+cargo install --git https://github.com/<org>/specdev-analyzer --tag v0.2.1
 ```
 
 Add `--force` when re-installing; an install at an unchanged version still
