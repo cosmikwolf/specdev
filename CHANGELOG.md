@@ -14,6 +14,8 @@ and it is `1`.
 
 ## [Unreleased]
 
+## [0.2.2] — 2026-09-24
+
 ### Added
 
 - **nextjs-app: the `app` module's context cone lists every layout, page and
