@@ -26,6 +26,7 @@ The analyzer ships these graph-check primitives (any profile may use them):
 - **`layer_dependency`** / **`layer_dependency_graph`** — for each scoped relation `(from, to)`, the `to` entity's `layer_field` must be ≤ the `from` entity's per `layer_ordering`.
 - **`endpoints_resolve`** — every value at `field` must name a materialized entity.
 - **`reachability`** — every entity in `scope` must be reachable from a root.
+- **`entity_count`** — the number of `entity_scope` entities whose `entity_attr` equals `entity_attr_value` must equal `expected_count`. A project with no entity of the scope yet passes.
 
 Profile-specific rule names map to these primitives via the `kind` field in the `[[project.graph_checks]]` block.
 
@@ -38,11 +39,13 @@ Distinct from rule names, the analyzer emits framework-level codes that are NOT 
 | `LAYOUT-001..006` | Project tree shape (missing `specs/specdev/`, missing schema, etc.). |
 | `SCHEMA`, `SCHEMA-ARCH`, `SCHEMA-REQ` | A TOML file violates its JSON Schema. |
 | `METASCHEMA-001..005` | Inlined block/bridge schema is misshapen (kind grammar, `extends`, etc.). |
+| `METASCHEMA-006` | A reduction relation reads its edges from neither or both of `from_spec` and `match`, or its `match` is misshapen. A relation like that would build no edges and say nothing. |
 | `AGGREGATOR-005` | The aggregator failed to compile after inline. |
 | `DOMAIN-003`, `REDUCE_UNRESOLVED` | A reduction's `extends` chain or relation endpoint references a kind/name that doesn't exist. |
 | `BLOCK-LINT-001..007`, `BRIDGE-LEX-001`, `REF-COVERAGE-001`, `REF-ARITY-001`, `PROSE-PROFILE-001` | Plugin-author-time lint codes (run via `specdev-analyzer plugin-lint --plugin <root>`). `REF-COVERAGE-001`/`REF-ARITY-001` = reference-crate coverage + generic-arity consistency; `PROSE-PROFILE-001` = inlined codegen prose must not name a profile. |
 | `BOOTSTRAP-001..003`, `INLINE-001..003`, `MERGE-001..003`, `LINEAGE-001`, `DRIFT-INVARIANT-001..003`, `MANIFEST-003` | Build-time CLI refusals. **Exit 1**, not 2 — the tool ran and refused on your data. |
 | `PLUGIN-001` | Plugin root could not be resolved. Exit 2 — nothing ran. |
+| `PLUGIN-AHEAD-001` | Info from `validate`: the plugin root named by `--plugin-root`, `SPECDEV_PLUGIN_ROOT` or `CLAUDE_PLUGIN_ROOT` holds newer copies of files this project inlined or bootstrapped (decided by content hash). Run `/spec-drift`. Silent when no plugin root is named. |
 
 Two of these protect files the tool did not write, and both were added after a brownfield project lost
 hand-authored content to them:

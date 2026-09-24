@@ -46,7 +46,7 @@ Run the analyzer's context cone for the target module — it returns the bounded
 specdev-analyzer context --module <Module> --output /tmp/specdev-ctx-$$.yaml
 ```
 
-Read every file path listed under `files:` and `related_files:`. The cone replaces the "every other file under `specs/modules/*.toml`" sweep — Step 5's impact analysis runs against `related_modules` (upstream / downstream / port_endpoints / binding_endpoints / hardware_owners / re_export_targets) instead of the full module tree, with the same logic.
+Read every file path listed under `files:` and `related_files:`. The cone replaces the "every other file under `specs/modules/*.toml`" sweep — Step 5's impact analysis runs against `related_modules` (upstream / downstream / port_endpoints / binding_endpoints / hardware_owners / re_export_targets / contains / contained_by) instead of the full module tree, with the same logic.
 
 Order to read:
 
@@ -83,7 +83,7 @@ If the request is ambiguous, ask focused questions — batch them in one message
 
 ## Step 5 — impact analysis
 
-Audit downstream effects per `references/impact-analysis-matrix.md`. The cone's `related_modules` block (`upstream` / `downstream` / `port_endpoints` / `binding_endpoints` / `hardware_owners` / `re_export_targets`) is the bounded input set; the matrix enumerates what to grep / cross-check for each change type (action rename, port rename, layer change, `depends_on` change, hardware reassignment, concurrency-model change, binding edit, visibility change, feature-gate edit).
+Audit downstream effects per `references/impact-analysis-matrix.md`. The cone's `related_modules` block (`upstream` / `downstream` / `port_endpoints` / `binding_endpoints` / `hardware_owners` / `re_export_targets` / `contains` / `contained_by`) is the bounded input set; the matrix enumerates what to grep / cross-check for each change type (action rename, port rename, layer change, `depends_on` change, hardware reassignment, concurrency-model change, binding edit, visibility change, feature-gate edit).
 
 If any issue surfaces, present findings grouped by change type and **wait for confirmation** before editing.
 
