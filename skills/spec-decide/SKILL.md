@@ -97,12 +97,23 @@ Show the output. If errors:
 3. Fix the modeling problem. Do not delete fields to silence the checker.
 4. Re-validate until clean.
 
+## Step 4.5 — show where the decision reaches
+
+```sh
+specdev-analyzer report decisions --decision <id>
+```
+
+The `decisions` row lists every module whose codegen prompt carries this decision (`reaches`). It is computed by the same function that assembles the prompt, so it is exact. A new decision normally reaches **no** module: nothing links it yet. Say so plainly in Step 5 — a decision in no prompt changes no generated code — and name the three ways to link it (the module's `guided_by[]`, a satisfied requirement's `decided_by[]`, the workspace tier).
+
+**When this decision supersedes or corrects another,** also look for older **accepted** decisions on the same subject: read their titles in `specs/decisions.toml` and run `report decisions --decision <older-id>` for each candidate. A module that an older decision reaches and this one does not is where the old text still lands in a prompt. That happened in the field: a new decision was recorded and cited, and one module's prompt still carried an older decision's contradicting text. Whether two texts contradict is your judgment and the user's — the report only puts them side by side. List each such module in Step 5 and ask the user whether to link this decision there or to correct the older one.
+
 ## Step 5 — report
 
 One paragraph:
 - Decision id and title written.
 - Cross-references created (`closes_questions`, `defaults_for`, `supersedes` populated this run).
 - Whether any OQ statuses now need flipping by hand (e.g., the user said this DEC closes OQ-NNN; that OQ's status currently reads `open` and should be flipped to `closed` via `/spec-question` path C). Tell the user explicitly.
+- Where it reaches (Step 4.5): the module list, or "no module yet", and any module an older decision on the same subject reaches and this one does not.
 - Suggested next step: `/spec-decide <next>` for another decision, `/spec-question` (path C) to flip an OQ's status to `closed` against this decision, or direct edit of `specs/requirements.toml` / a module TOML to wire the new decision into a requirement's `decided_by[]` or a module's `guided_by[]`.
 
 ## What this skill does NOT do
