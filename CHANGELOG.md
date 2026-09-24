@@ -16,6 +16,21 @@ and it is `1`.
 
 ### Added
 
+- **Skills check their write against the disk** (`scripts/write-check`,
+  `shared/write-check.md`). `/spec-design`, `/spec-edit`, `/spec-decide` and
+  `/spec-question` snapshot content hashes before the write and compare
+  after: a target that did not change is `not-written` (the skill stops), any
+  other file that changed is `unexpected` (the skill warns), and the report
+  is built from the file read back. Runs under macOS's bash 3.2.
+- **Guidance on where a list of domain values lives**
+  (`shared/vocabulary-placement.md`): a closed list in the spec or a table
+  of its own, what each costs, and the test between them — does a
+  non-engineer need to add a value without a deploy? `/spec-design` and
+  `/spec-decide` point at it.
+- **Prisma: a call into another module inside a transaction.** The callee
+  takes `Prisma.TransactionClient` and the caller passes `tx`; a spec that
+  asks for such a call needs the callee's item to name that parameter, or no
+  correct code exists. Compiled by the block's reference package.
 - **`/spec-decide` shows where a decision reaches** (Step 4.5, `report
   decisions --decision <id>`): a new decision is in no prompt until something
   links it, and on a supersede the skill compares the reach of older accepted
