@@ -16,6 +16,11 @@ and it is `1`.
 
 ### Added
 
+- **`/spec-decide` shows where a decision reaches** (Step 4.5, `report
+  decisions --decision <id>`): a new decision is in no prompt until something
+  links it, and on a supersede the skill compares the reach of older accepted
+  decisions on the same subject, so stale text still landing in a module's
+  prompt is found before codegen, not after.
 - **`shared/min-analyzer-version`** names the `specdev-analyzer` version
   this plugin is released with — the one its install docs pin, which
   `scripts/check-analyzer-pin` asserts. The analyzer reads it and warns when
