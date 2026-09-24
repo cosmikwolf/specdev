@@ -49,6 +49,8 @@ Two questions are universal — ask them on every module regardless of profile (
 
 Triad awareness (when the project authors `specs/decisions.toml` / `specs/open_questions.toml`): check whether any accepted decision should guide this module's design — if so, set `guided_by = ["DEC-..."]` so the rationale is inlined at codegen time. Check `specs/open_questions.toml` for open questions whose `affects` will reach this module: an open question hard-blocks `/spec-gen` for it, so tell the user up front. If the interview itself surfaces a genuine unknown, do not improvise a quiet answer in the spec — point the user at `/spec-question` to record it (or `/spec-decide` if the conversation settles a choice worth keeping).
 
+**A fixed set of domain values** (statuses, types, classifications): before you write the values into the spec, ask the test in `${CLAUDE_PLUGIN_ROOT}/shared/vocabulary-placement.md` — does a non-engineer need to add a value without a deploy? If yes, the module states a table, not the values. Either way, the choice needs a decision (`/spec-decide`) linked from this module's `guided_by`.
+
 Batch all relevant questions in one message. Show defaults so a fluent user can accept them all.
 
 ## Step 2 — dispatch the `module-designer` subagent, then write
@@ -77,6 +79,8 @@ Pass the input contract from `agents/module-designer.md`:
 The subagent returns three sections: `## Candidate TOML`, `## Evidence`, `## Notes`. The cone is best-effort — on a brand-new module it returns `module-not-found` with an empty sibling set, which is expected, not a failure. If the subagent returns a **blocking error** instead (missing requirement ids, malformed project schema, unresolvable cone), relay it to the user and stop — those are real problems to fix in the spec, not draft around.
 
 Review the Candidate against the Evidence and Notes. Surface anything the Notes flag (per-method descriptions to refine, requirements to author, downstream follow-ups). On the user's confirmation, write the Candidate TOML verbatim to `specs/modules/<ModuleName>.toml` (under `specs/modules/<package>/` for multi-package). The authoring rules in `references/toml-authoring-rules.md` are the subagent's contract; the main thread's job here is the comment-policy carve-out (the Candidate carries only the `#:schema` directive) and the file write.
+
+**Check the write against the disk.** Wrap the write of `specs/modules/<ModuleName>.toml` in the snapshot/compare pair in `${CLAUDE_PLUGIN_ROOT}/shared/write-check.md`, and build the Step 5 report from the file read back, not from the Candidate.
 
 If the user raises a structural issue ("actually this should be two modules"), stop, write a short plan, and wait for confirmation before re-dispatching.
 
