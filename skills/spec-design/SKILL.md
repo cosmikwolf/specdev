@@ -49,6 +49,8 @@ Two questions are universal — ask them on every module regardless of profile (
 
 Triad awareness (when the project authors `specs/decisions.toml` / `specs/open_questions.toml`): check whether any accepted decision should guide this module's design — if so, set `guided_by = ["DEC-..."]` so the rationale is inlined at codegen time. Check `specs/open_questions.toml` for open questions whose `affects` will reach this module: an open question hard-blocks `/spec-gen` for it, so tell the user up front. If the interview itself surfaces a genuine unknown, do not improvise a quiet answer in the spec — point the user at `/spec-question` to record it (or `/spec-decide` if the conversation settles a choice worth keeping).
 
+**A fixed set of domain values** (statuses, types, classifications): before you write the values into the spec, ask the test in `${CLAUDE_PLUGIN_ROOT}/shared/vocabulary-placement.md` — does a non-engineer need to add a value without a deploy? If yes, the module states a table, not the values. Either way, the choice needs a decision (`/spec-decide`) linked from this module's `guided_by`.
+
 Batch all relevant questions in one message. Show defaults so a fluent user can accept them all.
 
 ## Step 2 — dispatch the `module-designer` subagent, then write
