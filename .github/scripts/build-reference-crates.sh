@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
-# Build/analyze every codegen reference crate.
+# Build/analyze every reference crate.
 #
-# A block/bridge may ship `reference/<lang>/` — a CI-only crate that type-checks
-# the worked examples in its `codegen/<lang>/README.md` against the pinned
-# framework API. A wrong generic arity, constructor arg order, unbound interrupt,
-# or raw-Peri-vs-handle mistake in the prose fails the compile here, before it
-# can reach a downstream `/spec-gen` dogfood. These crates are NOT inlined into
-# user projects (they are siblings to `codegen/`, which inline never copies from).
+# A block/bridge may ship `reference/<lang>/` — a CI-only crate written against
+# the real framework API. The codegen prose these crates once witnessed is gone
+# (specdev no longer generates code); they stay, compiled, as the corpus the
+# rule-pack work measures against, and leave the tree with the reference
+# lint once that work settles. They are never inlined into user projects.
 #
 # Rust references: each carries its own `.cargo/config.toml` pinning the target
 # triple, so a plain `cargo build` cross-compiles. Dart references: discovered
@@ -24,9 +23,8 @@
 # a failure, not a skip: a missing gate that reads as a pass is the false green
 # this tree keeps filing issues about.
 #
-# `--frozen-lockfile` is deliberate here and wrong in `/spec-gen`'s per-module
-# gate: this lockfile is committed and its staleness is exactly what is under
-# test.
+# `--frozen-lockfile` is deliberate here: this lockfile is committed and its
+# staleness is exactly what is under test.
 # Run from anywhere.
 set -uo pipefail
 

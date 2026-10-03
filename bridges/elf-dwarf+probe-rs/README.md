@@ -55,12 +55,11 @@ selection or sampler that was never declared.
 
 - **A new crate.** There is no join product. probe-rs already accepts a
   `u64` and elf-dwarf already produces one; the pairing needs code, not
-  an adapter. This bridge therefore ships no `deps.yaml`.
+  an adapter.
 - **Cross-module wiring.** Both endpoints must be declared on the module
   carrying the bindings table (`binding_locality: endpoint_module`).
 - **Build-identity checking.** Nothing here can verify that the ELF and
-  the running firmware are the same build. See EDPR-003 in the codegen
-  prose — the failure mode is plausible values from wrong addresses, and
+  the running firmware are the same build. See EDPR-003 in the guidance — the failure mode is plausible values from wrong addresses, and
   the bridge documents it rather than pretending to prevent it.
 - **Display.** Sampled values reach a UI as ordinary data.
 
@@ -89,11 +88,11 @@ both sides. Cross-module wiring is not supported in v1.
 object on one side, probe-rs on the other. This is not "symbol source
 meets memory reader" in the abstract.
 
-**Codegen-complete.** Conforming TOML produces working code: a plan
-built from real DWARF classifications, reads dispatched at the right
-widths, sign extension and float bit-casting on the way back, and a
-wholesale re-plan on image reload. Both worked examples are compiled by
-`reference/rust/`, against both blocks' pinned APIs.
+**Rule-pack complete.** Each binding constrains the code (which
+selection feeds which sampler, the width source, the aggregate policy);
+the guidance carries the seam's rules — width and interpretation
+together, sign extension, a wholesale re-plan on reload — and
+EDPR-001..003 as checkable rules.
 
 **The contribution belongs to the bridge.** The width mapping cannot go
 in `elf-dwarf` without teaching it about probe access widths, and cannot

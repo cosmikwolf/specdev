@@ -16,7 +16,7 @@ tests/<module>_test.c            # Test stubs
 
 In multi-subproject CMake builds (ESP-IDF components, Zephyr modules, etc.),
 `src/` above is `<source_dir>/`: the `source_path` of the spec module's
-package, resolved by `/spec-gen`. E.g. `drivers::led` with
+package. E.g. `drivers::led` with
 `source_path = "components/drivers"` lands at
 `components/drivers/src/led/led.c`.
 

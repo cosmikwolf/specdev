@@ -98,15 +98,21 @@ If this returns `BOOTSTRAP-001` ("target tree already exists"), Step 3 did not f
 
 **Scenario B:** skip this step — the workspace root is already bootstrapped.
 
-## Step 5 — populate missing manifests if pre-manifest-era
+## Step 5 — bring the member to the current spec format
 
-If the adopted crate was bootstrapped before the manifest formats shipped, it may be missing `profile.yaml` / per-block `deps.yaml` / per-bridge `contract.yaml`. Populate them **without disturbing ids**:
+If the adopted crate is on an older spec format (`spec_version` below `2.0`), it moves with the workspace: a workspace
+migrates as one, from the root. First make sure the work tree is clean — `migrate` rewrites files in place, and
+`git diff` is the only way to see what it changed: run `git status --porcelain`, and if it lists anything, stop and
+ask the user to commit or stash first. Then, once the member is registered (Step 6):
 
 ```sh
-specdev-analyzer migrate --project crates/<member-name>
+specdev-analyzer migrate --dry-run     # at the workspace root; read the report
+specdev-analyzer migrate               # once the user agrees
 ```
 
-`migrate` byte-copies only the *missing* manifests from plugin HEAD; it is a true no-op when they are already present, and it freezes `origin` / `inlined_at` — the baseline (requirements/decisions/open_questions and their ids) is never touched. Run `migrate --project crates/<member-name> --dry-run` first if you want to see the plan. Skip entirely if the crate was bootstrapped recently against a manifest-era plugin. Also fix `crates/<member-name>/spec.toml` `[project].name` here if the member name changed during adoption.
+`migrate` never touches requirement, decision or open-question ids. Skip this step when the member is already on the
+current format. Also fix `crates/<member-name>/spec.toml` `[project].name` here if the member name changed during
+adoption.
 
 ## Step 6 — register the member in the workspace
 
@@ -118,23 +124,21 @@ name = "<member-name>"   # MUST match crates/<member-name>/spec.toml [project].n
 path = "crates/<member-name>"
 ```
 
-Then, in the workspace root's `specs/architecture.toml`, wire any cross-crate concerns the member needs:
-- **Shared package fields** — set `edition` / `version` / `license` / `repository` / `rust-version` under `[workspace_package]`; the member inherits each by *omitting* that field from its own `[project]` (the cargo-toml emitter renders `<field>.workspace = true`).
-- **Hoisted dependencies** — declare shared deps (including a path dep on a sibling member) under `[[workspace_dependencies]]`; the member opts in per-dep by setting `source = "workspace"` on its `CrateReference`.
-
-Inheritance is opt-in and per-field/per-dep — a freshly-adopted member validates as-is with no inheritance edits. Only wire what the user actually wants shared.
+Shared package fields and shared dependencies live in the workspace root's `Cargo.toml` (`[workspace.package]`,
+`[workspace.dependencies]`); the member inherits them with `workspace = true` in its own `Cargo.toml`. Only wire what
+the user actually wants shared.
 
 ## Step 7 — verify
 
 Validate the member tree **and** the workspace root:
 
 ```sh
-specdev-analyzer validate --project crates/<member-name> --no-color
-specdev-analyzer validate --project . --no-color
+specdev-analyzer check --project crates/<member-name> --no-color
+specdev-analyzer check --project . --no-color
 ```
 
 Both must report **0 errors**. Common failures:
-- Member `SCHEMA` errors after `migrate` — a field the refresh tightened; fix the offending field, don't delete it.
+- Member `SCHEMA` errors after `migrate` — a field the format change tightened; fix the offending field, don't delete it.
 - Root error that a member `name` doesn't match — the `[[workspace.members]].name` must equal the member's `[project].name`; reconcile them.
 
 Re-run until both are clean.
@@ -145,8 +149,8 @@ Summarize:
 - Scenario (A promote-in-place / B add-to-existing) and the three resolved paths.
 - The move performed (`git mv` vs `mv`), and that ids were preserved.
 - Whether `migrate` ran.
-- The member registration + any `[workspace_package]` / `[[workspace_dependencies]]` wiring applied.
-- Both validate results (member + root).
+- The member registration, and any `Cargo.toml` sharing applied.
+- Both check results (member + root).
 - **Next steps**: add further members with `/spec-init --non-interactive --profile <p> ... crates/<next>` then re-run this skill's registration step, or `/spec-inline` blocks into the member as usual.
 
 ## What this skill does NOT do
@@ -154,10 +158,10 @@ Summarize:
 - **Adopt a broken spec.** Step 1 requires the source to validate clean first; fix validate before adopting.
 - **Merge two workspaces.** The source must be a single crate (Scenario A) or a standalone crate (Scenario B), not itself a workspace root.
 - **Author or edit module specs.** Modules move verbatim with the tree; changing them is `/spec-edit`'s job.
-- **Decide what to hoist.** It surfaces `[workspace_package]` / `[[workspace_dependencies]]` as options and applies only what the user chooses; it does not auto-hoist shared deps.
+- **Decide what to share.** It surfaces `Cargo.toml` `[workspace.package]` / `[workspace.dependencies]` as options and applies only what the user chooses.
 - **Rewrite ids.** The whole point is id stability — the move is byte-preserving. If the user wants renamed ids, that is a separate manual edit after adoption.
 
 ## Additional resources
 
-- `${CLAUDE_PLUGIN_ROOT}/profiles/rust-workspace/README.md` — the canonical manual recipe this skill mechanizes (§ "Adopting an existing single-crate project as a member") plus the composition model (`[workspace_package]` inheritance, `source = "workspace"` deps).
+- `${CLAUDE_PLUGIN_ROOT}/profiles/rust-workspace/README.md` — the canonical manual recipe this skill mechanizes (§ "Adopting an existing single-crate project as a member") plus the composition model.
 - `${CLAUDE_PLUGIN_ROOT}/shared/plugin-root-preamble.md` — the Step 0 env preamble rationale.

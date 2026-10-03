@@ -16,7 +16,7 @@ src/<module>/tests.rs    # Test stubs
 The parent `src/lib.rs` or `src/main.rs` must declare each module with `mod <module>;`.
 
 In multi-crate workspaces, `src/` in the paths above is `<source_dir>/`: the
-`source_path` of the spec module's package, resolved by `/spec-gen`. E.g.
+`source_path` of the spec module's package. E.g.
 `drivers::Led` with `source_path = "crates/drivers"` lands at
 `crates/drivers/src/led/mod.rs`.
 
@@ -89,7 +89,7 @@ use crate::other_module::OtherStruct;
 use crate::another_module::AnotherError;
 ```
 
-For `external_deps`, generate `use` statements from the `used_modules` list in the spec. Each external group gets a comment identifying the package name.
+Group external `use` statements by crate, after the standard library and before crate-internal paths.
 
 ---
 

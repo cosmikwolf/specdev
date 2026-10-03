@@ -33,7 +33,7 @@ metaschema_version: "v1"
 # "required property" SCHEMA error. This is why the prisma block's own
 # relation selects `prisma.client` rather than the `[prisma]` table.
 #
-# `session_strategy` is therefore NOT a relation attr. Codegen reads it
+# `session_strategy` is therefore NOT a relation attr. The code reads it
 # from the module TOML directly, the way the itm block reads its
 # `[itm.decoder]` singleton.
 

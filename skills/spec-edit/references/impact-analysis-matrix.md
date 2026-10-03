@@ -22,7 +22,6 @@ For each change type the user proposes, surface findings grouped under the match
 
 - **Changing `visibility`** (library-api) — modules whose `[[items]]` `kind = "re_export"` references this module may need their re-export `visibility` adjusted.
 
-- **Changing `feature_gates`** (library-api) — `module_feature_gates_resolve` will fail if a referenced feature is removed.
 
 ## Reporting
 

@@ -33,8 +33,8 @@ The invoker provides in the prompt:
 - `project_root` — absolute path to the project root (has `spec.toml` and `specs/`).
 - `profile` — the project's profile name, from `spec.toml [project].profile`.
 - `language` — the project's language, from `spec.toml [project].language`.
-- `inlined_blocks` — array of block names inlined in this project. Their READMEs
-  under `specs/specdev/codegen/<language>/blocks/<name>/` are the authoring context.
+- `inlined_blocks` — array of block names inlined in this project. Their guidance
+  under `specs/specdev/guidance/blocks/<name>.md` is the authoring context.
 - `inlined_bridges` — array of `<a>+<b>` bridge names inlined in this project.
 - `package` — optional snake_case package name (multi-package projects only). When provided, the Candidate TOML is written by the invoker to `specs/modules/<package>/<ModuleName>.toml`; do **not** add a `package` field to the TOML itself — the analyzer derives it from the filesystem path.
 - `source_path` — optional absolute or project-relative path. When provided, restrict all Read / Grep / Glob searches to this subtree; do not scan other package trees. Used to scope evidence for one package in a multi-package fan-out.

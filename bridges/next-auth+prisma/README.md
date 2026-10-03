@@ -29,7 +29,7 @@ session_strategy = "jwt"     # or "database"
 adapter Auth.js has one strategy and nothing to choose; with one, the
 choice depends on **both** which Prisma driver adapter is in use and
 whether middleware calls `auth` — two facts that live in two different
-blocks. The codegen prose carries the table.
+blocks. The guidance carries the table.
 
 ## The module holding the binding
 
@@ -39,8 +39,8 @@ adapter, and this binding is its relationship to the database.
 
 ## Reference package
 
-`reference/typescript/` compiles the join against all three pinned
-packages. Two cases — the client singleton and the adapter wiring — since
+`reference/typescript/` compiles the join against
+all three pinned packages. Two cases — the client singleton and the adapter wiring — since
 each block's own reference already covers its half. Gate:
 `pnpm install --frozen-lockfile && pnpm run check`.
 

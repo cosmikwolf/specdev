@@ -54,7 +54,7 @@ A pattern survives a rebuild; a list does not.
 ## What this block does NOT contribute
 
 - **The file path.** Which build is being observed is a property of the
-  session, not the spec. Every emitted loader takes the path.
+  session, not the spec. Every loader takes the path.
 - **Reading the target.** The block produces an address, a width and a
   type classification. Fetching the bytes at that address is a separate
   concern and belongs in a bridge — see `elf-dwarf+probe-rs`.
@@ -70,14 +70,13 @@ GDB-driven or `nm`-driven symbol source would be a different block,
 because it would model the same information with an entirely different
 surface.
 
-**Leg 2 — codegen-completeness.** Conforming TOML produces working code:
-a two-stage loader with correct lifetimes, a DIE walk that handles both
-`DW_OP_addr` and `DW_OP_addrx`, a type resolver that follows typedefs and
-computes array sizes, and a filter. Every worked example is compiled by
-`reference/rust/`, which is how two lifetime constraints in the prose
-were found rather than shipped.
+**Leg 2 — rule-pack completeness.** Every field constrains the code:
+the image's endianness and link requirement, each selection's pattern,
+kinds and scope. The guidance carries the rules no check can verify —
+the full location evaluation (both `DW_OP_addr` and `DW_OP_addrx`), the
+bounded type walk, array sizes from subranges.
 
-**Leg 3 — no cross-block reach.** The codegen prose names no other
+**Leg 3 — no cross-block reach.** The guidance names no other
 block's types. The output is a plain struct of name, address, size and
 kind — the narrowest seam available, and one that reaches toward nothing.
 
@@ -90,13 +89,12 @@ kind — the narrowest seam available, and one that reaches toward nothing.
 ## Known sharp edges
 
 Both were found by compiling the reference crate, and both are in the
-codegen prose:
+guidance:
 
 - **`DW_OP_addrx`.** GCC emits `DW_OP_addr`; clang and rustc emitting
   DWARF 5 emit `DW_OP_addrx` into `.debug_addr`. Code that matches only
   the first operation returns *nothing* for the latter, silently. The
-  block's prose requires the full `Evaluation` path for exactly this
-  reason.
+  guidance requires the full evaluation path for exactly this reason.
 - **`object::File<'data, R>`.** The lifetime and the reader type must be
   the same lifetime. Elided separately they do not unify, and the error
   points at the signature rather than the cause.

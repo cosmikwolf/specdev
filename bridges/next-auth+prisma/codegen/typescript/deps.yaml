@@ -1,5 +1,0 @@
-# Manifest — npm deps the next-auth+prisma bridge contributes.
-# Schema: specdev-analyzer/src/embedded/block_deps.schema.yaml.
-npm:
-  - package: "@auth/prisma-adapter"
-    version: "^2.11.3"

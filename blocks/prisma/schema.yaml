@@ -48,8 +48,8 @@ properties:
           adapter:
             description: |
               Which Prisma driver adapter the singleton constructs. The
-              value is the adapter's short name; the block's codegen
-              prose maps each to its package, its exported class and the
+              value is the adapter's short name; the block's
+              guidance maps each to its package, its exported class and the
               datasource provider it serves:
 
                 pg              @prisma/adapter-pg              postgresql
@@ -82,7 +82,7 @@ properties:
               `schema.prisma`, relative to the project root. Prisma 7
               makes `output` required and the client is imported from
               that path, not from the `@prisma/client` package, so
-              codegen cannot write an import without it.
+              no import can be written without it.
             type: string
             minLength: 1
           schema_file:

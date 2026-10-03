@@ -18,7 +18,7 @@ metaschema_version: "v1"
 # The region-purpose constraint (EGP-001: the bound region's `purpose`
 # must be `free_form`) is NOT expressible as a relation -- it constrains
 # an attribute on one endpoint rather than the pairing -- and lives in
-# the bridge's codegen prose as a discipline rule that emission
+# the bridge's guidance as a discipline rule that emission
 # enforces. This mirrors how the egui+nih-plug bridge treats its own
 # region-purpose constraint.
 #

@@ -18,10 +18,10 @@ For each language `<lang>`:
 
 ## Sparseness rule
 
-Every `Item` carries `satisfies` (≥1 entry) except where a language's schema marks it optional (Rust's `kind = "re_export"`, whose inherently-contractual `pub use` nature makes `satisfies` optional) or where the item is a test (`test = true` carries `verifies` instead). Helper functions that don't satisfy a requirement do **not** appear in `items[]`. This keeps the items array bounded — typical module: 5–20 items, not 100+.
+Every `Item` carries `satisfies` (≥1 entry) except where a language's schema marks it optional (Rust's `kind = "re_export"`, whose inherently-contractual `pub use` nature makes `satisfies` optional). Helper functions that don't satisfy a requirement do **not** appear in `items[]`. This keeps the items array bounded — typical module: 5–20 items, not 100+.
 
 ## Kind vocabulary is data
 
-`imports.scm` has one capture, `@import.source`: the module specifier of each import. The adapter maps a specifier to a package name (`LanguageAdapter::import_package`), and `report imports` compares those names with what the module may rely on (its own and the architecture-level `external_deps`, plus the deps of the blocks and bridges it uses). A language without the file is reported `checked: false`, never clean. Rust ships none: cargo already refuses a crate that a package does not declare.
+`imports.scm` has one capture, `@import.source`: the module specifier of each import. The analyzer resolves each specifier to a project file (`specdev-analyzer report imports` shows the resolution), and `check` holds the resulting module-to-module edges to the declared `depends_on` (`internal_edges_declared`). External packages are the manifest's business: the package manager already refuses one the manifest does not declare.
 
 The analyzer holds no compile-time item-kind list. `items.schema.yaml`'s `kind` enum is the authority: it validates spec TOML (via the profile `$ref`), and the analyzer loads the same inlined copy at runtime for the `items diff` / `report coverage` kind gate. The `items.scm` capture prefixes (`<kind>.def` / `<kind>.name`, plus the `inherent_<kind>.*` + `inherent.host` member convention) must use the same kind strings — the extractor derives each item's `kind` from the capture prefix. Adding or removing a kind is an edit to these two files only.

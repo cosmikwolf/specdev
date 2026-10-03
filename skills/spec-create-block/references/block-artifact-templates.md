@@ -4,14 +4,14 @@ Exact shapes for the files `/spec-create-block` scaffolds. Placeholders: `<name>
 = block directory name (lowercase-hyphenated, concrete); `<key>` = the schema
 **table key** — the same string with hyphens turned to underscores (`nih-plug` →
 `nih_plug`); `<lang>` = target language (default `rust`); `<Kind>`/`<plural>` =
-an entity kind and its table name; `<case>` = a discrete worked-example case.
-Fill every `TODO:` from the interview (Step 1) and the **resolved real API**
-(Step 2) — never from memory.
+an entity kind and its table name. Fill every `TODO:` from the interview
+(Step 1) and the rules verified against the real API (Step 2) — never from
+memory.
 
 Live precedents (read the one whose shape matches):
-- `blocks/embassy/` — two entity kinds, no relations, `no_std` cross-target reference.
-- `blocks/egui/` — declares an intra-block relation (`region_in_panel`), `std` host reference.
-- `blocks/nih-plug/` — hyphenated name → `nih_plug` table key; `std` host reference.
+- `blocks/embassy/` — two entity kinds, no relations.
+- `blocks/egui/` — declares an intra-block relation (`region_in_panel`).
+- `blocks/nih-plug/` — hyphenated name → `nih_plug` table key.
 
 ⚠️ **Hyphen/underscore:** `<name>` (dir, `$id`, reduction entity qualifier) keeps
 the hyphen; `<key>` (schema table property + `for_each` path) uses the underscore.
@@ -50,8 +50,8 @@ $defs:
     description: snake_case or PascalCase identifier usable as a Rust ident.
     type: string
     pattern: "^[A-Za-z_][A-Za-z0-9_]*$"
-  # RustTypeExpression (free-form Rust type; validated at codegen, not schema):
-  #   type: string, minLength: 1
+  # A free-form type expression is a code fact: prefer intent (what the
+  # value means) over a type the code already holds.
 
   <Kind>:
     type: object
@@ -60,8 +60,8 @@ $defs:
     properties:
       name: { $ref: "#/$defs/Identifier" }
       # TODO: kind-specific fields — enums with `default`, integers with
-      # minimum/maximum, RustTypeExpression strings. One per schema field you
-      # want surfaced as a reduction attr.
+      # minimum/maximum. Intent only — no type or signature strings. One per
+      # schema field you want surfaced as a reduction attr.
 ```
 
 **Invariants:** `$id` = `https://specdev.dev/blocks/<name>.v1` (BLOCK-LINT-006);
@@ -112,119 +112,42 @@ name) yields a silent `REDUCE_UNRESOLVED`, not a schema error.
 
 ---
 
-## 3. `codegen/<lang>/README.md`
+## 3. `guidance.md`
 
-The load-bearing artifact (the shipped blocks run ~1500–1700 tokens — advisory,
-not lint-gated; thin prose yields thin codegen). Structure by concern; each
-section gets at least one explicit **do-NOT** rule. Suggested sections:
+Rules for whoever writes or edits code in a module that uses the block — the
+facts no check can verify. Inlined to `specs/specdev/guidance/blocks/<name>.md`
+in every project that inlines the block, and listed by `context --module`.
 
-1. **Crate dependencies** — the crate(s) from `deps.yaml`, with the feature notes.
-2. **Type emission** — how the `[<key>]` entries become Rust types/decls.
-3. **Per-kind emission** — a worked example per entity kind, types drawn from
-   Step 2's **resolved real API** with full generic arity (this is what
-   `REF-ARITY-001` checks against the reference).
-4. **Error handling / lifetimes / ownership** as relevant.
+```markdown
+# <name> — implementation guidance
 
-Hard rules:
-- **Leg 3 — no sibling-block names.** Do not mention another block's types. If the
-  reader "needs" embassy here, that coupling belongs in the `<name>+embassy`
-  bridge, not this prose. An explicit "do NOT add <other-block>" line is allowed
-  and good; an implicit reach is a violation.
-- **PROSE-PROFILE-001 — no profile name.** Write "the project's profile's
-  `module.conventions.md`", never a specific profile. The block layers on whatever
-  profile the project uses.
+Rules an agent follows when it writes or edits code for a module with a
+`[<key>]` table. No check verifies them; review does.
 
----
+## <Concern>
 
-## 4. `codegen/<lang>/deps.yaml`
-
-```yaml
-# Manifest — Cargo deps the <name> block contributes.
-# Schema: specdev-analyzer/src/embedded/block_deps.schema.yaml.
-crates:
-  - name: <crate>
-    version: "<x.y>"                     # or pin a git rev under `source`
-    features: [<...>]                    # TODO: from the resolved API
-    source: crates-io
-recommended_external_deps: []            # surfaced to the user, NOT auto-injected
+- <One rule per bullet: what to do or never do, and why in one clause.>
 ```
 
-For a reference **opt-out** block (unreleased API), document the reason here (a
-comment) and in `README.md`, and ship no `reference/`.
+Hard rules (`plugin-lint` checks the first three):
+- **Present** (`GUIDANCE-001`), **no fenced code** (`GUIDANCE-002`), **at most
+  4,096 bytes** (`GUIDANCE-003`). Rules, not code: a code sample is a template
+  that rots against the crate it names.
+- **No version numbers.** Name the behaviour; tell the reader to check the
+  version in the project's manifest where an API differs between releases.
+- **Leg 3 — no sibling-block names.** If the reader "needs" another block here,
+  that coupling belongs in the `<name>+<other>` bridge's guidance.
+- **PROSE-PROFILE-001 — no profile name.** Write "the project's profile".
+- **A choice is not guidance.** A project-specific choice belongs in that
+  project's decisions; guidance holds the rules every project using the block
+  shares.
 
 ---
 
-## 5. `README.md` (author-facing catalog — never inlined)
+## 4. `README.md` (author-facing catalog — never inlined)
 
 Sections: `# `<name>` block`, `## When to use`, `## What this block contributes`,
 `## What this block does NOT contribute`, `## Sharp-test rationale` (all three
 legs, explicitly), plus companion-block/bridge affinity and deferred items.
 Naming a profile or a companion block **here** is fine — this file is never
 inlined, so it *should* say "pairs with the X block via the `<name>+X` bridge".
-
----
-
-## 6. Reference crate — `reference/<lang>/` (discrete-case blocks)
-
-A **sibling** to `codegen/`, never nested. Inline copies only
-`codegen/<lang>/README.md` + `deps.yaml`, so `reference/` is CI-only by structure.
-Invariant: "a lib that **type-checks without link**."
-
-### `reference/<lang>/Cargo.toml`
-```toml
-# CI-only reference crate for the <name> block codegen prose. Type-checks the
-# worked examples in ../../codegen/<lang>/README.md against the pinned API.
-# NOT inlined — this dir is a sibling to codegen/.
-[package]
-name = "<name>-reference"                # hyphens ok in a package name
-version = "0.0.0"
-edition = "2021"
-publish = false
-
-[lib]
-
-[dependencies]
-# Mirror what the block contributes at codegen; pin git deps by rev.
-<crate> = { version = "<x.y>", features = [<...>] }
-```
-
-### `reference/<lang>/.cargo/config.toml` (cross-target only)
-```toml
-[build]
-target = "<triple>"                      # e.g. thumbv8m.main-none-eabihf; OMIT for host-target
-```
-
-### `reference/<lang>/src/lib.rs`
-```rust
-//! Compiled reference examples for the <name> block codegen prose. CI-only.
-#![no_std]                               // OMIT for a std host-target reference
-pub mod <case_1>;
-pub mod <case_2>;
-```
-
-### `reference/<lang>/src/<case>.rs`
-```rust
-//! <Case> reference — mirrors the README worked example. Annotate types
-//! explicitly so the compiler checks arity.
-use <crate>::<...>;
-// real constructor / signature: exact from the resolved API (Step 2)
-```
-
-### `reference/<lang>/reference_cases.yaml`
-```yaml
-# Reference-crate coverage manifest. CI-only — never inlined. Drives
-# REF-COVERAGE-001 (each name → src/<name>.rs) and REF-ARITY-001.
-reference_cases:
-  - <case_1>
-  - <case_2>
-```
-
-**Case-name rules:** opaque strings that are valid module file stems; avoid Rust
-keywords (fold an `enum`-like case into a combined file). Declare only the cases
-you actually ship a compiled example for.
-
-**Match the README (`REF-ARITY-001`):** the check compares generic arity **by base
-type name** between the README and these reference sources — write the type text
-identically in both (`Vec<u8, 16>` in the README ⇒ `Vec<u8, 16>` here). **Also
-commit** a `.gitignore` (ignoring `target/`) and the resolved `Cargo.lock`, as the
-shipped reference crates do, for reproducible CI.
