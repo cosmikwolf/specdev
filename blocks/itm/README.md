@@ -42,7 +42,7 @@ Don't use this block if:
 | — | `[itm.decoder]` | Iterator mode, timestamp clock and prescaler, EOF and malformed-packet policy |
 
 `[itm.decoder]` is a **nameless singleton**: it carries settings rather
-than identity, so codegen reads it directly and it is not materialized
+than identity, so the code reads it directly and it is not materialized
 as a graph entity. This follows the nih-plug block's treatment of its
 process-config table.
 
@@ -52,7 +52,7 @@ other.
 
 ## What this block does NOT contribute
 
-- **The bytes.** Every emitted decoder takes an `impl Read` parameter.
+- **The bytes.** Every decoder takes an `impl Read` parameter.
   Nothing here opens a probe, a port, or a file.
 - **Arming the comparators.** A `DataWatch` entry says what comparator 2
   *means*; something else has to actually arm comparator 2 on the target.
@@ -71,13 +71,13 @@ answer: the vocabulary (`TracePacket`, `Instrumentation`,
 different decoder would model the same wire protocol with different
 types and therefore be a different block.
 
-**Leg 2 — codegen-completeness.** Conforming TOML produces working code:
-a decoder built in the declared mode, per-port payload decoding including
-the partial-line buffering a text port genuinely needs, and per-
-comparator value decoding with the access direction preserved. Every
-worked example in the codegen prose is compiled by `reference/rust/`.
+**Leg 2 — rule-pack completeness.** Every field constrains the code: the
+decoder mode and timestamp settings, each port's payload width, each
+comparator's packet kind and value width. The guidance carries the rules
+no check can verify — partial-line buffering on a text port, the access
+direction kept, no zero-padding of a short payload.
 
-**Leg 3 — no cross-block reach.** The codegen prose names no other
+**Leg 3 — no cross-block reach.** The guidance names no other
 block's types. The input is an `impl Read` type parameter, which is the
 narrowest possible seam: the block cannot reach toward a transport
 because it never names one.
@@ -118,8 +118,8 @@ block exists:
   and fold counters — profiling data, deferred with PC sampling.
 - **Port paging.** Stimulus ports above 31 are reachable only through the
   `Extension` packet's page mechanism, which not every implementation
-  emits. The schema allows the numbers; codegen does not track pages.
-- **A stable upstream pin.** The crate's newest release is a 2022 release
-  candidate. It is what probe-rs itself uses in its own trace example, so
-  it is the path the ecosystem takes, but the pin should be revisited if
-  upstream ever ships 0.9.0 proper.
+  emits. The schema allows the numbers; the guidance does not cover pages.
+- **A stable upstream release.** The crate's newest release is a 2022
+  release candidate. It is what probe-rs itself uses in its own trace
+  example, so it is the path the ecosystem takes; revisit if upstream ever
+  ships a final release.

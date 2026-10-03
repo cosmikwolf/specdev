@@ -4,17 +4,9 @@ Authentication for a TypeScript project through
 [Auth.js](https://authjs.dev/) (`next-auth` v5). Adds a `[next_auth]`
 table to `Module` marking the one module that holds the configuration.
 
-**Pinned line: `next-auth` 5.0.0-beta.32, exactly.** The `latest` tag is
-`4.24.15` and is not a fallback — v4 predates the single-config shape
-this block is built on, and authjs.dev documents v5 only. Same call the
-`itm` block makes for its `0.9.0-rc.1` pin: the newest published version
-carrying the current vocabulary is a pre-release, and the "stable" is
-not a usable alternative. The pin is exact because a caret on a
-pre-release accepts the next beta silently.
-
-**The GA is a manual trigger.** The freshness sweep drops the
-pre-release identifier when comparing, so this pin reads `ahead` today
-and will read `current` the day 5.0.0 ships — it will never say "move".
+**Version.** The block is built on Auth.js's single-config major, published as a pre-release; the older stable line
+has another API and is not a fallback. The guidance says to pin it exactly (a range on a pre-release accepts the next
+beta silently) and to watch for the final release by hand.
 
 ## What the table says
 
@@ -51,9 +43,9 @@ satisfy. The `next-auth+prisma` bridge owns it.
 
 ## Reference package
 
-`reference/typescript/` compiles every worked example in the codegen
-prose against the pinned `next-auth`. Four cases: the config, the Edge
-split, the derived route file, and reading the session. Gate:
+`reference/typescript/` compiles four cases
+against the pinned `next-auth`: the config, the Edge split, the route
+file, and reading the session. Gate:
 `pnpm install --frozen-lockfile && pnpm run check`.
 
 ## Pairing

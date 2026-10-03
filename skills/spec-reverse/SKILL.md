@@ -41,7 +41,7 @@ If `specs/specdev/` is present, continue. Read `spec.toml` to learn the project'
 
 **If `[project].language` is not `rust`, stop here.** The analyzer's `reverse` pre-flight is language-neutral and will report `Proceed.` for a TypeScript or Dart tree, but every field this skill teaches you to extract below (`layer`, `actions`, `ports`, `hardware`, `state_machines`, `metadata`) belongs to the Rust profile schemas — a `nextjs-app` module schema admits none of them, and names five fields (`role`, `environment`, `client_component`, `boundary_kind`, `app_path`) this skill never mentions. Tell the user to author the specs with `/spec-init` + `/spec-design` instead, and that reverse engineering for their language is not shipped yet.
 
-Read `specs/specdev/profile.yaml` too. If it declares `reverse.vocabulary: profile`, the profile's own schema (items, visibility, feature gates — `module.conventions.md` is the reading in Step 2) is the reverse vocabulary and no block needs to be inlined. Among the Rust profiles, `library-api` and `rust-app` ship this declaration; `nextjs-app` ships it too, which is why the pre-flight admits a TypeScript tree the guidance below does not cover. The analyzer reads the same key in Step 1 and reports `[REVERSE-004]` as info instead of stopping on `[REVERSE-002]`.
+Read `specs/specdev/profile.yaml` too. If it declares `reverse.vocabulary: profile`, the profile's own schema (items, visibility — the profile README and inlined guidance are the reading in Step 2) is the reverse vocabulary and no block needs to be inlined. Among the Rust profiles, `library-api` and `rust-app` ship this declaration; `nextjs-app` ships it too, which is why the pre-flight admits a TypeScript tree the guidance below does not cover. The analyzer reads the same key in Step 1 and reports `[REVERSE-004]` as info instead of stopping on `[REVERSE-002]`.
 
 For firmware-layered projects (and any profile without `reverse.vocabulary: profile`), the relevant blocks should be inlined before reversing (the analyzer's pre-flight in Step 1 will tell you which are present):
 - An MCU block (e.g., `stm32h5-rs`) — needed to put `peripherals` / `pins` into module specs.
@@ -75,7 +75,7 @@ For single-module reversal, run the analyzer's context cone for the to-be-revers
 specdev-analyzer context --module <Name> --output /tmp/specdev-ctx-$$.yaml
 ```
 
-For greenfield reversal the module won't yet exist, and the cone returns `status: module-not-found` with `files.schema`, `files.block_readmes`, `files.bridge_readmes`, `files.profile_readme`, `files.module_conventions`, and `files.architecture` populated — exactly the surfaces this step needs. Read every path under `files:` (project-relative paths and `${CLAUDE_PLUGIN_ROOT}/...` paths alike); when `related_files` is non-empty (already-reversed siblings), read those for naming conventions and pattern reuse.
+For greenfield reversal the module won't yet exist, and the cone returns `status: module-not-found` with `files.schema`, `files.block_readmes`, `files.bridge_readmes`, `files.profile_readme`, `files.guidance`, and `files.architecture` populated — exactly the surfaces this step needs. Read every path under `files:` (project-relative paths and `${CLAUDE_PLUGIN_ROOT}/...` paths alike); when `related_files` is non-empty (already-reversed siblings), read those for naming conventions and pattern reuse.
 
 Plus the comment-policy file (not surfaced via the cone since it isn't a per-module concern):
 

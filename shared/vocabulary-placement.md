@@ -43,6 +43,6 @@ rules decide the default; a choice against them needs its reason written down.
 
 Author a decision with `/spec-decide` that names the list, the placement, and
 the answer to the test. Link it with `guided_by` from every module that reads or
-writes the values, so the choice reaches each of their codegen prompts.
+writes the values, so `report decisions --module` shows the choice to whoever edits them.
 Otherwise the next person to touch the list re-derives the choice — or makes the
 other one without knowing it was ever made.

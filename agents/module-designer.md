@@ -39,13 +39,13 @@ The invoker provides in the prompt:
 If `module_name`, `project_root`, `context_yaml`, `profile`, `language`, or
 `interview_answers` is missing, return an error naming which and stop. Do not guess paths or invent
 intent. `plugin_root` is the one exception: a missing value degrades per Step 0
-with a Notes entry rather than stopping, because the codegen prose it unlocks
-is an enrichment and the rest of the draft is still correct without it.
+with a Notes entry rather than stopping, because the plugin READMEs it unlocks
+are an enrichment and the rest of the draft is still correct without it.
 
 ## Step 0 — environment
 
 The context cone (Step 1) emits some paths as literal `${CLAUDE_PLUGIN_ROOT}/…`
-(the profile README and the module conventions live under the plugin, not the
+(the profile, block and bridge READMEs live under the plugin, not the
 project). Resolve them against the `plugin_root` you were given. That value is
 authoritative; prefer it over anything in the environment.
 
@@ -60,7 +60,7 @@ which it read.
 If `plugin_root` is absent, fall back to `CLAUDE_PLUGIN_ROOT`, then
 `SPECDEV_PLUGIN_ROOT`. If all three are unset, **say so in Notes** and read
 every project-relative path the cone gives you anyway — the draft degrades
-gracefully without the codegen prose, but the degradation has to be visible.
+gracefully without the plugin READMEs, but the degradation has to be visible.
 Never substitute a guess for the missing value.
 
 ## Step 1 — read the context cone
@@ -74,9 +74,11 @@ Read the YAML. The shape:
 
 - `status` — `ok` if the module already exists (the `/spec-edit` path), `module-not-found` on a greenfield `/spec-design`. **`module-not-found` is normal, not an error** — `files.*` are still populated.
 - `files.schema[]` — the aggregated `module.schema.yaml` plus inlined block/bridge schema fragments. **This is the binding contract for every field you emit.**
-- `files.block_readmes[]`, `files.bridge_readmes[]` — the authoring view for inlined blocks/bridges (distinct from codegen prose).
-- `files.profile_readme`, `files.module_conventions` — `${CLAUDE_PLUGIN_ROOT}/…` paths. The conventions doc is *codegen* prose; read it to learn which spec choices carry semantic weight downstream (especially the item model — see Step 3), but do not over-apply it (you are not generating code).
-- `files.architecture` — `specs/architecture.toml`, project-wide picks (features, connections, hardware ownership).
+- `files.block_readmes[]`, `files.bridge_readmes[]` — the authoring view for inlined blocks/bridges.
+- `files.profile_readme` — a `${CLAUDE_PLUGIN_ROOT}/…` path: the profile's authoring view (layers or roles, the item model where the profile keeps one).
+- `files.guidance[]` — the inlined implementation guidance (`specs/specdev/guidance/…`) of the profile and each inlined block and bridge: the rules the code must follow. Read it to learn which spec choices carry weight for the code, but do not copy it into the module — the module states intent, the guidance states rules.
+- `files.architecture` — `specs/architecture.toml`, project-wide picks (connections, hardware ownership).
+- `files.module_context[]` — present on `/spec-edit` when the module lists `context_files`: the reference reading its authors pinned. Read it.
 - `files.target_module` — present only when the module already exists (`/spec-edit`).
 - `related_modules` / `related_files[]` — the bounded sibling set. `contains` / `contained_by` are containment, not dependency (a page renders inside the `app` module without naming it in `depends_on`); read them with the other buckets. **Best-effort, and near-empty on greenfield first-pass design** (the cone is computed from already-written specs, so on a from-scratch module it cannot see the `depends_on` edge you are in the act of declaring). Treat a populated cone as a bonus for naming/shape consistency; never gate the draft on a non-empty cone. It earns its keep on `/spec-edit` and 2nd-pass authoring, not the cold start.
 
@@ -89,9 +91,9 @@ missing file means the dispatch was wrong. Do not draft against a guess.
 Read, in this order, what the cone pointed at:
 
 1. Every path in `files.schema[]` — the field list you must obey.
-2. `files.architecture` — for project-wide picks you must be consistent with.
+2. `files.architecture` — for project-wide picks you must be consistent with; and each `files.module_context[]` path when present.
 3. Each `files.block_readmes[]` / `files.bridge_readmes[]` — only the ones whose fields the interview indicated this module uses.
-4. `files.profile_readme` and `files.module_conventions` (expand `${CLAUDE_PLUGIN_ROOT}`) — the authoring + codegen view. The conventions doc's **item-emission section is load-bearing for Step 3**.
+4. `files.profile_readme` (expand `${CLAUDE_PLUGIN_ROOT}`) and `files.guidance[]` — the authoring view and the rules for the code.
 5. Each path in `related_files[]` when the cone is populated — sibling modules, to match naming and shape.
 
 Read only what is pointed at. Do not sweep the whole `specs/modules/` tree.
@@ -106,12 +108,26 @@ firmware-layered, inline-table preference, naming, layer discipline,
 one-module-per-file, comment policy). When two rules conflict, the earlier one
 wins.
 
-### The item surface — read this before drafting `[[items]]`
+### Code state — `planned` and `source_file`
 
-`module.items[]` is the module's contractual public surface. **An item is a
-public, contractual code symbol, identified by its fully-qualified path,
-described in prose — never by signature.** The conventions doc you read in
-Step 2 is the authority; this is the contract you draft to:
+When the interview says the code does not exist yet, draft `planned = true`.
+When it exists outside the profile's conventional path, draft `source_file`.
+Never both: a `planned` module whose source resolves is a `check` warning, and
+a non-planned module with no resolvable source is a `check` error.
+
+### `context_files`
+
+Draft the paths the interview named as reading for whoever edits the module —
+reference material only. A choice or a known problem the interview raises is a
+decision or an open question: say so in Notes rather than listing a file.
+
+### The item surface — only when the interview asks for `[[items]]`
+
+`module.items[]` is **optional**: a contract surface for a public API (a
+`library-api` crate) that `items diff` checks against the code. Draft it only
+when the interview asks for it. **An item is a public, contractual code symbol,
+identified by its fully-qualified path, described in prose — never by
+signature.** This is the contract you draft to:
 
 - A **method is a function.** A public function reached through `RateLimiter::`
   is its own item, the same way a free `render` function is one. Author one
@@ -123,11 +139,11 @@ Step 2 is the authority; this is the contract you draft to:
   the prefix — write `RateLimiter::new`, never `RateLimiter<C>::new`.
 - **A trait impl is one item.** `impl Display for RateLimiter` is a single
   `kind = "impl"` item named `Display for RateLimiter` — its method bodies are
-  codegen-derived from the trait, so they are not separate items.
+  dictated by the trait, so they are not separate items.
 - **The struct/enum/trait the methods hang off is its own item** —
   `pub struct RateLimiter` → item `RateLimiter` (`kind = "struct"`).
 - **Private / helper members are not items.** Only `pub` surface is contract.
-- **A file whose exports the framework constrains gets only the exports the framework allows.** When the conventions doc says a role's items are a fixed set of named exports — `nextjs-app` `role = "route_handler"`: the HTTP method functions (`GET`, `POST`, …) and route-segment config only, because the derived `route.ts` is `export *` and the framework's build rejects any other export — draft **only** those as items. Do not export helpers to satisfy the item model. A helper the module needs is either unexported (and so not an item) or it belongs in a `service` module that the handler depends on; if the helpers are substantial, stop and say "this should be two modules" instead of drafting them onto the handler. Flagging the tension in `## Notes` and drafting the exports anyway is the wrong call — `validate` passes that draft and the build gate is where it fails.
+- **A file whose exports the framework constrains gets only the exports the framework allows.** When the profile says a role's items are a fixed set of named exports — `nextjs-app` `role = "route_handler"`: the HTTP method functions (`GET`, `POST`, …) and route-segment config only, because its `route.ts` shim is `export *` and the framework's build rejects any other export — draft **only** those as items. Do not export helpers to satisfy the item model. A helper the module needs is either unexported (and so not an item) or it belongs in a `service` module that the handler depends on; if the helpers are substantial, stop and say "this should be two modules" instead of drafting them onto the handler. Flagging the tension in `## Notes` and drafting the exports anyway is the wrong call — `validate` passes that draft and the build gate is where it fails.
 - **Prose-first, always.** Each item carries a `description` of *what it does*,
   never a mirror of how it is typed. Do not name parameters, return types,
   struct fields, or generics — that is the source's job. The `signature_hint`
@@ -138,8 +154,9 @@ Step 2 is the authority; this is the contract you draft to:
 
 ### Requirements and `satisfies` (coarse-sharing — do not over-granulate)
 
-Every item except `kind = "re_export"` must carry `satisfies` (≥1 requirement
-id); the schema enforces it. **`satisfies` is per item, but requirements are
+The module's own `satisfies` names the requirements it covers. When the module
+keeps `items[]`, every item except `kind = "re_export"` must carry `satisfies`
+(≥1 requirement id); the schema enforces it. **`satisfies` is per item, but requirements are
 shared coarsely** — many methods of one type may point at one requirement. A
 limiter's whole public surface can `satisfies = ["REQ-API-001"]`; you do not
 author one requirement per method. Reach for requirement *granularity* (a new
@@ -149,22 +166,18 @@ requirements are the tedium this contract is designed to relieve — share one
 coarse `REQ-AREA-001` across a type's methods by default.
 
 **Precondition (do not invent requirement ids):** `satisfies` ids must name
-requirements the project has already authored in `specs/requirements.toml`. If
-that file is absent, or the interview names capabilities that map to no
-existing requirement, **do not invent ids** — stop and return an error (Step 6)
-telling the caller that `requirements.toml` must be authored first (or extended
-with the named requirements). Inventing requirement ids produces silent
+requirements the project has already authored under `specs/requirements/`. If
+there are none, or the interview names capabilities that map to no existing
+requirement, **do not invent ids** — stop and return an error (Step 6) telling
+the caller which requirements must be authored first. Inventing requirement ids produces silent
 traceability rot.
 
-### Test items
+### Tests
 
-An `[[items]]` entry with `test = true` is a test (`kind = "fn"` only). It uses
-`verifies = [...]` (pointing at `nature = "test"` requirements) in place of
-`satisfies`, and carries a `test_kind` (`unit` / `integration` / `doc`; `bench`
-/ `fuzz` reserve the slot but emit nothing in v1). Author test items when the
-interview names verification intent and the project has `nature = "test"`
-requirements for them. `satisfies` and `verifies` are mutually exclusive on the
-same item.
+A module spec carries no test entries. A requirement names its tests in
+`verified_by`, by the identity the analyzer's test discovery reports; when the
+interview names verification intent, list the requirement in Notes so the
+caller can add `verified_by` once the test exists.
 
 ## Per-method scaffolding
 
@@ -231,8 +244,8 @@ the **input that drove each non-obvious choice** — the schema field that force
 it, the sibling that set the naming precedent, the interview answer that
 specified it. Do not cite source lines (there are none).
 
-On a blocking error (missing input, malformed schema, `requirements.toml`
-absent when items need `satisfies`, unresolvable cone), return a single
+On a blocking error (missing input, malformed schema, no requirement for what
+the module covers, unresolvable cone), return a single
 short message naming the blocker and what the caller must do, and **stop**.
 Do not return a partial Candidate with the gap papered over — surface schema
 and requirement breakage to the user (resolve-and-stop, not draft-around).
@@ -252,8 +265,8 @@ and requirement breakage to the user (resolve-and-stop, not draft-around).
   escape hatch, not a habit.
 - **Stay read-only on files.** Your tools are `Read`, `Grep` and `Glob`. None of
   them writes, and you hold no shell, so the contract is enforced by the tool
-  list and not only stated here. You do not write files, run `validate`, or run
-  `gen` — the spawning skill does those after the user confirms.
+  list and not only stated here. You do not write files or run `validate` —
+  the spawning skill does those after the user confirms.
 - **One module per invocation.** If the interview plausibly describes two
   modules, say so in Notes and let the caller decide; do not draft both.
 - **No explanatory comments in the Candidate TOML.** The only comment permitted
@@ -266,7 +279,7 @@ and requirement breakage to the user (resolve-and-stop, not draft-around).
 
 This file is the single source of truth for the `module-designer` input/output
 contract. `/spec-design` and `/spec-edit` dispatch against the Input contract
-above; future codegen and reverse-engineering skills that build on this subagent
+above; future skills that build on this subagent
 reuse the three-section output shape (`## Candidate TOML` / `## Evidence` /
 `## Notes`), which is intentionally identical to `module-reverser`'s minus the
 LOW-confidence carve-out. Do not fork the contract into a separate doc — extend

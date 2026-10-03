@@ -48,10 +48,10 @@ version = "0.1.0"
 edition = "<edition>"
 
 [dependencies]
-# From depends_on: internal workspace crates
+# internal workspace crates
 other_module = { path = "../other_module" }
 
-# From external_deps: external crates
+# external crates
 some_crate = "1.2"
 another_crate = { version = "0.5", features = ["feature_a", "feature_b"] }
 ```
@@ -235,40 +235,12 @@ fn main() {
 
 ## Dependency Graph Verification
 
-The `depends_on` list from each module spec maps directly to `[dependencies]` entries — either as path dependencies (internal modules) or crate dependencies (external packages). The build system enforces that:
+`Cargo.toml` is the only source of truth for dependencies. The spec's `depends_on` states which project modules a
+module may use; `specdev-analyzer check` compares it with the module's actual imports (`internal_edges_declared`), and
+Cargo itself refuses an external crate the manifest does not declare. Cargo also rejects circular crate dependencies.
 
-- Every `depends_on` entry resolves to a declared dependency
-- No circular dependencies exist (Cargo rejects these at build time)
-- External packages listed in `external_deps` have corresponding entries in `[dependencies]`
+### Files a project template owns
 
----
-
-## Additive Dependency Management
-
-When a project already has a Cargo.toml (e.g., from a template like `esp-rs/esp-idf-template` or manual setup), spec-gen updates it additively rather than regenerating it.
-
-### Rules
-
-- Only add dependencies that are missing. Never modify existing entries.
-- Use the exact `build_integration.cargo` string from architecture.yaml's `external_packages`.
-- Append new entries at the end of the `[dependencies]` section.
-- If a dependency exists but with a different version than architecture.yaml specifies, do NOT change it — the existing Cargo.toml is authoritative for versions. Report the discrepancy in the generation report.
-- For `sdkconfig.defaults`: append missing `CONFIG_*` entries at the end of the file. Never modify or remove existing entries.
-
-### Files never overwritten
-
-These files are platform-specific boilerplate typically provided by a project template. spec-gen must never overwrite or regenerate them if they already exist:
-
-- `build.rs`
-- `rust-toolchain.toml`
-- `.cargo/config.toml`
-- `.gitignore`
-
-### Dependency resolution
-
-To check if a dependency is already satisfied:
-
-1. Parse `[dependencies]` from Cargo.toml
-2. Match by crate name (the TOML key, e.g., `esp-idf-svc`, `log`, `heapless`)
-3. If present under any version or source, consider it satisfied
-4. If absent, add it using `build_integration.cargo` from architecture.yaml
+`build.rs`, `rust-toolchain.toml`, `.cargo/config.toml` and `.gitignore` are platform boilerplate the project or its
+template owns. A firmware project's `.cargo/config.toml` names the build target that `[platform].target_triple`
+repeats for the gate step; keep the two equal.

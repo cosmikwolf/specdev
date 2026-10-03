@@ -70,13 +70,13 @@ with one specific API. It is not a "debugger" or "probe" abstraction:
 OpenOCD-driven one would be a different block, because the vocabulary
 (`SwoConfig`, `TraceSink`, `MemoryInterface`) is probe-rs's own.
 
-**Leg 2 — codegen-completeness.** Conforming TOML produces working code:
-an attach path, a read loop with real width dispatch and a real deadline,
-and a trace setup that streams bytes. Every worked example in the codegen
-prose is compiled by `reference/rust/`, so a signature that moves
-upstream breaks CI here rather than in a downstream project.
+**Leg 2 — rule-pack completeness.** Every field constrains the code:
+the session's probe, speed, attach mode and erase permission; each
+sampler's interval, batch and error policy; each trace source's sink,
+clock and comparators. The guidance carries the rules no check can
+verify (attach order, deadline loops, drain rate).
 
-**Leg 3 — no cross-block reach.** The codegen prose names no other
+**Leg 3 — no cross-block reach.** The guidance names no other
 block's types. Both places where a cross-block temptation exists are
 answered the same way — hand the caller a value and stop: an address is
 a `u64` the caller supplies, and the trace stream is an `impl Read` the

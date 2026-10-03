@@ -12,7 +12,6 @@
 [[actions]]
 name = "off"
 params = []
-returns = "Result<(), LedError>"
 blocking = false
 isr_safe = false
 description = "Turn the LED off."
@@ -23,7 +22,7 @@ description = "Turn the LED off."
 The project is single-package (v1 specdev is single-package across the board).
 
 **Module callers** — grep `specs/modules/*.toml` for `depends_on` containing `StatusLed`. Found:
-- `specs/modules/AudioPipeline.toml` has `depends_on = ["BtA2dpSink", "I2sOutput", "StatusLed"]`. Generated source under `src/audio_pipeline/` would call `self.led.off()`. That call site updates when `/spec-gen AudioPipeline` next runs.
+- `specs/modules/AudioPipeline.toml` has `depends_on = ["BtA2dpSink", "I2sOutput", "StatusLed"]`. Its source under `src/audio_pipeline/` calls `self.led.off()`; that call site changes when the code is updated to match the spec.
 
 **Architecture wiring** — grep `specs/architecture.toml` `[[connections]]` for `StatusLed.<anything>`. Ports bind to ports, not to actions, so renaming an action does not affect wiring. No impact.
 
@@ -34,7 +33,7 @@ The project is single-package (v1 specdev is single-package across the board).
 Present to the user:
 
 > **Impact analysis for rename `StatusLed.off` → `StatusLed.turn_off`:**
-> - Module callers: 1 — `AudioPipeline` (source call site `self.led.off()` will be regenerated on next `/spec-gen AudioPipeline`).
+> - Module callers: 1 — `AudioPipeline` (its source calls `self.led.off()`; update it with the rename).
 > - Architecture wiring: none.
 > - Hardware ownership: none.
 > - Bindings: none.
@@ -51,18 +50,17 @@ Rewrite the `[[actions]]` block:
 [[actions]]
 name = "turn_off"
 params = []
-returns = "Result<(), LedError>"
 blocking = false
 isr_safe = false
 description = "Turn the LED off."
 ```
 
-Do **not** edit source code from `/spec-edit`. Source regeneration is `/spec-gen`'s job — and it's the user driving Claude through `/spec-gen`, not the analyzer rewriting `.rs` files.
+Do **not** edit source code from `/spec-edit`. The code change is a separate step: the user (or the agent at their request) renames the method in `StatusLed` and the call in `AudioPipeline`, after reading `specdev-analyzer context --module StatusLed`.
 
 Re-run `specdev-analyzer validate --no-color`. Expect a clean report.
 
 ## Reporting back
 
 > Renamed action `StatusLed.off` → `StatusLed.turn_off` in `specs/modules/StatusLed.toml`.
-> 1 caller flagged (`AudioPipeline`); source update deferred to `/spec-gen AudioPipeline`.
+> 1 caller flagged (`AudioPipeline`); the code still says `off` until it is updated.
 > Validate: clean.

@@ -1,33 +1,51 @@
 # This project uses specdev
 
-`spec.toml` and `specs/specdev/` are present, so this repository is spec-managed.
+`spec.toml` and `specs/specdev/` are present, so this repository is spec-managed. The specs state intent —
+what each module is for, what it may depend on, which requirements it satisfies — and `specdev-analyzer check`
+checks that intent against the code. specdev does not generate code: you and the agent write it.
+
+## Before you edit code
+
+Run `specdev-analyzer context --module <Module>` for the module that owns the file, and read what it lists:
+
+- the module spec, its schema, and the specs of the modules next to it;
+- the inlined implementation guidance (`specs/specdev/guidance/`) of the profile and of every inlined block and
+  bridge — the rules the code must follow that no check can verify;
+- the module's `context_files` — reference reading its authors pinned (hardware notes, protocol references).
+
+Then run `specdev-analyzer report decisions --module <Module>`: the accepted decisions and the open questions that
+reach the module. The code follows those decisions; an `open` question that reaches it blocks building on it.
+
+If no module owns the file yet, design one first (`/spec-design`), or mark the work as planned.
 
 ## What the skills own — do not hand-write these
 
 - `specs/modules/*.toml` — written by `/spec-design` (new module), `/spec-edit` (existing module)
   and `/spec-reverse` (reverse-engineered from source).
-- Every file recorded in `specs/specdev/gen-lineage.toml` — emitted by `/spec-gen` and overwritten
-  the next time its module regenerates. Check that file before you edit any generated source.
-- The build manifest (`Cargo.toml`, `pubspec.yaml`, `package.json`) **once it has a row in
-  `gen-lineage.toml`**. Until then it is yours: a project that adopted specdev over existing code
-  has a hand-written manifest that `/spec-gen` never produced, and `manifest --write` refuses to
-  replace it (`MANIFEST-003`) for exactly that reason.
+- New ledger entries: `/spec-decide` writes `specs/decisions/<id>.toml`, `/spec-question` writes
+  `specs/open_questions/<id>.toml`.
+- `specs/specdev/` — the inlined machinery. Change it through `/spec-inline`, `/spec-inline-bridge` and
+  `specdev-analyzer migrate`; a local edit there is allowed, and `drift` reports it.
 
 ## What you write by hand
 
-- `specs/requirements.toml` — requirements are yours to author; the skills read them.
-- `spec.toml` and `specs/architecture.toml` — project identity and cross-module wiring. Bootstrap
-  seeds them once and then leaves them alone; edit them directly.
-- The body of an existing entry in `specs/decisions.toml` or `specs/open_questions.toml`.
-  New entries go through `/spec-decide` and `/spec-question`.
-- `specs/specdev/profile.yaml` `gates:` — the compile gates are project data; edit them directly.
+- The code, the tests and the build manifest (`Cargo.toml`, `pubspec.yaml`, `package.json`) — the manifest is the
+  only source of truth for dependencies, features and build profiles.
+- Requirements under `specs/requirements/` — yours to author; the skills read them.
+- `spec.toml` and `specs/architecture.toml` — project identity and cross-module wiring.
+- The body of an existing decision or open question.
+- `specs/specdev/profile.yaml` `gates:` — the compile gates are project data. After an edit, run
+  `specdev-analyzer gate --emit` to rewrite `scripts/specdev-gates.sh`.
 
 ## The loop
 
-1. Spec first: `/spec-design <one line>` or `/spec-edit <Module>`.
-2. Check: `/spec-validate` after any edit under `specs/`.
-3. Generate: `/spec-gen`.
-4. If a skill refuses, the refusal names the fix. Fix the spec and rerun; do not route around it by hand.
+1. Spec first: `/spec-design <one line>` or `/spec-edit <Module>`. A module with no code yet carries
+   `planned = true`; remove it when the code lands.
+2. Read the context (above), then write the code and its tests. A requirement's `verified_by` names the test
+   by the identity `specdev-analyzer report tests` shows.
+3. Check: `/spec-validate` (`specdev-analyzer check`). CI runs `sh scripts/specdev-gates.sh`, which runs `check`
+   and then every compile gate.
+4. If a check fails, the finding names the fix. Fix the spec or the code; do not route around it.
 
 In a `rust-workspace` root, modules live in the member crates: run the module skills from the member
 directory, not the workspace root.

@@ -11,22 +11,24 @@ For user-authored profiles, no illustrative shape is provided here; read the pro
 - **depends_on** — list of existing module names. Default empty.
 - **Hardware** — pins / peripherals / clocks the module owns or borrows. Cross-check against `specs/architecture.toml` and the inlined MCU block's schema (e.g., for `stm32h5`: `peripherals[].kind` must be one of the block's enum).
 - **Ports** — name + `port_type` + `direction` for each port. These appear as endpoints in `architecture.toml [[connections]]`.
-- **Actions** — public action surface. One line per action, with `params`, `direction`, `blocking`, `isr_safe`.
+- **Actions** — public action surface. One line per action: what it does, plus `blocking` and `isr_safe`. No parameter or return types — the code holds those.
 - **State machine** — if the module has one, ask for initial state, state names, triggering events. Defer transition details to the TOML.
-- **Errors** — one short variant name + one-line description each.
+- **Errors** — one line per failure the module reports: what can go wrong and what the caller sees.
 - **Metadata** — `MemoryModel`, `ConcurrencyModel`, `ErrorHandling`, `Ownership`. Pick explicit, well-justified values; do not default through.
 - **Bindings** — if both `embassy` and `stm32h5-rs` are inlined and a bridge is present, ask whether this module declares any `bindings."embassy+stm32h5-rs".peripheral_tasks[]` entries (each entry: `task`, `peripheral`, optional `handoff` ∈ `{owned, shared}`).
-- **satisfies** — requirement ids if `specs/requirements.toml` declares any.
+- **satisfies** — requirement ids from `specs/requirements/`.
+- **Code state** — `planned = true` when no code exists yet; otherwise `source_file` when the file is not at `src/<layer>/<name>.rs`.
 
 ## library-api
 
 - **Name** — PascalCase.
 - **visibility** — `pub` / `pub(crate)` / `pub(super)`.
 - **depends_on** — list of existing module names.
-- **items** — `[[items]]` entries for the module's contractual surface. Re-exports use `kind = "re_export"` with `{target, visibility, alias?}`; other public-API items (`fn`, `struct`, `enum`, `trait`, `impl`, ...) require `satisfies` (≥1 requirement id).
-- **feature_gates** — list of feature names; ANY-of `cfg(feature = "...")` semantics.
-- **external_deps** — module-scoped crates (CrateReference shape: `{crate, version, source?, features?, default_features?}`).
-- **satisfies** — requirement ids if any.
+- **items** — optional `[[items]]` entries for the module's contractual surface, checked by `items diff`. Re-exports use `kind = "re_export"` with `{target, visibility, alias?}`; other public-API items (`fn`, `struct`, `enum`, `trait`, `impl`, ...) require `satisfies` (≥1 requirement id).
+- **satisfies** — requirement ids from `specs/requirements/`.
+- **Code state** — `planned = true` when no code exists yet; otherwise `source_file` when the file is not at the conventional path.
+
+Features and dependencies live in `Cargo.toml`; the module spec does not copy them.
 
 ## rust-workspace
 

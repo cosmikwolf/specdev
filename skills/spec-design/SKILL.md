@@ -32,7 +32,7 @@ If `specs/specdev/` is absent at the project root, stop and tell the user to run
 
 Read `spec.toml` to learn the project's `[project].profile` and `[project].language`. The profile shapes which fields the module schema accepts.
 
-Check `specs/requirements.toml`. Every non-`re_export` item the module owns must `satisfies` a requirement, so the subagent (Step 2) needs requirement ids to already exist. If the file is absent or has no requirement covering what this module does, tell the user up front — they author requirements in `specs/requirements.toml` (and `/spec-question` / `/spec-decide` capture the reasoning behind them). Do not let the draft invent requirement ids.
+Check `specs/requirements/`. The module `satisfies` requirements, so the subagent (Step 2) needs requirement ids to already exist. If there is no requirement covering what this module does, tell the user up front — they author requirements under `specs/requirements/` (and `/spec-question` / `/spec-decide` capture the reasoning behind them). Do not let the draft invent requirement ids.
 
 ## Step 1 — interview
 
@@ -42,12 +42,13 @@ Ask the user for fields not reasonably inferable from `$ARGUMENTS`. The canonica
 
 For shipped profiles, illustrative interview-question lists are in `references/interview-shapes.md` (firmware-layered, library-api, rust-workspace routing). For user-authored profiles, read the profile's `module.schema.yaml` and `README.md` directly — no illustrative shape is provided.
 
-Two questions are universal — ask them on every module regardless of profile (F-013, F-015 from the zfm audio-plugin dogfood):
+Three questions are universal — ask them on every module regardless of profile:
 
-- **`items[]` — what symbols does this module own?** Walk the user through the structural items they want emitted: `fn` / `struct` / `enum` / `trait` / `re_export` / etc., each with a short `description` and (when known) a `satisfies = [...]` list naming the requirements it covers. For a type with public methods, get the **type name and its public member names** — that pair is what lets the subagent scaffold the per-method items (one `<Type>::<member>` `kind = "fn"` item each, sharing a coarse requirement) so the user writes descriptions, not boilerplate. You do not need full signatures; method names plus intent are enough (the item model is prose-first per `references/toml-authoring-rules.md`). Modules with empty `items[]` give `/spec-gen` nothing to anchor on and offer no traceability surface to `/spec-sync-items`. If the user is genuinely architecting and doesn't know the items yet, record that as a `# TODO: items[]` comment instead of leaving the array silently absent.
-- **`module.context_files = [...]` — does this module need out-of-band prose at codegen time?** When the module is deep-domain (DSP math, hardware sequencing, protocol details, MIDI quirks), point the user at any project-prose files (`docs/dsp-notes.md`, `docs/yamaha-fm-arch.md`) the codegen agent should inline alongside the spec. The analyzer reads each path's contents into the assembled prompt at `prompt --module` time. Skip this if the module is mechanical (config types, glue code) — empty `context_files` is the right answer for shallow modules.
+- **Does the code exist yet?** A new module almost always has no code: write `planned = true`. `check` then stays silent about the missing source, and `check --since` reports the flag so it cannot be forgotten. When the code lands, the flag goes (`check` warns about a `planned` module whose source resolves). When code already exists, leave `planned` out and set `source_file` if the file is not where the profile's convention puts it — `check` reports a module with no resolvable source as an error.
+- **`module.context_files = [...]` — what must someone read before editing this module?** Reference reading only: a datasheet section, a protocol note, a hardware reference (`docs/HARDWARE_REFERENCE.md`). `specdev-analyzer context --module` lists these paths for whoever edits the code, and `validate` checks that each exists. A choice or a known problem is not reference reading: it belongs in a decision or an open question. Leave the list empty for a mechanical module.
+- **`items[]` — only if the project keeps a contract surface.** `items[]` is optional: use it for a public API whose symbols are the contract (a `library-api` crate), where `items diff` checks it against the code. For a type with public methods, get the **type name and its public member names** so the subagent can scaffold one `<Type>::<member>` `kind = "fn"` item each, sharing a coarse requirement — prose-first, never signatures (`references/toml-authoring-rules.md`). Otherwise leave `items[]` out: the module's `satisfies`, `depends_on` and description carry the intent.
 
-Triad awareness (when the project authors `specs/decisions.toml` / `specs/open_questions.toml`): check whether any accepted decision should guide this module's design — if so, set `guided_by = ["DEC-..."]` so the rationale is inlined at codegen time. Check `specs/open_questions.toml` for open questions whose `affects` will reach this module: an open question hard-blocks `/spec-gen` for it, so tell the user up front. If the interview itself surfaces a genuine unknown, do not improvise a quiet answer in the spec — point the user at `/spec-question` to record it (or `/spec-decide` if the conversation settles a choice worth keeping).
+Triad awareness: check whether any accepted decision under `specs/decisions/` should guide this module — if so, set `guided_by = ["DEC-..."]` so `report decisions --module` lists it for whoever writes the code. Check `specs/open_questions/` for open questions whose `affects` will reach this module: once the module has code, `check` reports each `open` one as an error (`implementation_unblocked`), so tell the user up front. If the interview itself surfaces a genuine unknown, do not improvise a quiet answer in the spec — point the user at `/spec-question` to record it (or `/spec-decide` if the conversation settles a choice worth keeping).
 
 **A fixed set of domain values** (statuses, types, classifications): before you write the values into the spec, ask the test in `${CLAUDE_PLUGIN_ROOT}/shared/vocabulary-placement.md` — does a non-engineer need to add a value without a deploy? If yes, the module states a table, not the values. Either way, the choice needs a decision (`/spec-decide`) linked from this module's `guided_by`.
 
@@ -100,15 +101,15 @@ Show the output. If errors:
 
 If validation surfaces a structural issue ("actually this should be two modules"), stop, write a short plan, and wait for confirmation before re-dispatching the subagent.
 
-## Step 4 — optional: extract and show
+## Step 4 — check against the code
 
 Once validate is clean, run:
 
 ```sh
-specdev-analyzer extract --output /tmp/specdev-extract-<pid>
+specdev-analyzer check --no-color
 ```
 
-Read the module's YAML and show the user the first ~30 lines. This previews what `/spec-gen` will consume and surfaces any data-shape surprises early.
+A `planned` module with no code passes. A module without `planned` and with no resolvable source is an error (`source_resolves`): either the code exists somewhere else (set `source_file`) or the module is planned (set `planned = true`). An `implementation_unblocked` error means an open question reaches a module that already has code — route to `/spec-question`.
 
 ## Step 5 — report
 
@@ -116,7 +117,7 @@ One paragraph:
 - Module name and path written.
 - Key decisions in one line each (layer / visibility, ownership kind, error strategy, bindings).
 - Anything the user asked for that wasn't placed in the file, and where it was recorded instead.
-- Suggested next step: `/spec-design <next module>`, or `/spec-gen <ModuleName>` once at least one module exists and a code-path exists for the inlined blocks/bridges.
+- Suggested next step: `/spec-design <next module>`, or write the code. Before writing it, run `specdev-analyzer context --module <ModuleName>` and `specdev-analyzer report decisions --module <ModuleName>`, and read what they list — the inlined guidance, the `context_files`, the decisions. Remove `planned = true` when the code lands, and run `/spec-validate`.
 
 ## Additional resources
 
@@ -128,4 +129,4 @@ One paragraph:
 
 - **Edit existing modules.** That's `/spec-edit`'s job. If the target file exists, stop and tell the user.
 - **Inline blocks or bridges.** That's `specdev-analyzer inline <block>` / `inline-bridge <a>+<b>`. If the user wants `peripherals` / `tasks` / `bindings.<a>+<b>` fields and the corresponding block/bridge isn't inlined, the schema will reject them; tell the user to inline first.
-- **Generate code.** That's `/spec-gen`'s job.
+- **Write code.** The user and the agent write it after the design, following the project rules (`.claude/rules/specdev.md`).

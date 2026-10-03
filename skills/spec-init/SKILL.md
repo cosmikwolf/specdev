@@ -69,7 +69,7 @@ When the choice is between `rust-app` and `library-api` and the detection is amb
 3. **Language** — `rust`, `dart` or `typescript`. The profile decides: each profile's `profile.yaml` declares its `language:`, so offer the language matching the chosen profile (`dart` for `flutter-app`, `typescript` for `nextjs-app`, `rust` for the Rust profiles); a mismatch fails at bootstrap. `c` and `cpp` are in the schema enum and have an audit tier, but no profile generates them yet. (default: the chosen profile's declared language)
 4. **Bootstrap directory** — usually the current working directory, but the analyzer creates it if absent and refuses if `specs/specdev/` is already present. (default: `.`)
 
-These four questions are all the schema requires. Profile-specific decisions (target triple, MCU part, license, MSRV, …) live in `architecture.toml` / optional `[project]` fields and are filled in Step 6, after the analyzer has emitted templates.
+These four questions are all the schema requires. Profile-specific facts (the target triple, connections) live in `architecture.toml` and are filled in Step 6, after the analyzer has emitted templates. Versions, licenses and dependencies stay in the build manifest.
 
 ## Step 5 — run bootstrap
 
@@ -83,7 +83,7 @@ specdev-analyzer bootstrap \
   <bootstrap_dir>
 ```
 
-This emits the full `specs/specdev/` machinery (schemas, reductions, codegen prose for the chosen profile), plus templates: `spec.toml`, `specs/architecture.toml`, `specs/requirements.toml`, and the empty `specs/modules/` directory. Templates carry profile-specific commented hints.
+This emits the full `specs/specdev/` machinery (schemas, reductions, `domain.toml`, `profile.yaml`, and the profile's implementation guidance in `specs/specdev/guidance/profile.md`), plus `spec.toml`, the empty `specs/modules/` directory, the gate script `scripts/specdev-gates.sh`, and the profile's paired files (config files written once when absent — for example the CI workflow template). Templates carry profile-specific commented hints.
 
 If the analyzer fails:
 - `BOOTSTRAP-001` — `specs/specdev/` already exists, or the profile name is invalid; surface message verbatim.
@@ -93,37 +93,36 @@ If the analyzer fails:
 
 Do not attempt to repair these errors by hand-writing files.
 
-## Step 5.5 — the compile-gate registry the project just inherited
+## Step 5.5 — the compile gates and CI the project just inherited
 
-Bootstrap copies the profile's `profile.yaml` byte-faithfully, so the new `specs/specdev/profile.yaml` already carries the profile's **`gates:`** block — the compile gates as data, one `label` + `scope` + `steps` (argv lists) per gate. Read the block back and show the user what the project inherited:
+Bootstrap copies the profile's `profile.yaml` byte-faithfully, so the new `specs/specdev/profile.yaml` carries the profile's **`gates:`** block — the compile gates as data, one `label` + `steps` (argv lists) per gate — and renders them into `scripts/specdev-gates.sh`. Read the block back and show the user what the project inherited:
 
 ```sh
 awk '/^gates:/{f=1;print;next} f&&/^[^[:space:]]/{exit} f' specs/specdev/profile.yaml
 ```
 
-Three facts the user needs now, not at their first `/spec-gen`:
+Three facts the user needs now:
 
-- **`/spec-gen` refuses to generate anything when the registry declares no gate with `scope: module`.** Not a warning, not a skip. `specdev-analyzer gen --module <M> --tail` aborts non-zero and prints the block to paste. A project that verifies nothing has nothing to verify with.
-- **The block is the project's now.** Editing a step, adding a gate or changing a label is a normal edit to `specs/specdev/profile.yaml`. Deleting the last `scope: module` gate stops codegen.
-- **The registry is in the gate key.** Changing it flips every module to `verified: false`, which is correct — the old passes proved a different check.
+- **The script is what CI runs.** `sh scripts/specdev-gates.sh` runs `specdev-analyzer check` first and then every gate, stopping at the first failure. The profile's CI workflow template (when it ships one) installs the toolchain the profile README lists, builds the analyzer, and runs the script. A missing tool stops the script with exit 2 and a line naming the command.
+- **The block is the project's now.** Editing a step, adding a gate or changing a label is a normal edit to `specs/specdev/profile.yaml`; then `specdev-analyzer gate --emit` rewrites the script (`validate` reports a script that differs from the block).
+- **Commit the lockfile.** CI installs are frozen: a CI run refuses to change the lockfile.
 
-If the chosen profile is **user-authored and ships no `gates:` block**, say so here and give the shape to write before the first `/spec-gen`:
+If the chosen profile is **user-authored and ships no `gates:` block**, say so here and give the shape to write:
 
 ```yaml
 gates:
   - label: fast
-    scope: module
     steps:
       - [<program>, <arg>, <arg>]
 ```
 
-`steps` is a list of **argv lists**, never a shell string: one exit code per step, and no second quoting grammar. A `${root.<table>.<field>}` token in an argument resolves against `specs/architecture.toml` at run time. `/spec-create-profile` § "Step 1 — interview the project shape" is the authoring reference.
+`steps` is a list of **argv lists**, never a shell string: one exit code per step, and no second quoting grammar. A `${root.<table>.<field>}` token in an argument resolves against `specs/architecture.toml` when the script is rendered. `/spec-create-profile` § "Step 1 — interview the project shape" is the authoring reference.
 
 ## Step 6 — confirm or fill architecture defaults
 
 Read the emitted `specs/architecture.toml`. The template ships pre-filled with sane defaults; bootstrap-emitted architecture is valid as-is. This step is interview-driven refinement, not error recovery — only edit fields the user actually wants to change.
 
-For per-profile refinement shapes (firmware-layered, library-api, optional `[project]` fields), see `references/architecture-refinement.md`. For user-authored profiles, read `${CLAUDE_PLUGIN_ROOT}/profiles/<profile>/README.md` and the emitted `specs/architecture.toml` together — the README enumerates which fields the profile considers required vs optional.
+For per-profile refinement shapes, see `references/architecture-refinement.md`. For user-authored profiles, read `${CLAUDE_PLUGIN_ROOT}/profiles/<profile>/README.md` and the emitted `specs/architecture.toml` together — the README enumerates which fields the profile considers required vs optional.
 
 ## Step 7 — verify
 
@@ -145,7 +144,7 @@ Summarize:
 - Files created (one line each, with paths).
 - What `/spec-config` reported for each of its two files: created, or already present.
 - The selected profile and a one-line reminder of what it shapes (firmware-layered → layered embedded; library-api → Rust library; rust-app → standalone Rust application, testable core plus thin entry point; audio-plugin → VST3/CLAP/standalone audio plugin; rust-workspace → workspace root that walks per-member crates; flutter-app → Flutter application; nextjs-app → Next.js App Router application). For a user-authored profile, quote its README's first line.
-- The gate registry the project inherited (Step 5.5): the labels and their scopes, or the shape to write when the profile ships none.
+- The gate registry the project inherited (Step 5.5): the gate labels and the script path, or the shape to write when the profile ships none.
 - Validate result.
 - **Suggested next steps**: render per-profile guidance from `${CLAUDE_PLUGIN_ROOT}/shared/profile-next-steps.md` (it has a section per shipped profile plus a fallback for user-authored ones).
 
@@ -159,6 +158,6 @@ Summarize:
 ## Additional resources
 
 - `references/build-manifest-detection.md` — manifests scanned in Step 2 and fields extracted as interview defaults.
-- `references/architecture-refinement.md` — illustrative per-profile architecture refinements for Step 6 (firmware-layered platform/runtime/logger picks, library-api `msrv`/features, optional `[project]` fields).
+- `references/architecture-refinement.md` — illustrative per-profile architecture refinements for Step 6 (the firmware-layered target triple; connections and project decisions).
 - `references/requirements-readme-template.md` — verbatim body for an optional `specs/requirements/README.md` file (write only if the project intends to track requirements).
 - `${CLAUDE_PLUGIN_ROOT}/shared/profile-next-steps.md` — per-profile suggested next steps rendered in Step 8.
