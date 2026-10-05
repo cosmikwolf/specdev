@@ -73,12 +73,26 @@ The exact file shapes this skill scaffolds are in `references/bridge-artifact-te
 
 ## Step 0.5 — does this bridge earn its keep?
 
-Three tests, in order. Any one of them failing means **do not author a bridge** —
+Four tests, in order. Any one of them failing means **do not author a bridge** —
 say so and stop. The cost of getting this wrong is asymmetric: an unnecessary
 bridge is five files and a permanent maintenance surface, while a missing one is
 a few lines someone writes by hand.
 
-1. **Endpoint resolvability (mechanical — check this first, it is a hard gate).**
+0. **Is the binding an edge at all? (cheapest — run it first.)** A bridge declares
+   relations only (`entities: []`), and each binding is an edge between two entity
+   kinds the endpoint blocks own. Three plausible shapes are not edges:
+   - an **attribute** of one entity (a task's priority) bound to something that is
+     not modelled as an entity (an interrupt vector);
+   - a **cardinality** constraint ("at least as many X as Y") — no primitive
+     expresses it, and the compiler usually does already;
+   - one line of **glue** — test 2 says to hand-author it.
+
+   "These two things must agree" is not automatically an edge. A threshold, a count
+   or a single line gives the bridge nothing to declare; the rule belongs in the
+   owning block's guidance (or, where an edge already exists, in a rule pack check
+   over it, `related_attrs_allowed`).
+
+1. **Endpoint resolvability (mechanical — a hard gate).**
    A bridge's bindings table lives on **one module**, and both endpoints must
    **resolve** against materialized entities. That is the requirement. It is
    *not* a requirement that both endpoints live on the binding's own module.
