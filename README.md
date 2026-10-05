@@ -102,7 +102,7 @@ From an existing **Rust** codebase (reverse engineering is Rust-only today):
 | `/spec-question`       | Raise an open question under `specs/open_questions/`, downgrade it to a committed default, or close it. |
 | `/spec-validate`       | Run `specdev-analyzer check` (validate, then the spec against the code) and translate findings into actionable fixes. |
 | `/spec-reverse`        | One-shot migration: reverse-engineer module specs from an existing **Rust** codebase. Single-module or `--all`. |
-| `/spec-inline`         | Inline a canonical block from `${CLAUDE_PLUGIN_ROOT}/blocks/<name>/` into the project's `specs/specdev/` tree, split across schema, reduction, implementation guidance and an upstream snapshot. |
+| `/spec-inline`         | Inline a canonical block from `${CLAUDE_PLUGIN_ROOT}/blocks/<name>/` into the project's `specs/specdev/` tree, split across schema, reduction, implementation guidance, an optional rule pack and an upstream snapshot. |
 | `/spec-inline-bridge`  | Inline a canonical bridge between two already-inlined blocks. Bridge name is `<a>+<b>` with `a` and `b` lex-ordered. |
 | `/spec-drift`          | Read-only report on which inlined files diverge from the plugin tree or have been edited locally. |
 | `/spec-sync-items`     | Three-stage sync (deterministic diff → AI-advisory rationale → human approval → spec mutation) reconciling a module's `[[items]]` with what tree-sitter finds in source. |
@@ -150,6 +150,7 @@ my-project/
         │   ├── profile.md
         │   ├── blocks/<name>.md
         │   └── bridges/<name>.md
+        ├── checks/, queries/            # inlined rule packs: checks as data, tree-sitter queries
         ├── upstream/                    # bytes-as-of-inlining; the merge base for --merge
         ├── domain.toml                  # user-edited graph-check rules
         └── lineage.toml                 # provenance + content hash for every inlined unit
@@ -187,7 +188,7 @@ Each entry has its own `README.md` describing what it contributes; read those fo
 
 What this repo currently ships at HEAD (subject to change as new profiles / blocks / bridges land):
 
-- **Profiles** — project-shape skeletons. One-shot scaffolding at bootstrap; no ongoing dependency.
+- **Profiles** — project-shape skeletons. Bootstrap copies their files into `specs/specdev/`; `drift` tracks them against the plugin from then on.
   - `firmware-layered` (rust) — embedded Rust on Cortex-M, layered architecture (PAC → HAL → driver → middleware → application), ports + connections wiring, hardware ownership.
   - `library-api` (rust) — pure Rust library, visibility-driven module boundaries, an optional `items[]` contract surface.
   - `rust-app` (rust) — standalone Rust executable: a testable core plus a thin entry point.
@@ -195,7 +196,7 @@ What this repo currently ships at HEAD (subject to change as new profiles / bloc
   - `rust-workspace` (rust) — workspace root profile that walks per-member crates each carrying their own profile (typically `library-api` or `audio-plugin` or `firmware-layered`).
   - `flutter-app` (dart) — Flutter application, composition root plus screens and services, fenced by platform.
   - `nextjs-app` (typescript) — Next.js App Router application, nine module roles, the client/server boundary as two fields.
-- **Blocks** — concrete frameworks, libraries, or hardware families. Each ships a schema fragment, reduction rules, implementation guidance, and a README.
+- **Blocks** — concrete frameworks, libraries, or hardware families. Each ships a schema fragment, reduction rules, implementation guidance, a README, and optionally a rule pack (checks as data).
   - Rust: `eframe`, `egui`, `egui-plot`, `elf-dwarf`, `embassy`, `iroh`, `itm`, `mk20dx`, `nih-plug`, `probe-rs`, `rtic`, `stm32h5-rs`.
   - Dart: `flutter-rust-bridge`, `universal-ble`.
   - TypeScript: `next-auth`, `prisma`.
@@ -204,9 +205,9 @@ What this repo currently ships at HEAD (subject to change as new profiles / bloc
 
 ### Authoring your own profile / block / bridge
 
-Drop it under `blocks/<name>/` or `bridges/<a>+<b>/` or `profiles/<name>/` in the plugin tree (or any git repo / local path), then pull it into a project via `specdev-analyzer inline <block> --from <url|path>` or its `/spec-inline` wrapper. The layout is linted by `specdev-analyzer plugin-lint`, gated in the **analyzer's** CI (`tests/plugin_lint.rs::live_plugin_lint_passes`, which checks this tree out as a sibling) rather than in this repository's. Run it yourself with `specdev-analyzer plugin-lint --plugin "${CLAUDE_PLUGIN_ROOT}"` — that gate is currently blocked on the same cross-repo token as the rest of the analyzer's CI, so do not read a missing run as a passing one.
+Author it with `/spec-create-block`, `/spec-create-bridge` or `/spec-create-profile`, under `blocks/<name>/`, `bridges/<a>+<b>/` or `profiles/<name>/` in a plugin tree you can write to (this checkout, or a fork). A project then inlines it with `/spec-inline` / `/spec-inline-bridge` (or bootstraps it with `/spec-init`), with `--plugin-root` pointing at that tree when it is not the installed plugin. The layout is linted by `specdev-analyzer plugin-lint --plugin <tree>`, and gated in the **analyzer's** CI (`plugin_lint::live_plugin_lint_passes`, which checks this tree out as a sibling) rather than in this repository's.
 
-User-contributed blocks and bridges are first-class: `--from <url|path>` works against any git repo or local checkout, lineage records the origin, and `/spec-drift` / `/spec-inline --merge` handle updates with 3-way merge against `specs/specdev/upstream/`.
+User-contributed blocks and bridges are first-class: lineage records the origin, and `/spec-drift` / `/spec-inline --merge` handle updates with 3-way merge against `specs/specdev/upstream/`.
 
 ## Scope
 

@@ -13,7 +13,7 @@ Validation rule names and severities are **profile-specific** and live in each p
   modules_acyclic               = "error"
   layer_dependency              = "error"
   connection_endpoints_resolve  = "error"
-  requirement_satisfies_resolves = "warning"
+  requirements_have_satisfiers  = "error"
   ```
 - **`[[project.graph_checks]]`** — declares each check's `kind` (`unique`, `acyclic`, `layer_dependency`, `endpoints_resolve`, etc.), `scope`, and source fields. Read this to learn what the rule actually checks.
 

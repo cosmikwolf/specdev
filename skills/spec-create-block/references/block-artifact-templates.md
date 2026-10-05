@@ -131,6 +131,9 @@ Rules an agent follows when it writes or edits code for a module with a
 - <One rule per bullet: what to do or never do, and why in one clause.>
 ```
 
+With a rule pack, the opening names what the pack checks instead: "The rule pack
+checks <the rules it covers, by `<name>.<rule>` id>; review checks the rest."
+
 Hard rules (`plugin-lint` checks the first three):
 - **Present** (`GUIDANCE-001`), **no fenced code** (`GUIDANCE-002`), **at most
   4,096 bytes** (`GUIDANCE-003`). Rules, not code: a code sample is a template

@@ -1,7 +1,6 @@
 # egui+egui-plot — implementation guidance
 
-Rules an agent follows when it writes or edits a plot placed in an egui region. No check verifies them yet; review
-does. EGP-001..004 are rules a future unit check will verify.
+Rules an agent follows when it writes or edits a plot placed in an egui region. No check verifies them; review does.
 
 ## Placement
 

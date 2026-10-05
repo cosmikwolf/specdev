@@ -10,9 +10,9 @@ first.
 
 `@auth/prisma-adapter` is a join product. It takes a Prisma client and
 returns an Auth.js adapter, so it is useless unless both blocks are
-present — and a project that inlined `next-auth` alone would receive a
-dependency it could not satisfy. That is the rule that moved
-`nih_plug_egui` out of the `egui` block and into `egui+nih-plug`.
+present — the `next-auth` block's guidance would otherwise tell a project
+without Prisma to add a package it cannot use. That is the rule that
+moved `nih_plug_egui` out of the `egui` block and into `egui+nih-plug`.
 
 ## What the binding says
 

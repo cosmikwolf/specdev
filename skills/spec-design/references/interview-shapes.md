@@ -17,7 +17,7 @@ For user-authored profiles, no illustrative shape is provided here; read the pro
 - **Metadata** — `MemoryModel`, `ConcurrencyModel`, `ErrorHandling`, `Ownership`. Pick explicit, well-justified values; do not default through.
 - **Bindings** — if both `embassy` and `stm32h5-rs` are inlined and a bridge is present, ask whether this module declares any `bindings."embassy+stm32h5-rs".peripheral_tasks[]` entries (each entry: `task`, `peripheral`, optional `handoff` ∈ `{owned, shared}`).
 - **satisfies** — requirement ids from `specs/requirements/`.
-- **Code state** — `planned = true` when no code exists yet; otherwise `source_file` when the file is not at `src/<layer>/<name>.rs`.
+- **Code state** — `planned = true` when no code exists yet; otherwise `source_file` when the file is not at `<paths.source>/<snake_name>.rs` or `<paths.source>/<snake_name>/mod.rs` (the only places `check` looks).
 
 ## library-api
 

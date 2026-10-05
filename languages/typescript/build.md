@@ -107,17 +107,17 @@ packages:
 | Run a script | `pnpm run <name>` | `npm run <name>` |
 
 - `tsc --noEmit` exiting 0 is the TypeScript analog of `cargo check` — a
-  type-clean tree is the minimum bar for generated code. It does not run the
-  code and does not see framework-level errors; a framework profile adds its own
-  slower gate.
+  type-clean tree is the minimum bar. It does not run the code and does not see
+  framework-level errors; a framework profile adds its own slower gate.
 - **None of these commands is "the compile gate".** The gate is the profile's
-  `gates:` registry in `specs/specdev/profile.yaml` — a `label`, a `scope` and
-  `steps` as argv lists — and `specdev-analyzer gate --label <l> [--module <m>]…`
-  is what runs it and writes the rows. This table is the menu a profile author
-  picks steps from, not a procedure anyone follows by hand. A typical TypeScript
-  registry has a module-scope gate (`[pnpm, install]`, `[pnpm, exec, tsc,
-  --noEmit]`, `[pnpm, exec, vitest, run, --passWithNoTests]`) and, for a
-  framework, a batch-scope gate holding the slower whole-tree build.
+  `gates:` registry in `specs/specdev/profile.yaml` — a `label` and `steps` as
+  argv lists — rendered into `scripts/specdev-gates.sh`, which CI runs after
+  `specdev-analyzer check`; `specdev-analyzer gate --label <l>` runs one gate by
+  hand. This table is the menu a profile author picks steps from, not a
+  procedure anyone follows by hand. A typical TypeScript registry has a fast
+  gate (`[pnpm, install]`, `[pnpm, exec, tsc, --noEmit]`, `[pnpm, exec, vitest,
+  run, --passWithNoTests]`) and, for a framework, a second gate holding the
+  slower whole-tree build.
 - `node --version` and the package-manager version are machine facts. The
   project pins them through `engines` and `packageManager`, which are files.
 

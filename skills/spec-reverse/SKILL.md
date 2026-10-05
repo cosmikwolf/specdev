@@ -101,8 +101,8 @@ From the mode table above, load the matching reference file and follow it end to
 
 - `references/mode-architecture.md` — procedure for the no-args architecture pass.
 - `references/mode-single-module.md` — procedure for `<ModuleName>` single-module reversal (uses Step 4's `extract-items` output as the structural basis).
-- `references/mode-full-project.md` — procedure for `--all` end-to-end reversal: project-shape survey, then a sequential per-module loop using the same single-module procedure. Parallel fan-out via the `module-reverser` subagent is supported but not required; sequential walk produces a cleaner audit trail and avoids racing on `validate` invocations.
-- `references/module-reverser-subagent.md` — invocation contract for the `module-reverser` subagent dispatched during `--all` if the user opts into parallel fan-out.
+- `references/mode-full-project.md` — procedure for `--all` end-to-end reversal: project-shape survey, then a sequential per-module loop using the same single-module procedure. Parallel fan-out is not available (the `module-reverser` subagent is staged, not shipped).
+- `references/module-reverser-subagent.md` — the contract and status of the staged `module-reverser` subagent (not shipped; nothing dispatches it).
 - `${CLAUDE_PLUGIN_ROOT}/skills/spec-design/references/toml-authoring-rules.md` — priority-ordered TOML authoring rules shared with `/spec-design` and `/spec-edit`. Rule 8 carves out the `# LOW:` marker convention that's unique to `/spec-reverse`; rules 1–7 apply once the user confirms inferred fields and the markers are stripped.
 
 ## What this skill does NOT do

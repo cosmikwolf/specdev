@@ -1,7 +1,7 @@
 # elf-dwarf+probe-rs — implementation guidance
 
 Rules an agent follows when it writes or edits code that samples, through a debug probe, the variables that DWARF
-debug info locates. No check verifies them yet; review does. EDPR-001..003 are rules a future unit check will verify.
+debug info locates. No check verifies them; review does.
 
 ## The handoff
 

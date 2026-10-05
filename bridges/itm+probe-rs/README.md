@@ -101,7 +101,7 @@ the itm decoder on one side, probe-rs on the other.
 **Rule-pack complete.** Each binding constrains the code (which watch,
 which trace source, which clock, when to arm); the guidance carries the
 seam's rules — one resolved clock for both sides, teardown order,
-routing by comparator — and ITMPR-001..004 as checkable rules.
+routing by comparator — and ITMPR-001..004 as numbered rules; review checks them.
 
 **The contribution belongs to the bridge.** Comparator agreement cannot
 live in `itm` without teaching it about probe arming, and cannot live in

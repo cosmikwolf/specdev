@@ -4,93 +4,42 @@ Pure build system reference for Rust projects using Cargo. These patterns apply 
 
 ---
 
-## Workspace Cargo.toml
+## Toolchain Commands
 
-When a project contains multiple modules, use a workspace at the project root:
+| Purpose | Command |
+|---|---|
+| Type-check (the usual compile gate) | `cargo check --quiet` |
+| Type-check for a cross target | `cargo check --quiet --target <triple>` |
+| Run tests | `cargo test` |
+| Lint | `cargo clippy --all-targets` |
+| Format | `cargo fmt` |
+| Build release | `cargo build --release` |
+| Fail when `Cargo.lock` would change (CI) | add `--locked` to any of the above |
 
-```toml
-[workspace]
-members = [
-    "src/module_a",
-    "src/module_b",
-    "src/module_c",
-]
-```
-
-Each module directory listed in `members` must contain its own `Cargo.toml`.
-
----
-
-## Single-Crate Cargo.toml
-
-For projects that compile as a single crate (all modules in one package):
-
-```toml
-[package]
-name = "<project_name>"
-version = "0.1.0"
-edition = "<edition>"     # e.g. "2021" or "2024"
-
-[dependencies]
-# Internal and external dependencies listed here
-```
+- `cargo check` exiting 0 is the minimum bar: a type-clean tree. It does not run the code; a profile that needs more
+  adds a second gate.
+- **None of these commands is "the compile gate".** The gate is the profile's `gates:` registry in
+  `specs/specdev/profile.yaml` — a `label` and `steps` as argv lists — rendered into `scripts/specdev-gates.sh`, which
+  CI runs after `specdev-analyzer check`. This table is the menu a profile author picks steps from.
 
 ---
 
-## Per-Module Cargo.toml
+## Cargo.toml
 
-Each module directory has its own `Cargo.toml`:
+`Cargo.toml` is the project's, and the only source of truth for dependencies, features and build profiles. The spec
+copies none of it.
 
-```toml
-[package]
-name = "<module_name>"
-version = "0.1.0"
-edition = "<edition>"
-
-[dependencies]
-# internal workspace crates
-other_module = { path = "../other_module" }
-
-# external crates
-some_crate = "1.2"
-another_crate = { version = "0.5", features = ["feature_a", "feature_b"] }
-```
-
----
-
-## Mapping External Packages to Cargo Dependencies
-
-External packages from the architecture spec map to `[dependencies]` entries. The `build_integration.cargo` field in the architecture spec provides the exact Cargo dependency string.
-
-### Source Types
-
-| Source Type | Cargo Mapping |
-|-------------|---------------|
-| `crate` | Standard crates.io dependency: `name = "version"` |
-| `git` | Git dependency: `name = { git = "url", rev = "ref" }` |
-| `sdk` | SDK-specific crate: follows `build_integration.cargo` exactly |
-| `component` | Framework registry crate: follows `build_integration.cargo` exactly |
-
-### Version and Features
+- A single crate holds every module of a package; modules are files under `src/`, not crates.
+- A workspace lists its member crates under `[workspace] members`; each member has its own `Cargo.toml` and, in
+  specdev, its own spec root (see the `rust-workspace` profile).
+- Dependency shapes:
 
 ```toml
 [dependencies]
-# Simple version constraint
 simple_dep = "1.0"
-
-# With features enabled
 featured_dep = { version = "2.3", features = ["async", "derive"] }
-
-# Git source with specific revision
 git_dep = { git = "https://github.com/org/repo", rev = "abc123" }
-
-# Git source with branch
-branch_dep = { git = "https://github.com/org/repo", branch = "main" }
-
-# Path dependency (workspace member)
 local_dep = { path = "../local_dep" }
-
-# With default-features disabled
 minimal_dep = { version = "1.0", default-features = false, features = ["needed_feature"] }
 ```
 
@@ -205,7 +154,7 @@ Use in code with `#[cfg(feature = "feature_name")]`.
 
 ## Build Scripts
 
-When a module requires build-time code generation or configuration:
+When a crate needs a build-time step (a generated table, a linker script, a native library):
 
 ```toml
 [package]

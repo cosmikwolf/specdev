@@ -92,7 +92,7 @@ meets memory reader" in the abstract.
 selection feeds which sampler, the width source, the aggregate policy);
 the guidance carries the seam's rules — width and interpretation
 together, sign extension, a wholesale re-plan on reload — and
-EDPR-001..003 as checkable rules.
+EDPR-001..003 as numbered rules; review checks them.
 
 **The contribution belongs to the bridge.** The width mapping cannot go
 in `elf-dwarf` without teaching it about probe access widths, and cannot

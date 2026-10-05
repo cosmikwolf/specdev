@@ -86,7 +86,7 @@ egui_plot 0.37 against egui 0.36.
 
 **Rule-pack complete.** Each binding constrains the code (which plot
 in which region, fill, order); the guidance carries the placement rules
-and EGP-001..004 as checkable rules.
+and EGP-001..004 as numbered rules; review checks them.
 
 **The contribution belongs to the bridge.** Placement cannot live in
 `egui` without teaching it about plot types, and cannot live in

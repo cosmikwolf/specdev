@@ -9,11 +9,11 @@ line — lowercase severity, colon, bracketed rule, absolute path (no `#` pointe
 and the tail is a count line whose error count alone drives the exit code.
 
 ```
-$ specdev-analyzer validate --no-color
+$ specdev-analyzer check --no-color
 error: [layer_dependency] /path/to/proj/specs/modules/AudioPipeline.toml: module `AudioPipeline` (layer=middleware) depends on `FlightController` (layer=application) — middleware cannot depend on application.
 error: [SCHEMA] /path/to/proj/specs/modules/I2sOutput.toml: required property `metadata.ConcurrencyModel` missing.
 error: [connection_endpoints_resolve] /path/to/proj/specs/architecture.toml: connection endpoint `AudioPipeline.led_command` does not name a known port.
-warning: [requirement_satisfies_resolves] /path/to/proj/specs/requirements.toml: requirement `REQ-AUDIO-003` not in any module's `satisfies[]`.
+warning: [requirements_have_satisfiers] /path/to/proj/specs/requirements/REQ-AUDIO-003.toml: requirement `REQ-AUDIO-003` not in any module's `satisfies[]`.
 
 loaded 9 modules / 12 requirements / 9 sources / 12 graph checks
 3 error(s), 1 warning(s), 14 info(s)
@@ -37,7 +37,7 @@ Group by category, then severity. Do not dump raw output — translate each rule
 
 ### Warnings (1)
 
-**Unsatisfied requirement (`requirement_satisfies_resolves`)** — `REQ-AUDIO-003` declared in `requirements.toml#/requirement/4` is not referenced by any module's `satisfies[]`. Either satisfy it in the relevant module or remove the requirement.
+**Unsatisfied requirement (`requirements_have_satisfiers`)** — `REQ-AUDIO-003` declared in `specs/requirements/REQ-AUDIO-003.toml` is not referenced by any module's `satisfies[]`. Either satisfy it in the relevant module or remove the requirement.
 
 ## Step 4 handoff (per the skill's read-only contract)
 
@@ -46,6 +46,6 @@ Do not edit files from `/spec-validate`. Tell the user:
 - `layer_dependency` on `AudioPipeline` → `/spec-edit AudioPipeline`.
 - `SCHEMA` on `I2sOutput` → `/spec-edit I2sOutput`.
 - `connection_endpoints_resolve` in `architecture.toml` → edit `specs/architecture.toml` directly (no skill currently owns that file).
-- `requirement_satisfies_resolves` → `/spec-edit` on whichever module should satisfy the requirement, or edit `requirements.toml` to remove it.
+- `requirements_have_satisfiers` → `/spec-edit` on whichever module should satisfy the requirement, mark the requirement `planned = true` if nothing is built for it yet, or delete its file.
 
 Re-invoke `/spec-validate` after fixes to confirm a clean report.
