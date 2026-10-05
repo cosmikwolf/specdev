@@ -1,7 +1,6 @@
 # itm+probe-rs — implementation guidance
 
-Rules an agent follows when it writes or edits code that decodes a probe's SWO trace stream as ITM/DWT packets. No
-check verifies them yet; review does. ITMPR-001..004 are rules a future unit check will verify.
+Rules an agent follows when it writes or edits code that decodes a probe's SWO trace stream as ITM/DWT packets. No check verifies them; review does.
 
 ## The stream join
 

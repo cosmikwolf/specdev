@@ -45,13 +45,12 @@ If any of these are missing, return an error message saying which and stop. Do n
 
 Read these once, in order:
 
-1. `<schema_dir>/module.schema.yaml` — the field list you must obey.
-2. `<schema_dir>/architecture.schema.yaml` — so you understand what `depends_on` and ports mean in context.
-3. `<schema_dir>/metadata.schema.yaml` — for the closed metadata categories.
-4. `<domain_dir>/author.md` — structural conventions and inference rules for this domain.
-5. `<language_dir>/syntax.md` — language-level file conventions.
-6. `<project_root>/specs/architecture.toml` — for cross-module context (ports, connections, hardware ownership already declared elsewhere).
-7. Every existing `<project_root>/specs/modules/**/*.toml` — to understand what the surrounding modules look like and what names/types they expose.
+1. `<project_root>/specs/specdev/schemas/module.schema.yaml` — the field list you must obey.
+2. `<project_root>/specs/specdev/schemas/architecture.schema.yaml` — so you understand what `depends_on` and ports mean in context.
+3. `<project_root>/specs/specdev/schemas/metadata.schema.yaml` (when the profile ships one) — for the closed metadata categories.
+4. `<project_root>/specs/specdev/guidance/` — the profile's and each inlined unit's implementation guidance.
+5. `<project_root>/specs/architecture.toml` — for cross-module context (ports, connections, hardware ownership already declared elsewhere).
+6. Every existing `<project_root>/specs/modules/**/*.toml` — to understand what the surrounding modules look like and what names/types they expose.
 
 ## Step 2 — locate source
 
@@ -75,10 +74,10 @@ For each field you emit, be prepared to cite the source line(s) that justified i
 - **`layer`** — infer from dependencies: direct register access → `pac` or `driver`; depends only on drivers → `middleware`; depends on middleware or has policy/business logic → `application`.
 - **`description`** — **one sentence** stating the module's *purpose* at a level higher than the rest of the spec. Do not restate anything other fields already capture (no listing of actions, state machines, ports, hardware, dependencies, or error variants). Target ≤ 20 words. If the sentence could be deleted without losing information a reader can't get from scanning the rest of the TOML, rewrite it.
 - **`depends_on`** — other in-project modules this one imports or includes. Names only.
-- **`actions[]`** — each public function (`pub fn`, non-`static` C function, exported C++ method). For each: `params` (inline if ≤3, expanded otherwise), `direction` per parameter, `returns`, `blocking` (true iff it may await, loop on IO, or acquire a mutex), `isr_safe` (true only when clearly safe from ISR context). ISR060 forbids `blocking=true` and `isr_safe=true` simultaneously — never emit both.
+- **`actions[]`** — each public function (`pub fn`, non-`static` C function, exported C++ method). For each: `params` (inline if ≤3, expanded otherwise), `direction` per parameter (no types), `blocking` (true iff it may await, loop on IO, or acquire a mutex), `isr_safe` (true only when clearly safe from ISR context). Never emit `blocking = true` and `isr_safe = true` together.
 - **`state_machines[]`** — detect by pattern: an enum consumed by `match` or `switch` dispatching on a field of `self` or an equivalent state holder. States = enum variants. Include event enum, initial state, and transitions only when the dispatch is unambiguous. Mark LOW if transitions are partial.
 - **`ports[]`** — traits the module implements (Rust), vtable / PIMPL interfaces (C++), or function-pointer structs (C). Cross-check against `architecture.toml` — if a port appears in connections, it must be declared here.
-- **`hardware`** — pins, peripherals, clocks the module initializes or references. Cross-check against `architecture.toml` for ownership conflicts (OWN050).
+- **`hardware`** — pins, peripherals, clocks the module initializes or references. Cross-check against `architecture.toml` for ownership conflicts.
 - **`errors[]`** — variants of the module's error enum, or distinct return codes with stable names. PascalCase variant + short description each.
 - **`metadata.MemoryModel`** — `allocation` ∈ {`static_alloc`, `heap_alloc`, `stack_alloc`}. Static allocations, `static mut`, `Box::leak`, fixed arrays → `static_alloc`. `Vec::new()`, `malloc`, `new` → `heap_alloc`.
 - **`metadata.ConcurrencyModel`** — `protection` ∈ {`none`, `critical_section`, `mutex`, `atomic`, `disable_interrupts`}. Infer from guards in the code. `isr_safe` / `reentrant` as booleans.

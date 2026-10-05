@@ -1,20 +1,21 @@
-# `languages/` — per-language item vocabulary
+# `languages/` — per-language queries and item vocabulary
 
-Fourth top-level plugin tier, peer to `blocks/`, `bridges/`, and `profiles/`. Each subdirectory holds the per-language artifacts that the analyzer needs to extract items from source and that profiles `$ref` into their `module.schema.yaml` `items[]` field.
+Fourth top-level plugin tier, peer to `blocks/`, `bridges/`, and `profiles/`. Each subdirectory holds the per-language artifacts the analyzer reads source with — the tree-sitter queries behind `check`'s test discovery and import edges, and item extraction — and the item schema that profiles `$ref` into their `module.schema.yaml` `items[]` field.
 
 ## What lives here
 
 For each language `<lang>`:
 
 - **`items.schema.yaml`** — the JSON Schema 2020-12 fragment defining the `Item` shape for this language. Profiles' `module.schema.yaml` `items[]` field `$ref`s this schema via the `{{language}}` placeholder.
-- **`syntax.md`**, **`build.md`**, **`audit.scm`** — tree-sitter-backed authoring helpers. The `tree-sitter-<lang>` adapters in `specdev-analyzer/src/lang/` `include_str!` from `audit.scm`.
+- **`audit.scm`**, **`tests.scm`**, **`imports.scm`**, **`items.scm`** — the tree-sitter queries. The `tree-sitter-<lang>` adapters in `specdev-analyzer/src/lang/` embed a copy of each (`include_str!`): `tests.scm` drives test discovery (`verified_by`, `report tests`), `imports.scm` the import edges (`internal_edges_declared`, `report imports`), `items.scm` item extraction (`extract-items`, `items diff`).
+- **`build.md`** — the language's toolchain commands, for profile authors who write a profile's compile gates.
 
 ## Status
 
 - `rust/items.schema.yaml` — used by `extract-items` and by Rust profile module schemas.
-- `c/`, `cpp/` — `items.schema.yaml` for C is on the roadmap; current artifacts cover the existing tree-sitter-backed adapters.
-- `dart/` — full tier: `audit.scm`, `items.schema.yaml`, `items.scm`, `imports.scm`, `syntax.md`, `build.md` (pub/flutter toolchain). Used by `extract-items` and (once a Dart profile ships) by Dart profile module schemas.
-- `typescript/` — full tier: `audit.scm`, `items.schema.yaml`, `items.scm`, `imports.scm`, `syntax.md`, `build.md` (Node/pnpm toolchain). One language, two extensions (`.ts`, `.tsx`) and two grammars; the adapter picks the grammar per resolved file and the one items query compiles under both. Visibility is `export` (top level) and the absence of `private`/`protected`/`#` (members). Used by `extract-items` and (once a TypeScript profile ships) by TypeScript profile module schemas.
+- `c/`, `cpp/` — `audit.scm`, `tests.scm`, `imports.scm`, `build.md`; no item vocabulary yet.
+- `dart/` — full tier: `audit.scm`, `items.schema.yaml`, `items.scm`, `imports.scm`, `tests.scm`, `build.md` (pub/flutter toolchain). Used by `extract-items` and by the `flutter-app` profile's module schema.
+- `typescript/` — full tier: `audit.scm`, `items.schema.yaml`, `items.scm`, `imports.scm`, `tests.scm`, `build.md` (Node/pnpm toolchain). One language, two extensions (`.ts`, `.tsx`) and two grammars; the adapter picks the grammar per resolved file and the one items query compiles under both. Visibility is `export` (top level) and the absence of `private`/`protected`/`#` (members). Used by `extract-items` and by the `nextjs-app` profile's module schema.
 
 ## Sparseness rule
 

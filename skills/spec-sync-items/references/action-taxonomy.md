@@ -33,13 +33,13 @@ proposed_spec:
 
 Pick when the item was **deleted** in source and the spec wasn't updated — the requirement it satisfied is genuinely gone.
 
-If the item was **renamed** rather than deleted, use `rename` instead (below) — `remove-from-spec` followed by `add-to-spec` would drop the `satisfies`/`verifies` trace and force you to re-author it by hand.
+If the item was **renamed** rather than deleted, use `rename` instead (below) — `remove-from-spec` followed by `add-to-spec` would drop the `satisfies` trace and force you to re-author it by hand.
 
 `proposed_spec` — absent.
 
 ## `rename` — the item was renamed in source; carry its trace across
 
-Pick when a top-level item was renamed in source: the old name shows up as `in_spec_only` and the new name as a separate `in_source_only` entry. A rename rewrites only the spec item's `name`, preserving its `satisfies`, `verifies`, `description`, and kind-discriminated extras — the whole point is keeping the requirement/verification trace that remove + add would lose.
+Pick when a top-level item was renamed in source: the old name shows up as `in_spec_only` and the new name as a separate `in_source_only` entry. A rename rewrites only the spec item's `name`, preserving its `satisfies`, `description`, and kind-discriminated extras — the whole point is keeping the requirement trace that remove + add would lose.
 
 Set the action on the **`in_spec_only` entry** (the one carrying the old name and the trace):
 

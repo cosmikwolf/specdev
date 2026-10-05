@@ -65,7 +65,7 @@ properties:
           the usual cause, which is why the bridge that adds one has
           more to say about this field. Note that the nextjs-app profile
           has no role for the middleware (or Next 16 `proxy`) file, so
-          a spec-managed project cannot design or generate one; see the
+          no module spec can describe one; see the
           guidance for the per-module alternative. `true` stays a
           safe choice either way.
         type: boolean

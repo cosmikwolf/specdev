@@ -9,7 +9,7 @@ argument-hint: "[<existing-crate-dir>] [--into crates/<member-name>]"
 
 Promote a **validated** single-crate specdev project into a member of a `rust-workspace` root. This skill mechanizes the manual recipe documented in `${CLAUDE_PLUGIN_ROOT}/profiles/rust-workspace/README.md` (§ "Adopting an existing single-crate project as a member"), so that ids stay stable **by construction** rather than by hand-verification.
 
-**Why it's safe to move the whole tree.** A specdev crate is partitioned so the move is clean: the id-bearing baseline (`spec.toml`, `specs/requirements.toml`, `specs/decisions.toml`, `specs/open_questions.toml`, `specs/architecture.toml`, `specs/modules/`) and the crate's own machinery (`specs/specdev/`) all relocate together, and every path resolves relative to the member's own `spec.toml`. So a moved member validates standalone (the bidirectional-minimality invariant). `git mv` is a byte-preserving rename — requirement / decision / open-question ids come along verbatim.
+**Why it's safe to move the whole tree.** A specdev crate is partitioned so the move is clean: the id-bearing baseline (`spec.toml`, the ledger directories `specs/requirements/`, `specs/sources/`, `specs/decisions/` and `specs/open_questions/` — or the combined `.toml` ledgers of a `1.x` tree — `specs/architecture.toml`, `specs/modules/`) and the crate's own machinery (`specs/specdev/`) all relocate together, and every path resolves relative to the member's own `spec.toml`. So a moved member validates standalone (the bidirectional-minimality invariant). `git mv` is a byte-preserving rename — requirement / decision / open-question ids come along verbatim.
 
 **The ordering trap this skill exists to prevent.** `specdev-analyzer bootstrap` refuses a target whose `specs/specdev/` already exists (`BOOTSTRAP-001`). So when the workspace root is the *same directory* as the crate being adopted, the crate's tree must move **out** of the root **before** the workspace shell is bootstrapped there. Doing it in the wrong order is the exact friction that motivated this skill.
 
@@ -64,7 +64,7 @@ Get an explicit go-ahead before Step 3. Nothing is written until then.
 
 This is the ordering-critical step: it relocates the baseline **and** frees the root of `specs/specdev/` (Scenario A), which Step 4 requires.
 
-From the workspace root (`mv` variant shown; substitute `git mv` when Step 1.5 said git):
+From the workspace root (`git mv` shown; substitute plain `mv` when Step 1.5 found no git work tree):
 
 ```sh
 mkdir -p crates/<member-name>

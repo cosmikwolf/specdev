@@ -1,6 +1,6 @@
 # `specs/requirements/README.md` stub content
 
-`/spec-init` Step 6 writes this file verbatim as part of scaffolding the `specs/requirements/` directory. Copy the body between the horizontal rules below into the created file — no modifications.
+`/spec-init` writes this file verbatim when the project tracks requirements; bootstrap does not create `specs/requirements/`. Copy the body between the horizontal rules below into the created file — no modifications.
 
 ---
 Each `.toml` file in this directory holds one entry: a `[[requirement]]` (file `<id>.toml`) or an external `[[source]]` document it derives from (a protocol spec, a standard, a user brief). One file per entry keeps parallel branches from colliding.

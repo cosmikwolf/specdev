@@ -34,12 +34,11 @@ and adds more between releases; an enumerated list here would reject a
 valid provider the day it shipped. A wrong id fails at the import, which
 is the checker that does know the list.
 
-## What the block contributes
+## What the block's code needs
 
-One package: `next-auth`. `@auth/prisma-adapter` is deliberately absent —
-it is a join product, useless unless a database unit is present too, so
-contributing it here would hand a project a dependency it cannot
-satisfy. The `next-auth+prisma` bridge owns it.
+One package in the project's `package.json`: `next-auth`. The block's guidance does not name `@auth/prisma-adapter` —
+it is a join product, useless unless a database unit is present too. The `next-auth+prisma` bridge's guidance covers
+it.
 
 ## Pairing
 

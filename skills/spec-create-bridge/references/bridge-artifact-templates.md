@@ -184,8 +184,8 @@ The rules at the seam, for whoever writes the handoff code. Inlined to
 # <a>+<b> — implementation guidance
 
 Rules an agent follows when it writes or edits code that <does the handoff>.
-No check verifies them yet; review does. <PAIR>-001..00N are rules a future
-unit check will verify.
+The rule pack checks <the rules it covers, by `<a>+<b>.<rule>` id>; review
+checks the rest. (With no rule pack: "No check verifies them; review does.")
 
 ## The join product
 
@@ -198,7 +198,8 @@ unit check will verify.
 
 ## Rules
 
-- **<PAIR>-001:** <a cross-block constraint neither block can check alone>.
+- **<PAIR>-001:** <a cross-block constraint neither block can check alone; name
+  its `<a>+<b>.<rule>` id when the rule pack checks it>.
 ```
 
 Hard rules (`plugin-lint` checks the first three): present (`GUIDANCE-001`), no

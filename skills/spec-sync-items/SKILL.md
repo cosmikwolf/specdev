@@ -67,7 +67,7 @@ Default behavior when in doubt: stop and ask. Losing rationales silently is wors
 
 ## Step 3 — fill in recommendations (Claude-advisory pass)
 
-Read `specs/specdev/upstream/items-sync/<Module>.proposal.yaml`. Walk each `pending` entry and pick one of five actions per the taxonomy in `references/action-taxonomy.md` (`skip` / `add-to-spec` / `remove-from-spec` / `update-spec` / `rename`). For each entry, write `rationale`, `action`, and (for `add-to-spec` / `update-spec`) `proposed_spec` or (for `rename`) `rename_to`. A symbol renamed in source is a `rename` on the `in_spec_only` old-name entry + a `skip` on the paired `in_source_only` new-name entry — never remove + add, which drops the `satisfies`/`verifies` trace.
+Read `specs/specdev/upstream/items-sync/<Module>.proposal.yaml`. Walk each `pending` entry and pick one of five actions per the taxonomy in `references/action-taxonomy.md` (`skip` / `add-to-spec` / `remove-from-spec` / `update-spec` / `rename`). For each entry, write `rationale`, `action`, and (for `add-to-spec` / `update-spec`) `proposed_spec` or (for `rename`) `rename_to`. A symbol renamed in source is a `rename` on the `in_spec_only` old-name entry + a `skip` on the paired `in_source_only` new-name entry — never remove + add, which drops the `satisfies` trace.
 
 Save the file. Tell the user how many entries were resolved per action category, and ask them to review.
 

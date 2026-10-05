@@ -22,9 +22,8 @@ For each change type the user proposes, surface findings grouped under the match
 
 - **Changing `visibility`** (library-api) — modules whose `[[items]]` `kind = "re_export"` references this module may need their re-export `visibility` adjusted.
 
+- **Editing a module whose `contains` list is not empty** (a composition root, e.g. the nextjs-app `app` module that owns the root layout) — every module in `contains` renders inside it, though none names it in `depends_on`. A change to what it provides (providers, fonts, metadata defaults, the frame around `children`) reaches all of them; list them. Changing its `role` away from the containing role removes those edges, and the profile's count check (e.g. `single_app_module`) reports the missing root.
 
 ## Reporting
 
 If any issue surfaces, present them grouped by change-type row above and **wait for user confirmation** before editing. Do not silently accept a change that breaks downstream callers — the user decides whether to fix the dependents or revise the proposed edit.
-
-- **Editing a module whose `contains` list is not empty** (a composition root, e.g. the nextjs-app `app` module that owns the root layout) — every module in `contains` renders inside it, though none names it in `depends_on`. A change to what it provides (providers, fonts, metadata defaults, the frame around `children`) reaches all of them; list them. Changing its `role` away from the containing role removes those edges, and the profile's count check (e.g. `single_app_module`) reports the missing root.

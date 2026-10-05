@@ -7,7 +7,7 @@ argument-hint: <block-name> [--merge]
 
 # /spec-inline — Thin wrapper over `specdev-analyzer inline`
 
-Inline a canonical block from the plugin tree (`${CLAUDE_PLUGIN_ROOT}/blocks/<block>/`) into the project's `specs/specdev/` tree. A block's inlined content is **split across** four locations (there is no single `inlined/blocks/<block>/` directory): `schemas/inlined/blocks/<block>.schema.yaml`, `reductions/blocks/<block>.yaml`, `guidance/blocks/<block>.md`, and an `upstream/blocks/<block>/` snapshot (used by `--merge`). The analyzer is the source of truth for what a block contributes (schema, reduction, implementation guidance); this skill runs the command, surfaces output, and reports.
+Inline a canonical block from the plugin tree (`${CLAUDE_PLUGIN_ROOT}/blocks/<block>/`) into the project's `specs/specdev/` tree. A block's inlined content is **split across** several locations (there is no single `inlined/blocks/<block>/` directory): `schemas/inlined/blocks/<block>.schema.yaml`, `reductions/blocks/<block>.yaml`, `guidance/blocks/<block>.md`, the rule pack's `checks/blocks/<block>.toml` and `queries/blocks/<block>/<lang>/*.scm` when the block ships one, and an `upstream/blocks/<block>/` snapshot (used by `--merge`). The analyzer is the source of truth for what a block contributes (schema, reduction, implementation guidance, rule pack); this skill runs the command, surfaces output, and reports.
 
 If `specdev-analyzer` is not on PATH, tell the user to install it (follow `${CLAUDE_PLUGIN_ROOT}/shared/analyzer-install.md` — it derives the org from the plugin's own remote; both repositories are private) and stop. If it IS on PATH but reports `MANIFEST-002`, or a `MANIFEST-001` naming a file under the plugin tree, then the analyzer is older than the plugin — not a problem with any project file. Tell the user to re-run the install command with `--force` (or `cargo install --path <checkout> --force` from a local checkout), then retry.
 
@@ -44,7 +44,7 @@ Exit codes:
 - `0` — clean. Go to Step 3.
 - non-zero — surface stderr verbatim. Common error families:
   - `INLINE-001` — block name not found under the plugin's `blocks/` tree (or the block is missing its `schema.yaml` / `reduction.yaml`). Verify spelling; list available blocks with `ls "${CLAUDE_PLUGIN_ROOT}/blocks/"`.
-  - `INLINE-002` — block already inlined; rerun with `--merge` to update (recommended). Also covers a file collision in the destination — a file already sitting where a block-emitted file goes, including an existing `upstream/` snapshot. A fresh inline would require removing the block's inlined files across `specs/specdev/` (schema, reduction, guidance, `upstream/` snapshot) — rare; prefer `--merge`.
+  - `INLINE-002` — block already inlined; rerun with `--merge` to update (recommended). Also covers a file collision in the destination — a file already sitting where a block-emitted file goes, including an existing `upstream/` snapshot. A fresh inline would require removing the block's inlined files across `specs/specdev/` (schema, reduction, guidance, rule pack, `upstream/` snapshot) — rare; prefer `--merge`.
   - `INLINE-003` — a bridge's endpoint block is not inlined yet. Inline the named block first, then retry.
   - `MERGE-001..003`, `MERGE-FILESET` — `--merge` conflict or fileset evolution. Show verbatim; the conflict markers are left in place for retry.
   - `LINEAGE-001` — lineage file inconsistent with the inlined tree. Plugin-author bug or local hand-edit; surface for the user.
@@ -65,7 +65,7 @@ A clean inline should leave the project validating. If new findings appear, they
 Report:
 
 - Block inlined (and whether `--merge` was used).
-- Files written / changed (count or short list under `specs/specdev/` — schema, reduction, guidance, `upstream/` snapshot).
+- Files written / changed (count or short list under `specs/specdev/` — schema, reduction, guidance, rule pack, `upstream/` snapshot).
 - New `lineage.toml` entry confirmed (or merged with existing).
 - Validate result.
 - **User actions the block leaves to the user.** Read the block's `README.md` and `guidance.md` for anything marked a *user action* (a dependency to add to the manifest, a CLI to install, a code generator to run, a config file to create) and list each one with its command. A block cannot add a step to the profile's gates, so a user action that must run before the gates (a generated client, for example) has to be run by hand — or added as a gate step in `specs/specdev/profile.yaml` — and the report is where the user learns that. Also say that whoever edits a module using the block reads the inlined guidance first (`specdev-analyzer context --module` lists it).

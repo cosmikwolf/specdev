@@ -31,7 +31,7 @@ Don't use this block if:
   entire surface would be inert.
 - You only need to flash a binary once, at build time. `probe-rs run` and
   `cargo-flash` already do that from the command line, with no code to
-  generate.
+  write.
 
 ## What this block contributes
 

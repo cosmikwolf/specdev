@@ -51,5 +51,5 @@ it. Repeating it would create a third place to get it wrong.
 ## Pairing
 
 An authentication block that stores sessions in the database shares
-`@prisma/client` with this block. That shared package is what a
-composition gate asserts on.
+`@prisma/client` with this block; the `next-auth+prisma` bridge covers
+that pairing.

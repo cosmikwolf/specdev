@@ -15,7 +15,7 @@ If a fact deserves to live in the TOML, it belongs in a schema field, not in a c
 
 ## LOW-confidence carve-out (used only by `/spec-reverse`)
 
-`/spec-reverse` (and the `module-reverser` subagent it dispatches) annotates inferred fields with a single inline comment of the form:
+`/spec-reverse` annotates inferred fields with a single inline comment of the form:
 
 ```
 field = "..."  # LOW: inferred from <source>:<line>, please confirm
@@ -25,4 +25,4 @@ These markers are transient review metadata — they exist so the user can confi
 
 ## Scope
 
-This policy applies to every `.toml` file that lives under a project's `specs/` tree: `spec.toml`, `specs/architecture.toml`, `specs/modules/**/*.toml`, `specs/ui/**/*.toml`, `specs/stores/**/*.toml`, `specs/requirements/**/*.toml`. It does not apply to non-spec TOML (e.g. `Cargo.toml`).
+This policy applies to every `.toml` file that lives under a project's `specs/` tree: `spec.toml`, `specs/architecture.toml`, `specs/modules/**/*.toml`, and the ledger entries under `specs/requirements/`, `specs/sources/`, `specs/decisions/` and `specs/open_questions/`. It does not apply to non-spec TOML (e.g. `Cargo.toml`).

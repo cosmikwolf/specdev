@@ -31,7 +31,7 @@ add_library(<module_name>
 target_link_libraries(<module_name> PRIVATE <dependency_1> <dependency_2>)
 ```
 
-Dependencies come from the module spec's `depends_on` list. Each entry maps to another `add_library` target.
+Link the targets of the modules this one uses. They match the module spec's `depends_on`: `specdev-analyzer check` compares that list with the module's `#include` edges (`internal_edges_declared`).
 
 ### Per-Module Test Executable
 
@@ -50,7 +50,7 @@ add_test(NAME test_<module_name> COMMAND test_<module_name>)
 
 ### External Package Integration
 
-External packages use the `build_integration.cmake` string from the architecture spec:
+External packages, as the build file declares them (the spec copies none of it):
 
 ```cmake
 # External: <package_name>
@@ -61,8 +61,8 @@ target_link_libraries(<module_name> PRIVATE <package_name>::<component>)
 Or for SDK-provided packages:
 
 ```cmake
-# SDK integration — follows build_integration.cmake from architecture spec
-<build_integration_cmake_string>
+# SDK integration — the SDK's own CMake snippet
+<sdk_cmake_snippet>
 ```
 
 ### Complete Example
@@ -160,7 +160,7 @@ test: test_<module_a> test_<module_b>
 
 ### External Package Integration (Make)
 
-External packages append flags from `build_integration.make` in the architecture spec:
+External packages append their flags, as the Makefile declares them:
 
 ```makefile
 # External: <package_name>
@@ -234,7 +234,7 @@ test('test_<module_name>',
 
 ### External Package Integration (Meson)
 
-External packages use `dependency()` calls from `build_integration.meson` in the architecture spec:
+External packages use `dependency()` calls, as the build file declares them:
 
 ```meson
 <package_name>_dep = dependency('<package_name>')
@@ -308,14 +308,16 @@ test('test_app',
 
 ---
 
-## Build System Selection
+## Toolchain Commands
 
-The `build_system` field in the architecture spec determines which build files to generate:
+| Purpose | CMake | Make | Meson |
+|---|---|---|---|
+| Configure | `cmake -S . -B build` | — | `meson setup build` |
+| Build (the usual compile gate) | `cmake --build build` | `make` | `meson compile -C build` |
+| Run tests | `ctest --test-dir build` | `make test` | `meson test -C build` |
 
-| Value | Files Generated |
-|-------|----------------|
-| `cmake` | `CMakeLists.txt` |
-| `make` | `Makefile` |
-| `meson` | `meson.build` |
-
-Only one build system is generated per project. The choice is specified in the architecture spec.
+- The project picks one build system; its build file is the project's, never the spec's.
+- **None of these commands is "the compile gate".** The gate is the profile's `gates:` registry in
+  `specs/specdev/profile.yaml` — a `label` and `steps` as argv lists — rendered into `scripts/specdev-gates.sh`, which
+  CI runs after `specdev-analyzer check`. No shipped profile targets C yet; this table is the menu a profile
+  author picks steps from.
