@@ -11,6 +11,9 @@ matches the pairing:
 - `bridges/egui+nih-plug/` — plugin shell, host (GUI/audio).
 - `bridges/next-auth+prisma/` — named cross-module endpoint.
 
+`bridges/egui+nih-plug/` also ships a rule pack (`checks.toml`, `related_attrs_allowed` across the binding
+relation). Its shape is in `${CLAUDE_PLUGIN_ROOT}/shared/rule-packs.md`.
+
 ---
 
 ## 1. `bindings.schema.yaml`
