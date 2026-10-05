@@ -13,8 +13,7 @@ plugin) and `specdev-analyzer` (the CLI) ship together and must be installed
 as a matched pair — see "Keeping it current" below for why.
 
 Replace `<org>` in the commands below with the GitHub organization you were
-granted access to. For Kink Engineering that is `kink-engineering`; the
-upstream is `cosmikwolf`. If `git` cannot read the URL, you do not have
+granted access to (the upstream is `cosmikwolf`). If `git` cannot read the URL, you do not have
 access yet — ask for it rather than working around it, because the two
 repositories must come from the *same* org or the analyzer will validate your
 project against schemas the plugin does not ship.
