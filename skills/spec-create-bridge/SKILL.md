@@ -160,7 +160,7 @@ A bridge is defined by *what it wires* and *what rules the seam carries*. Batch 
   - `plugin_shell_unique` — the binding targets the project's **single `plugin_shell`-layer module**; auto-resolves when exactly one such module exists (`egui+nih-plug`).
   The `diagnostic_template` is the `hint:` line appended to a REDUCE_UNRESOLVED finding; it may substitute `{bridge_name}`, `{parameter}`, `{decl_module}`, `{binding_module}`. Copy the matching precedent's template and adjust the wording.
 
-- **Rules at the seam.** What must whoever writes the handoff code know? Ownership across the seam, which side builds what, the constraints between the two blocks' attributes that no single block can check (widget kind ↔ parameter type; comparator ↔ armed units). Give each cross-block constraint a stable rule id (`<PAIR>-001`) — a future unit check verifies them by id. These become `guidance.md`.
+- **Rules at the seam.** What must whoever writes the handoff code know? Ownership across the seam, which side builds what, the constraints between the two blocks' attributes that no single block can check (widget kind ↔ parameter type; comparator ↔ armed units). Each constraint a check can verify goes in the bridge's `checks.toml` as a rule named `<a>+<b>.<rule>` (`${CLAUDE_PLUGIN_ROOT}/shared/rule-packs.md`; `related_attrs_allowed` compares an attribute pair across the binding relation); the guidance names that rule id. These become `guidance.md`.
 
 ## Step 2 — verify the rules against the real API
 
@@ -190,6 +190,7 @@ Write the files under `<root>/bridges/<a>+<b>/`, following the exact shapes in `
    - `BRIDGE-LEX-001` — the directory name is lex-ordered.
    - `GUIDANCE-001/002/003` — `guidance.md` present, no fenced code, under the cap.
    - `PROSE-PROFILE-001` — no profile name in `guidance.md`.
+   - `PACK-LINT-001..005` — `checks.toml` passes its schema, each query compiles and holds the captures its check names, each primitive is known, each rule carries the `<a>+<b>.` prefix.
 
    `plugin-lint` does not compile a bridge's schema or reduction; Step 4.2 proves both, so do not skip it.
 

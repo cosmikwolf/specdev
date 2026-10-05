@@ -12,6 +12,8 @@ Live precedents (read the one whose shape matches):
 - `blocks/embassy/` — two entity kinds, no relations.
 - `blocks/egui/` — declares an intra-block relation (`region_in_panel`).
 - `blocks/nih-plug/` — hyphenated name → `nih_plug` table key.
+- `blocks/rtic/` (code check: tasks against `#[task(...)]`) and `blocks/mk20dx/` (graph check: `unique` over two
+  fields) — a rule pack. Its shape is in `${CLAUDE_PLUGIN_ROOT}/shared/rule-packs.md`.
 
 ⚠️ **Hyphen/underscore:** `<name>` (dir, `$id`, reduction entity qualifier) keeps
 the hyphen; `<key>` (schema table property + `for_each` path) uses the underscore.

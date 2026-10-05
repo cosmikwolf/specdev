@@ -34,7 +34,8 @@ specdev-analyzer check --no-color
 - **stale flags** (`stale_planned`) — a `planned` module whose source now resolves, or a planned requirement whose modules are all built;
 - **open-question gate** (`implementation_unblocked`) — a module that an `open` question reaches (local or workspace tier) and that has code;
 - **imports** (`internal_edges_declared`) — every import between project modules follows a declared `depends_on`;
-- **tests** (`requirements_have_tests`, `verified_by_resolves`) — a requirement names its tests in `verified_by`, and each named test exists in the test discovery (`specdev-analyzer report tests` shows the identities).
+- **tests** (`requirements_have_tests`, `verified_by_resolves`) — a requirement names its tests in `verified_by`, and each named test exists in the test discovery (`specdev-analyzer report tests` shows the identities);
+- **rule packs** (`pack_entity_in_code`, `pack_attribute_matches`, `pack_key_ambiguous`) — each inlined block's or bridge's code checks: a spec entity the code lacks, an attribute that differs, or a key the code has at more than one place (`${CLAUDE_PLUGIN_ROOT}/shared/rule-packs.md`).
 
 Use `specdev-analyzer validate --no-color` alone only when the code is not there to read (a spec-only review).
 
@@ -62,8 +63,8 @@ Group findings in this order, each group with one sentence of context before the
 3. **Metaschema / aggregator** — `METASCHEMA-001..006`, `AGGREGATOR-005`. Inlined block/bridge schemas are misshapen. Usually a plugin-author bug surfaced after `inline`.
 4. **Kind resolution** — `DOMAIN-003`, `REDUCE_UNRESOLVED`. A reduction's `extends` chain or relation endpoint names a kind or entity that does not exist.
    `REDUCE-001` is different: a spec file did not parse, so the graph was never built and **no graph check ran**. A report with no group-5 findings proves nothing while `REDUCE-001` is present. Fix the parse error first and run again.
-5. **Graph checks** — rule names declared in `specs/specdev/domain.toml` (e.g. `unique_qualified_names`, `modules_acyclic`, `layer_dependency`, `connection_endpoints_resolve`, `requirements_have_satisfiers`). They depend on cross-file invariants.
-6. **Spec against the code** — `source_resolves`, `stale_planned`, `implementation_unblocked`, `internal_edges_declared`, `requirements_have_tests`, `verified_by_resolves`.
+5. **Graph checks** — rule names declared in `specs/specdev/domain.toml`, and the `<unit>.<rule>` names of the inlined rule packs in `specs/specdev/checks/` (a `PACK-001` means a pack did not load and none of its checks ran) (e.g. `unique_qualified_names`, `modules_acyclic`, `layer_dependency`, `connection_endpoints_resolve`, `requirements_have_satisfiers`). They depend on cross-file invariants.
+6. **Spec against the code** — `source_resolves`, `stale_planned`, `implementation_unblocked`, `internal_edges_declared`, `requirements_have_tests`, `verified_by_resolves`, `pack_entity_in_code`, `pack_attribute_matches`, `pack_key_ambiguous`, `PACK-002`.
 7. **Warnings and info** — including `PLUGIN-AHEAD-001` (the plugin holds newer copies of inlined or profile files: name the count and offer `/spec-drift`; do not merge or refresh from this skill), `GATE-SCRIPT-002` (no gate script yet: `specdev-analyzer gate --emit`), and `FORMAT-001` (an older project format: see "Format migration").
 
 Do not paraphrase analyzer messages — the raw text is the most precise.
@@ -81,6 +82,7 @@ For graph-check rule names, the **project's** `specs/specdev/domain.toml` is aut
 - `SCHEMA` on a module — an unknown field usually means a block isn't inlined yet; a bad enum means the value is outside the schema's set.
 - `source_resolves` — the code exists somewhere else (set `source_file`), or it is not built yet (set `planned = true`).
 - `stale_planned` — the code landed: remove `planned = true`.
+- `pack_entity_in_code` / `pack_attribute_matches` — the spec and the code disagree about a unit entry. Either the spec is ahead (mark the entry `planned = true` until it is built) or the code drifted (fix the code). `pack_key_ambiguous` — two code items share the key; rename one, or give the spec the name the code uses. For a rule-pack graph check (`<unit>.<rule>`), the unit's inlined `guidance/` file names the rule and says what it means.
 - `implementation_unblocked` — an open question reaches built code. Route to `/spec-question` (close it, or commit a default); never silence it in the spec.
 - `internal_edges_declared` — the code imports a module the spec does not list. Either the dependency is intended (add it to `depends_on` via `/spec-edit`, then check the layer rules) or the import is a mistake (fix the code).
 - `requirements_have_tests` / `verified_by_resolves` — add the test, or correct the name in `verified_by` to the identity `specdev-analyzer report tests` shows. Mark `test_pending = true` only when the test is truly not written yet.

@@ -39,7 +39,7 @@ The exact file shapes this skill scaffolds are in `references/block-artifact-tem
 
 4. **Run the SHARP TEST before writing anything.** A block must pass all three legs; if any fails, stop and tell the user *which* leg and why:
    - **Leg 1 — concreteness.** Does the block name a *specific* framework / library / hardware family? Counter-test: if "which X?" can substitute for the name (a "concurrency" block that "could be embassy or rtic"), leg 1 fails.
-   - **Leg 2 — rule-pack completeness.** Does every field state intent that constrains the code — and have a check (a graph check, a reference that must resolve, a future unit check) or a guidance rule? A field that only restates the code (a type, a signature, a dependency version) fails: the code and the manifest already hold it — a spec states intent, not syntax. A pure abstraction with nothing to constrain fails too.
+   - **Leg 2 — rule-pack completeness.** Does every field state intent that constrains the code — and have a check (a check in the block's `checks.toml`, a reference that must resolve) or a guidance rule? A field that only restates the code (a type, a signature, a dependency version) fails: the code and the manifest already hold it — a spec states intent, not syntax. A pure abstraction with nothing to constrain fails too.
    - **Leg 3 — no cross-block reach.** Does the block stand alone? It must not reference another block's types or reach into its territory — that belongs in a bridge. Naming a companion block in the *author-facing README* is fine; reaching into another block's territory in the **guidance** is a leg-3 violation. Grep the drafted `guidance.md` for every other block's name (not this block's own name) and judge each hit: naming a crate the framework itself depends on is not a reach; telling the code what another block's table means, or what code another block owns, is.
 
 5. **Language.** Guidance is language-specific where the framework is. One block targets the language of its framework (`rust`, `dart`, `typescript`).
@@ -72,6 +72,7 @@ Write the files under `<root>/blocks/<name>/`, following `references/block-artif
 | `schema.yaml` | `$id: https://specdev.dev/blocks/<name>.v1` (BLOCK-LINT-006 checks this). Contributes `properties.<block-key>` (underscore key for a hyphenated name). `additionalProperties: false` on the `[<block>]` table and each nested object — a block table is a **leaf**, so use `additionalProperties`, **not** `unevaluatedProperties`. Inline `Identifier` in `$defs` — never `$ref` a profile's `enums.schema.yaml`. |
 | `reduction.yaml` | `metaschema_version: "v1"`. One entity per kind, `extends: Module`, `from: "specs/modules/*.toml"`, `for_each: "<block-key>.<plural>[]"`, `name: "${root.name}.${.name}"`, `attrs` 1:1 with the schema fields. `relations: []` unless the block has an intra-block relation (then `extends: depends_on`, path-qualified `from_kind`/`to_kind`). |
 | `guidance.md` | The rules from Step 1, verified in Step 2. Rules only: no fenced code and at most 4,096 bytes (`plugin-lint` checks these), no version numbers (review checks this). Sectioned by concern; each rule one bullet. **Leg 3:** no sibling-block names. **PROSE-PROFILE-001:** write "the project's profile", never a profile name. It is inlined into every project that uses the block, and `specdev-analyzer context --module` lists it for whoever edits a module. |
+| `checks.toml` + `languages/<lang>/*.scm` | Optional rule pack: the checks for the fields a check can verify — graph checks over the block's entities, and code checks that compare entities with the code through a query. Shape, rule naming and severity: `${CLAUDE_PLUGIN_ROOT}/shared/rule-packs.md`. Name every rule `<name>.<rule>`, and name each rule id in `guidance.md`. |
 | `README.md` | Author-facing (never inlined): when to use, what it contributes, the sharp-test rationale (all three legs), companion-block/bridge affinity, deferred items. Naming a profile or companion block HERE is fine. |
 
 ## Step 4 — gate at authoring time
@@ -87,12 +88,13 @@ Write the files under `<root>/blocks/<name>/`, following `references/block-artif
    - `BLOCK-LINT-007` — `reduction.yaml` passes the embedded reduction metaschema.
    - `GUIDANCE-001/002/003` — `guidance.md` present, no fenced code, under the cap.
    - `PROSE-PROFILE-001` — no profile name in `guidance.md`.
+   - `PACK-LINT-001..005` — `checks.toml` passes its schema, each query compiles and holds the captures its check names, each primitive is known, each rule carries the `<name>.` prefix.
 
    Surface any finding verbatim and fix; run again until clean.
 
 2. **Leg 3 by grep:** `grep -n -e <other-block> … <root>/blocks/<name>/guidance.md` over every other block name. Judge each hit: a crate the framework itself depends on is fine; a rule about another block's table or code is a reach — move it to a bridge, or rephrase it without the sibling.
 
-3. **Round-trip smoke:** in a scratch project, `/spec-init` a matching profile, `/spec-inline <name>`, author a minimal module using the block's table, with `planned = true` (it has no code), and run `specdev-analyzer check`. Zero schema findings confirms the schema composes; `specdev-analyzer reduce` shows the block's entities in the graph; `specs/specdev/guidance/blocks/<name>.md` is the inlined guidance.
+3. **Round-trip smoke:** in a scratch project, `/spec-init` a matching profile, `/spec-inline <name>`, author a minimal module using the block's table, with `planned = true` (it has no code), and run `specdev-analyzer check`. With a pack: break one fact each check reads and confirm `check` reports exactly that rule, so the check is not silent by accident. Zero schema findings confirms the schema composes; `specdev-analyzer reduce` shows the block's entities in the graph; `specs/specdev/guidance/blocks/<name>.md` is the inlined guidance.
 
 ## Step 5 — report + next steps
 
