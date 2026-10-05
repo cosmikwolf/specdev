@@ -29,7 +29,7 @@ The org is the path segment after the host:
 
 ```
 git@github.com:cosmikwolf/specdev.git      ->  cosmikwolf
-https://github.com/example-org/specdev.git  ->  example-org
+https://github.com/<org>/specdev.git      ->  <org>
 ```
 
 **If that command exits non-zero** (128 when the plugin tree is not a git
