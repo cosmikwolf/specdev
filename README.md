@@ -191,7 +191,7 @@ What this repo currently ships at HEAD (subject to change as new profiles / bloc
   - `firmware-layered` (rust) — embedded Rust on Cortex-M, layered architecture (PAC → HAL → driver → middleware → application), ports + connections wiring, hardware ownership.
   - `library-api` (rust) — pure Rust library, visibility-driven module boundaries, an optional `items[]` contract surface.
   - `rust-app` (rust) — standalone Rust executable: a testable core plus a thin entry point.
-  - `audio-plugin` (rust) — VST3/CLAP/standalone audio plugins, four-layer (host_interface → plugin_shell → engine → dsp_node), `[plugin]`/`[audio]`/`[runtime]` architecture sections.
+  - `audio-plugin` (rust) — VST3/CLAP/standalone audio plugins, four-layer (host_interface → plugin_shell → engine → dsp_node), parameter bindings.
   - `rust-workspace` (rust) — workspace root profile that walks per-member crates each carrying their own profile (typically `library-api` or `audio-plugin` or `firmware-layered`).
   - `flutter-app` (dart) — Flutter application, composition root plus screens and services, fenced by platform.
   - `nextjs-app` (typescript) — Next.js App Router application, nine module roles, the client/server boundary as two fields.

@@ -48,15 +48,6 @@ it. Repeating it would create a third place to get it wrong.
 `@prisma/client`, the `prisma` CLI (a devDependency), the one driver adapter that fits the database, and `dotenv`
 — all in the project's `package.json`. The guidance lists the adapter table and the version lock.
 
-## Reference package
-
-`reference/typescript/` compiles against the
-pinned client. It uses SQLite through
-`@prisma/adapter-better-sqlite3` because it needs no server. The gate is
-`pnpm install --frozen-lockfile && pnpm run check`; the `check` script
-runs `prisma generate` before `tsc --noEmit`, because the generated
-client does not exist until it does.
-
 ## Pairing
 
 An authentication block that stores sessions in the database shares

@@ -1,6 +1,0 @@
-# Reference-crate coverage manifest. CI-only — never inlined. Declares the
-# discrete cases this bridge ships a COMPILED reference for. Drives
-# REF-COVERAGE-001 (each name -> src/<name>.rs) and REF-ARITY-001.
-reference_cases:
-  - region_plots
-  - stacked

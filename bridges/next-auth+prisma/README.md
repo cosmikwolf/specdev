@@ -37,14 +37,7 @@ It carries `[next_auth]` and this binding. It does **not** need
 `[prisma].client`: it never queries a model, it hands the client to the
 adapter, and this binding is its relationship to the database.
 
-## Reference package
+## What the compiler does not catch
 
-`reference/typescript/` compiles the join against
-all three pinned packages. Two cases — the client singleton and the adapter wiring — since
-each block's own reference already covers its half. Gate:
-`pnpm install --frozen-lockfile && pnpm run check`.
-
-**Read the prose section on what the compiler does not catch.**
-`PrismaAdapter` accepts almost any argument without complaint, so the
-reference certifies the option names and the strategy, not that the
-argument is a real client.
+`PrismaAdapter` accepts almost any argument without complaint, so a type check proves the option names and the
+strategy, not that the argument is a real client.

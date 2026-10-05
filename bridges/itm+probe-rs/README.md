@@ -55,8 +55,8 @@ watch or source that was never declared.
 
 - **A new crate.** There is no join product. probe-rs's `SwoReader<'_>`
   implements `std::io::Read` and itm's `Decoder<R>` accepts any
-  `R: Read`, so they compose directly. The bridge's reference crate
-  compiles that join, which is the proof no adapter is needed.
+  `R: Read`, so they compose directly. A test crate compiled that join
+  when the bridge was written, which showed no adapter is needed.
 - **The watched addresses.** `add_swv_data_trace` takes an address at
   runtime. Where it comes from is not this pairing's concern; a symbol
   lookup is a different bridge's job.
