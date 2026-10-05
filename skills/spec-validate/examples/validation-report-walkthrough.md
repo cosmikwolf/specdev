@@ -13,10 +13,10 @@ $ specdev-analyzer check --no-color
 error: [layer_dependency] /path/to/proj/specs/modules/AudioPipeline.toml: module `AudioPipeline` (layer=middleware) depends on `FlightController` (layer=application) — middleware cannot depend on application.
 error: [SCHEMA] /path/to/proj/specs/modules/I2sOutput.toml: required property `metadata.ConcurrencyModel` missing.
 error: [connection_endpoints_resolve] /path/to/proj/specs/architecture.toml: connection endpoint `AudioPipeline.led_command` does not name a known port.
-warning: [requirements_have_satisfiers] /path/to/proj/specs/requirements/REQ-AUDIO-003.toml: requirement `REQ-AUDIO-003` not in any module's `satisfies[]`.
+error: [requirements_have_satisfiers] /path/to/proj/specs/requirements/REQ-AUDIO-003.toml: requirement `REQ-AUDIO-003` not in any module's `satisfies[]`.
 
 loaded 9 modules / 12 requirements / 9 sources / 12 graph checks
-3 error(s), 1 warning(s), 14 info(s)
+4 error(s), 0 warning(s), 14 info(s)
 ```
 
 Exit 1, because the error count is non-zero.
@@ -29,13 +29,11 @@ Group by category, then severity. Do not dump raw output — translate each rule
 
 **Required field missing (SCHEMA)** — `I2sOutput` is missing `metadata.ConcurrencyModel`. firmware-layered's `module.schema.yaml` requires the four metadata sub-objects. Use `/spec-edit I2sOutput` to add it.
 
-### Graph-check errors (2)
+### Graph-check errors (3)
 
 **Layered architecture (`layer_dependency`)** — `AudioPipeline` (middleware) → `FlightController` (application). The layered ordering is `application > middleware > driver > HAL > PAC` (top-down); a middleware module cannot depend on an application module. Fix options: invert the dependency, or move shared types into a lower layer. Use `/spec-edit AudioPipeline` so impact is analyzed.
 
 **Architecture wiring (`connection_endpoints_resolve`)** — `architecture.toml#/connections/2/to` names port `AudioPipeline.led_command`, but no such port exists on that module (the real port is `led_cmd`). Either rename the port in `AudioPipeline.toml` (`/spec-edit AudioPipeline`) or fix the endpoint string directly in `architecture.toml`.
-
-### Warnings (1)
 
 **Unsatisfied requirement (`requirements_have_satisfiers`)** — `REQ-AUDIO-003` declared in `specs/requirements/REQ-AUDIO-003.toml` is not referenced by any module's `satisfies[]`. Either satisfy it in the relevant module or remove the requirement.
 
