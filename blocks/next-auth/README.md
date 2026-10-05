@@ -41,13 +41,6 @@ it is a join product, useless unless a database unit is present too, so
 contributing it here would hand a project a dependency it cannot
 satisfy. The `next-auth+prisma` bridge owns it.
 
-## Reference package
-
-`reference/typescript/` compiles four cases
-against the pinned `next-auth`: the config, the Edge split, the route
-file, and reading the session. Gate:
-`pnpm install --frozen-lockfile && pnpm run check`.
-
 ## Pairing
 
 `next-auth+prisma` adds database-backed sessions and owns the adapter

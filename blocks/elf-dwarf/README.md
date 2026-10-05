@@ -88,8 +88,8 @@ kind — the narrowest seam available, and one that reaches toward nothing.
 
 ## Known sharp edges
 
-Both were found by compiling the reference crate, and both are in the
-guidance:
+Both were found by compiling a test crate while the block was written, and
+both are in the guidance:
 
 - **`DW_OP_addrx`.** GCC emits `DW_OP_addr`; clang and rustc emitting
   DWARF 5 emit `DW_OP_addrx` into `.debug_addr`. Code that matches only

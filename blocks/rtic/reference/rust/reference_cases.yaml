@@ -1,6 +1,0 @@
-# ONE case, and the reason is a property of the framework rather than a
-# shortcut: `#[rtic::app]` generates an entry point and a vector table, so
-# two apps in one crate collide at link and rustc refuses them. The app IS
-# the emission unit, so it is also the reference unit. Every kind the
-# codegen prose documents is exercised inside this single app.
-reference_cases: [app]
