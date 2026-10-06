@@ -16,7 +16,7 @@ metaschema_version: "v1"
 #     Surfaces as `unresolved Sampler endpoint <id>`.
 #
 # One further invariant is NOT expressible as a relation and lives in
-# the bridge's codegen prose as a discipline rule: a selection whose
+# the bridge's guidance as a discipline rule: a selection whose
 # `kinds` admits only aggregates, bound with `aggregates = "skip"`,
 # yields an address list that is always empty. Promotion to a graph-check
 # primitive is a bounded follow-up; the trigger is the first dogfood that

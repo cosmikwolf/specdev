@@ -15,7 +15,7 @@ Write two files at the project root, **each only when it is absent**:
 
 Both files belong to the user after this skill creates them. Rewrite them, extend them, or delete
 them freely - nothing in specdev reads either file, and neither is recorded in
-`specs/specdev/gen-lineage.toml`, so an edit is not drift.
+`specs/specdev/lineage.toml`, so an edit is not drift.
 
 The rules file is a **fallback**, not the primary path. The installed plugin prints its own live
 copy of the same text at the start of every session. The project copy matters when hooks are off,
@@ -92,8 +92,8 @@ Then tell the user two things:
 ## What this skill does NOT do
 
 - **Refresh or merge either file.** There is no re-sync path. The first write is the only write.
-- **Record either file in `specs/specdev/gen-lineage.toml`.** Neither is a generated output. A
-  lineage row would report every intended user edit as drift.
+- **Record either file in `specs/specdev/lineage.toml`.** Neither is machinery. A lineage row
+  would report every intended user edit as drift.
 - **Read either file back.** No skill and no analyzer command reads them. They are Claude Code
   configuration and a human-facing log, not spec state.
 - **Edit a file that exists.** It has no `Edit` tool for this reason.

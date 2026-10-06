@@ -31,8 +31,8 @@ properties:
           Path to the Auth.js configuration module, relative to the
           project root. Auth.js v5 puts it at the repository root
           (`auth.ts`) so that any module may import `auth`, `signIn`,
-          `signOut` and `handlers` from one place. Codegen needs the
-          path because every consumer's import is derived from it.
+          `signOut` and `handlers` from one place. Every consumer's
+          import follows from this path.
         type: string
         minLength: 1
         default: "auth.ts"
@@ -65,8 +65,8 @@ properties:
           the usual cause, which is why the bridge that adds one has
           more to say about this field. Note that the nextjs-app profile
           has no role for the middleware (or Next 16 `proxy`) file, so
-          a spec-managed project cannot design or generate one; see the
-          codegen README for the per-module alternative. `true` stays a
+          no module spec can describe one; see the
+          guidance for the per-module alternative. `true` stays a
           safe choice either way.
         type: boolean
         default: false

@@ -58,8 +58,8 @@ properties:
                            token expires.
 
               Choose `jwt` when middleware calls `auth` and the prisma
-              `adapter` is a Node-only driver. See the bridge's codegen
-              prose for which adapters are Edge-capable; that table is
+              `adapter` is a Node-only driver. See the bridge's
+              guidance for which adapters are Edge-capable; that table is
               the reason this field is here and not in either block.
             type: string
             enum: [database, jwt]

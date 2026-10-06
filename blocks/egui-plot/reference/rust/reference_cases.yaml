@@ -1,5 +1,0 @@
-# Reference-crate coverage manifest. Plugin-author / CI-only; never inlined.
-# Drives REF-COVERAGE-001 (each name -> src/<name>.rs) and REF-ARITY-001.
-reference_cases:
-  - plots
-  - series

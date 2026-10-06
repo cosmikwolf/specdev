@@ -8,13 +8,13 @@ When two rules conflict, the earlier rule wins.
 1. **Schema is the contract.** Every field name must appear somewhere in the aggregator's reachable schemas. No invented keys. The schema uses `unevaluatedProperties: false`, which is `allOf`-aware — block-contributed properties pass through.
 2. **Required fields by profile.** firmware-layered requires `name` + `layer`; library-api requires `name` + `visibility`. Whatever else the profile's `module.schema.yaml` lists as required must be present.
 3. **Required metadata (firmware-layered).** `metadata.MemoryModel`, `metadata.ConcurrencyModel`, `metadata.ErrorHandling`, `metadata.Ownership` must all be present. Pick explicit values.
-4. **Prefer inline tables for ≤3 params.** `params = [{name = "...", type = "u32", direction = "in"}]` is easier to read than an array-of-tables for short lists. Flip to `[[actions.params]]` when an action has >3 params.
+4. **Prefer inline tables for short lists.** `params = [{name = "...", direction = "in"}]` is easier to read than an array-of-tables. Never write parameter or return types: the code holds them.
 5. **Naming conventions.**
    - Module names: PascalCase (`StatusLed`, `BtA2dpSink`).
    - Action names: `snake_case`.
    - Event names: `snake_case`, suffixed `_evt` (`set_solid_evt`, not `setSolid`).
    - State names: `snake_case`.
-   - Error variants: `PascalCase` (they become Rust enum variants).
+   - Error entries: a `description` of what can go wrong and what the caller sees; the code chooses the error type.
 6. **Layer discipline (firmware-layered).** A module at layer `application` must not directly depend on a `PAC` module — walk through `middleware` / `driver` / `HAL`. The `layer_dependency` graph check enforces this.
 7. **One module per file.** Each TOML holds exactly one module.
 8. **Comment policy** — follow `${CLAUDE_PLUGIN_ROOT}/shared/comment-policy.md`. `/spec-design` and `/spec-edit` work from explicit user intent, not inference, so neither emits `# LOW:` markers — those are unique to `/spec-reverse` and are stripped once the user confirms each inferred field.
@@ -22,12 +22,12 @@ When two rules conflict, the earlier rule wins.
 
 ## The item surface (`items[]`) — per-method model
 
-`module.items[]` carries the module's contractual public surface. The
-per-profile codegen prose is the authority for emission detail
-(`${CLAUDE_PLUGIN_ROOT}/profiles/<profile>/codegen/<language>/module.conventions.md`,
-its "Item emission" section); these are the authoring rules that draft against
-it. **Keep the two in sync — when the conventions doc changes the item model,
-this section changes with it.**
+`module.items[]` is optional: the module's contractual public surface, for a
+project that keeps one (a `library-api` crate), checked against the code by
+`items diff`. The language's item schema (`languages/<lang>/items.schema.yaml`)
+and its extraction queries define what counts as an item; these are the
+authoring rules. **Keep them in sync with the extraction queries — when the
+item model changes, this section changes with it.**
 
 The one-line rule:
 
@@ -43,8 +43,8 @@ ii. **Inherent `impl` blocks dissolve into their methods.** Never author an item
     for the `impl Type { … }` block itself. Generics normalize out of the
     prefix: `RateLimiter::new`, never `RateLimiter<C>::new`.
 iii. **A trait impl is one item** — `kind = "impl"`, named `<Trait> for <Type>`
-     (e.g. `Display for RateLimiter`). Its method bodies are codegen-derived
-     from the trait, so they are not separate items.
+     (e.g. `Display for RateLimiter`). Its method bodies are dictated by the
+     trait, so they are not separate items.
 iv. **The type itself is an item** — `pub struct RateLimiter` → item
     `RateLimiter` (`kind = "struct"`). Private / helper members are **not**
     items; only `pub` surface is contract.
@@ -60,8 +60,7 @@ vi. **`satisfies` shares coarsely.** Every item except `kind = "re_export"`
     `satisfies = ["REQ-API-001"]`. Author a new `REQ-…` only for a genuinely
     distinct capability, not one-per-method. Over-granular per-method
     requirements are the tedium to avoid. Do **not** invent requirement ids: the
-    ids must already exist in `specs/requirements.toml` (author it first if
-    absent).
+    ids must already exist under `specs/requirements/` (author them first).
 
 Worked example — a type and its public inherent methods (one struct item + one
 item per public method, sharing coarse requirements; the trait impl is a single
@@ -97,11 +96,9 @@ No item names parameters, return types, or generics. A `pub` symbol left out of
 `items[]` still compiles but shows as `in_source_only` in `/spec-sync-items` —
 the correct signal that you have public surface the spec doesn't account for.
 
-**Test items** are `kind = "fn"` with `test = true`: they use `verifies = [...]`
-(pointing at `nature = "test"` requirements) instead of `satisfies`, and carry a
-`test_kind` (`unit` / `integration` / `doc`). `satisfies` and `verifies` are
-mutually exclusive on the same item. See the conventions doc's "Test items"
-section for emit locations.
+**Tests are not items.** A requirement names its tests in `verified_by`, by the
+identity `specdev-analyzer report tests` shows; `check` verifies that each named
+test exists.
 
 ## Division of labor: `module-designer` subagent vs main thread
 

@@ -5,23 +5,9 @@ TypeScript project. Adds a `[prisma]` table to `Module` that says which
 module owns the client singleton, which driver adapter it builds, and
 which modules use it.
 
-**Pinned line: Prisma 7.x** (`@prisma/client ^7.10.0`). Prisma 8 is not
-generally available — the `prisma` CLI publishes `8.0.0-rc.N` on the
-`latest` dist-tag, so a bare `pnpm add prisma` takes a release candidate.
-Name the version.
-
-**One pin is swept, and it pulls the other three.** The freshness sweep
-reads contributed deps, so it watches `@prisma/client` and nothing else
-here: the CLI and the adapter are user actions and the reference's own
-`package.json` is not a contribution. That is deliberate and it still
-works, because Prisma publishes the client, the CLI and every adapter
-from one release at one version. When the sweep reports `@prisma/client`
-behind, bump all four — block pin, reference client, reference CLI,
-reference adapter — in one unit, and re-run the reference gate, which is
-what certifies the prose against the new line.
-
-No `pin-policy.yaml` ships here. A hold would need a swept pin to hold,
-and the only swept pin is current.
+**Version.** The guidance is written for the current Prisma major (driver adapter mandatory, client imported from
+the generator's `output`, the URL in `prisma.config.ts`). The CLI, the client and the adapter come from one release
+at one version; name the version when adding them, because the CLI's default tag can be a release candidate.
 
 ## What the table says
 
@@ -57,29 +43,13 @@ and two ways to disagree. The table holds config inputs only.
 adapters serves exactly one provider — and `schema.prisma` already states
 it. Repeating it would create a third place to get it wrong.
 
-## What the block contributes
+## What the project adds
 
-One package: `@prisma/client`. The `prisma` CLI, the chosen driver
-adapter and `dotenv` are **user actions**, surfaced through
-`recommended_external_deps` and documented in `codegen/typescript/README.md`.
-
-The CLI cannot be contributed because it is a devDependency and block
-contributions are runtime deps. The adapter cannot be contributed because
-eight ship and exactly one applies to any project. This follows the
-flutter-rust-bridge block, which contributes its runtime package and
-leaves its codegen CLI to a documented user action.
-
-## Reference package
-
-`reference/typescript/` compiles every worked example in the codegen
-prose against the pinned client. It uses SQLite through
-`@prisma/adapter-better-sqlite3` because it needs no server. The gate is
-`pnpm install --frozen-lockfile && pnpm run check`; the `check` script
-runs `prisma generate` before `tsc --noEmit`, because the generated
-client does not exist until it does.
+`@prisma/client`, the `prisma` CLI (a devDependency), the one driver adapter that fits the database, and `dotenv`
+— all in the project's `package.json`. The guidance lists the adapter table and the version lock.
 
 ## Pairing
 
 An authentication block that stores sessions in the database shares
-`@prisma/client` with this block. That shared package is what a
-composition gate asserts on.
+`@prisma/client` with this block; the `next-auth+prisma` bridge covers
+that pairing.

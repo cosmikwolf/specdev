@@ -42,11 +42,11 @@ Run in order, pausing for confirmation between passes:
 3. **Per-module reverse loop** — for each confirmed `(module_name, source_path)` tuple, run the procedure from `mode-single-module.md`. Sequential walk preferred (cleaner audit trail; no `validate` race). **Parallel fan-out is not available.** The `module-reverser` subagent is staged, not shipped (`module-reverser-subagent.md` has the contract and the current status), and this skill's `allowed-tools` cannot dispatch a subagent in any case. Walk the modules sequentially; do not offer the user a choice that cannot be honored.
 4. **Validate everything** — run `specdev-analyzer validate --no-color` from the project root (or each workspace member root). Surface graph-check failures and missing cross-references. For unfamiliar rule names, read the project's `specs/specdev/domain.toml` `[[project.graph_checks]]` blocks for the rule's `kind` and meaning.
 
-Project-wide source-vs-spec audit is **out of scope** for `/spec-reverse`. v1 ships one-way spec→source codegen + `/spec-reverse` as a migration tool; continuous audit is not in v1. Per-module `[[items]]` drift is handled by `/spec-sync-items`.
+Project-wide source-vs-spec checking is **out of scope** for `/spec-reverse`: that is `specdev-analyzer check` (`/spec-validate`), which runs on every change. `/spec-reverse` is the adoption tool for code that has no spec yet. Per-module `[[items]]` drift is handled by `/spec-sync-items`.
 
 ## Summary report
 
 - **Architecture**: language, target, RTOS, build system.
 - **Modules**: table — name, layer (firmware-layered) or visibility (library-api), status (OK / SKIPPED / PARTIAL), LOW-confidence field count, source files.
 - **Validation**: overall PASS/FAIL with per-module issues.
-- **Next steps**: review LOW fields, `/spec-edit <Module>` to refine any, `/spec-gen <Module>` when ready to regenerate code.
+- **Next steps**: review LOW fields, `/spec-edit <Module>` to refine any, then `/spec-validate` — `check` compares every reversed module with its code.

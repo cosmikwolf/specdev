@@ -45,9 +45,9 @@ mirrors the `egui` block's `region_in_panel`.
   whichever unit supplies the crate-root `pub use ...::egui;` alias —
   the `eframe` block for a native application, the `egui+nih-plug`
   bridge for a plugin editor, or the project itself for any other
-  integration. Emitted code refers to `crate::egui`.
+  integration. The code refers to `crate::egui`.
 - **The data.** A series names a channel and says how it is drawn.
-  Filling it is the emitted code's job; binding it to a producer is a
+  Filling it is the code's job; binding it to a producer is a
   bridge's job.
 - **Where the plot sits in the interface.** A plot draws into whatever
   `Ui` it is handed. Placing it inside a surrounding panel or region is
@@ -70,16 +70,14 @@ published crate. It is not a "charting" abstraction: `Vec2b` axis masks,
 egui_plot's own vocabulary, and a different plotting library would model
 the same concepts with different types.
 
-**Leg 2 — codegen-completeness.** Conforming TOML produces working code:
-a `Plot` with real axis masks and a real bounds policy, and items added
-with the correct constructor arity. Both worked examples are compiled by
-`reference/rust/`, which is how the borrowed-samples lifetime constraint
-below was found rather than shipped.
+**Leg 2 — rule-pack completeness.** Every field constrains the code:
+the plot's id, axes masks, bounds policy, link group and follow window;
+each series' kind, style, colour and label. The guidance carries the
+rules no check can verify (stable ids, label identity, stable colours).
 
-**Leg 3 — no cross-block reach.** The codegen prose names no other
-block's types. It refers to `crate::egui`, which is a crate-root
-convention any host satisfies, not a reach into a particular unit — the
-same seam the block's own reference crate stands in for.
+**Leg 3 — no cross-block reach.** The guidance names no other block's
+types. It refers to `crate::egui`, which is a crate-root convention any
+host satisfies, not a reach into a particular unit.
 
 ## Companion units
 

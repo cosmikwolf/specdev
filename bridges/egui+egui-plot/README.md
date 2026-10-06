@@ -47,7 +47,7 @@ different thing being placed inside them.
 
 - **A new crate.** There is no join product. A region body already has a
   `&mut Ui` and `Plot::show` already takes one, so they compose
-  directly. The bridge therefore ships no `deps.yaml`.
+  directly.
 - **egui.** Neither endpoint block contributes it either. It arrives
   from the host — the `eframe` block for a native application, or the
   project itself for another integration.
@@ -84,11 +84,9 @@ v1.
 egui and egui_plot, and the pairing is one specific version pair —
 egui_plot 0.37 against egui 0.36.
 
-**Codegen-complete.** Conforming TOML produces working code: a plot
-emitted into a region's body with the region's own layout around it, a
-stack of plots at declared heights on a linked axis, and the conditional
-builder rebinding that axis linking requires. Both worked examples are
-compiled by `reference/rust/`.
+**Rule-pack complete.** Each binding constrains the code (which plot
+in which region, fill, order); the guidance carries the placement rules
+and EGP-001..004 as numbered rules; review checks them.
 
 **The contribution belongs to the bridge.** Placement cannot live in
 `egui` without teaching it about plot types, and cannot live in

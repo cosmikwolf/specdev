@@ -82,6 +82,33 @@ if [ "$found_total" -eq 0 ]; then
   exit 2
 fi
 
+# The CI workflow template each profile ships pins the analyzer release its
+# job installs (`SPECDEV_ANALYZER_TAG: vX.Y.Z`). Bootstrap writes it into every
+# new project, so a stale pin there installs the wrong analyzer in CI.
+templates=0
+for f in "$plugin_root"/profiles/*/templates/specdev-ci.yml.template; do
+  [ -f "$f" ] || continue
+  templates=$((templates + 1))
+  rel="${f#$plugin_root/}"
+  pins="$(grep -c -E '^[[:space:]]*SPECDEV_ANALYZER_TAG:' "$f")"
+  if [ "$pins" -ne 1 ]; then
+    echo "MISSING  $rel — expected one SPECDEV_ANALYZER_TAG line, found $pins" >&2
+    rc=1
+    continue
+  fi
+  got="$(sed -n -E 's/^[[:space:]]*SPECDEV_ANALYZER_TAG:[[:space:]]*([^[:space:]]+).*/\1/p' "$f")"
+  if [ "$got" != "$want" ]; then
+    echo "STALE    $rel" >&2
+    echo "         want SPECDEV_ANALYZER_TAG: $want (from $analyzer/Cargo.toml)" >&2
+    echo "         got  SPECDEV_ANALYZER_TAG: $got" >&2
+    rc=1
+  fi
+done
+if [ "$templates" -eq 0 ]; then
+  echo "check-analyzer-pin: found no CI workflow template — a walk bug reads as a clean pass" >&2
+  exit 2
+fi
+
 # The version the analyzer itself checks against. Every analyzer command reads
 # this file and warns when the installed binary is older, so it must name the
 # release the install lines above pin: lower and an old binary passes silently
@@ -101,6 +128,6 @@ else
 fi
 
 if [ "$rc" -eq 0 ]; then
-  echo "check-analyzer-pin: $found_total install site(s) all pin --tag $want; min-analyzer-version is $declared"
+  echo "check-analyzer-pin: $found_total install site(s) and $templates CI template(s) all pin $want; min-analyzer-version is $declared"
 fi
 exit "$rc"

@@ -10,9 +10,44 @@ would read as equally solid. `git log` has the rest.
 
 The plugin and `specdev-analyzer` version **independently**. They are not
 meant to match. `contract_version` is the compatibility number between them,
-and it is `1`.
+and it is `2`.
 
 ## [Unreleased]
+
+**Checked intent: specdev no longer generates code.** Specs state intent — what each module is for, what it may
+depend on, which requirements it satisfies, which decisions guide it — and `specdev-analyzer check` checks that intent
+against the code you and the agent write. Needs specdev-analyzer 0.3.0. Existing projects move with
+`specdev-analyzer migrate` (format `spec_version` 2.0); commit or stash first, then run it with `--dry-run`.
+
+### Removed
+
+- `/spec-gen`, every `codegen/` directory (codegen prose, `*.conventions.md`, `deps.yaml`), the stub and shim
+  templates, the reference crates and their `reference_cases.yaml`, and `languages/*/syntax.md`.
+- The audio-plugin `[plugin]` / `[audio]` architecture fields and `runtime.panic_handler`, and the `spec.toml`
+  `crate_shape` / `crate_type` keys: the code and `Cargo.toml` hold them (`migrate` lists each removed value).
+
+### Added
+
+- **Implementation guidance:** every profile, block and bridge ships a short `guidance.md` (rules only), inlined to
+  `specs/specdev/guidance/` and listed by `specdev-analyzer context --module` for whoever edits the code.
+- **Rule packs:** a block or bridge can ship its checks as data (`checks.toml` plus tree-sitter queries). Shipped:
+  `rtic` (tasks and resources against the code), `mk20dx` (no pin claimed twice), `egui+nih-plug` (a widget fits its
+  parameter and sits in a controls region).
+- **Format 2.0:** one file per decision, requirement, source and open question; module `planned` and `source_file`;
+  requirement `verified_by` and `test_pending`; open-question `hard_gate`.
+- **The gate script:** each profile's `gates:` render into `scripts/specdev-gates.sh` (`check`, then every gate), and
+  a CI workflow template is written once at bootstrap.
+- Test discovery (`tests.scm`) and import edges (`imports.scm`) for Rust, TypeScript, Dart, C and C++.
+- `/spec-create-bridge` Step 0.5 test 0: is the binding an edge between two entities at all.
+
+### Changed
+
+- The skills are rewritten for checked intent: `/spec-design` writes `planned = true` for a module with no code;
+  the skills read `context --module` and `report decisions --module` before code edits and want a clean work tree
+  before `migrate`; `/spec-validate` runs `check`.
+- `firmware-layered`, `library-api` and `rust-app` guidance: a module filed away from `src/<name>.rs` or
+  `src/<name>/mod.rs` sets `source_file`.
+- `rust-workspace`: the root declares no gate; its script runs each member's script.
 
 ### Fixed
 
