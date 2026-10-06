@@ -14,6 +14,12 @@ and it is `2`.
 
 ## [Unreleased]
 
+### Added
+
+- **`/spec-validate` names the requirement-tree rule, `report requirements`, and the workspace id rules** (#234,
+  #235, #236): a parent requirement is covered by its children; a member id may not repeat a workspace id; a
+  workspace open question must name a requirement id that exactly one member defines. Needs specdev-analyzer 0.3.3.
+
 ## [0.3.2] — 2026-10-06
 
 ### Added
