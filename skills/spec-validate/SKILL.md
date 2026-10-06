@@ -28,6 +28,8 @@ Run from the project root:
 specdev-analyzer check --no-color
 ```
 
+At a workspace root, `check` alone checks the root only, and its summary line says how many members it skipped. Add `--members` to check the root and every member in one run: each member's findings come under a `member <path>:` heading, the last line sums them, and the exit code is the worst.
+
 `check` runs `validate` first — layout discovery, schema validation of every spec file, kind resolution, reduction, and the graph checks in `specs/specdev/domain.toml` — and then the checks that read the code:
 
 - **source rule** (`source_resolves`) — a module that is not `planned` must have resolvable source;
