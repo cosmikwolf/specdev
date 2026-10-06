@@ -38,7 +38,7 @@ needed):
 Or from the private repository, replacing \`<org>\` with the GitHub
 organization you were granted access to:
 
-    cargo install --git https://github.com/<org>/specdev-analyzer --tag v0.3.1
+    cargo install --git https://github.com/<org>/specdev-analyzer --tag v0.3.2
 
 Or set \`ANALYZER_BIN\` to an absolute path.
 
