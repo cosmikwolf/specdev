@@ -1,6 +1,6 @@
 ---
 name: spec-decide
-description: This skill should be used when the user asks to "record a decision", "write a DEC", "add a design decision", "add an ADR for X", "log an ADR", "capture an ADR", "decide <X>", "we decided to use Y", "lock in <choice>", "pin the choice to use Y", "commit to <choice>", "log this as DEC-NNN", "supersede DEC-NNN with a new decision", "this is the decision we're making", or needs to author a single new decision file under `specs/decisions/`. Authors one accepted decision per invocation, then validates. **New decisions only — refuses if a decision with the proposed id already exists.** To supersede an existing decision, this skill can author the successor with `supersedes = [...]`; to resolve an open question, pair it with `/spec-question` path C. To edit the body of an existing decision, edit its file directly.
+description: This skill should be used when the user asks to "record a decision", "write a DEC", "add a design decision", "add an ADR for X", "log an ADR", "capture an ADR", "decide <X>", "we decided to use Y", "lock in <choice>", "pin the choice to use Y", "commit to <choice>", "log this as DEC-NNN", "supersede DEC-NNN with a new decision", "this is the decision we're making", "retire REQ-NNN", "this requirement is moot", or needs to author a single new decision file under `specs/decisions/`. Authors one accepted decision per invocation, then validates. **New decisions only — refuses if a decision with the proposed id already exists.** To supersede an existing decision, this skill can author the successor with `supersedes = [...]`; to resolve an open question, pair it with `/spec-question` path C. To edit the body of an existing decision, edit its file directly.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 argument-hint: <one-line title for the decision>
 ---
@@ -111,11 +111,23 @@ The `decisions` row lists every module this decision reaches. A new decision nor
 
 **When this decision supersedes or corrects another,** look for older **accepted** decisions on the same subject: read their titles under `specs/decisions/` and run `report decisions --decision <older-id>` for each candidate. A module that an older decision reaches and this one does not still has the old text applied to it. Whether two texts contradict is your judgment and the user's — the report only puts them side by side. List each such module in Step 5 and ask the user whether to link this decision there or to correct the older one.
 
+## Step 4.6 — when the decision retires a requirement
+
+If the decision makes a requirement moot (it will never be built), retire the requirement; do not delete it. Deleting frees the id for reuse, and an open question that `affects` it stops resolving. Ask the user first: the move changes a file this skill does not own. Then:
+
+```sh
+mkdir -p specs/requirements/retired
+git mv specs/requirements/<REQ-ID>.toml specs/requirements/retired/<REQ-ID>.toml
+```
+
+Add `retired_by = "<decision id>"` to the moved file (the decision must be `accepted`). Remove the id from every module's `satisfies` (module level and `[[items]]`) and from any requirement that names it as a parent. Run `specdev-analyzer check`: `retired_requirement_consistency` names anything still building on it. The folder is the state: agents that list `specs/requirements/` no longer see it, and its id stays taken. To bring it back, move the file back and remove the `retired_by` line.
+
 ## Step 5 — report
 
 One paragraph:
 - Decision id and title written.
 - Cross-references created this run.
+- Requirements retired (Step 4.6), each with its new path.
 - Open questions whose status now needs a flip (route to `/spec-question` path C or B), and an old decision whose status needs `superseded`.
 - Where it reaches (Step 4.5): the module list, or "no module yet", and any module an older decision on the same subject reaches and this one does not.
 - Suggested next step: another `/spec-decide`, `/spec-question` to flip an OQ against this decision, or `/spec-edit` to wire the decision into a requirement's `decided_by[]` or a module's `guided_by[]`.
@@ -124,4 +136,5 @@ One paragraph:
 
 - **Edit existing decisions.** If the file already exists, stop and tell the user.
 - **Flip existing OQ statuses or a superseded decision's status.** The user (or `/spec-question`) does that.
+- **Delete requirements.** A moot requirement is retired (Step 4.6), never deleted.
 - **Author requirements / open questions / modules.** Use `/spec-design` for modules and `/spec-question` for open questions. Requirements are hand-authored under `specs/requirements/`.

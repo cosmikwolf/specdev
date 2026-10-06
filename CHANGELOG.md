@@ -14,6 +14,24 @@ and it is `2`.
 
 ## [Unreleased]
 
+### Added
+
+- **Retire a requirement instead of deleting it** (#229): `/spec-decide` Step 4.6 moves it to
+  `specs/requirements/retired/` with `retired_by`; the six requirements schemas document the field; `/spec-design`
+  reads the top level of `specs/requirements/` only; the project rules say a moot requirement is retired. Needs
+  specdev-analyzer 0.3.2.
+- **The SessionStart hook relays the analyzer-version warning** (#226): at a project root it runs
+  `specdev-analyzer --version` and passes on its `ANALYZER-VERSION-` line, or says the analyzer is not on `PATH`, so
+  an old analyzer is reported even when `check` runs outside a skill.
+- **`/spec-validate` names `check --members`, `requirement_size` and the retired-requirement rule** (#230, #232,
+  #229).
+
+### Changed
+
+- **The project rules name the entry-level `planned` flag** for a module whose code exists but some of whose
+  rule-pack entries do not (#231); `/spec-validate` says to put the `migrate` report in the migration's commit
+  message (#227).
+
 ## [0.3.1] — 2026-10-06
 
 ### Fixed
