@@ -1,3 +1,0 @@
-# Cortex-M3, forced by the PAC compile vehicle above.
-[build]
-target = "thumbv7m-none-eabi"

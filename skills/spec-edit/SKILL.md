@@ -54,9 +54,9 @@ Order to read:
 2. `files.architecture` — for `[[connections]]` and project-wide picks.
 3. Each file in `related_files` — bounded sibling set; this is the impact-analysis input.
 4. `files.schema` (aggregator + inlined block + inlined bridge schemas) — authoritative for the field list.
-5. `${CLAUDE_PLUGIN_ROOT}/profiles/<profile>/codegen/<language>/module.conventions.md` — only if the change touches semantically-loaded fields (state machines, metadata, hardware, bindings) and you need to confirm what they drive at codegen time.
+5. `files.guidance` — the inlined implementation guidance — only if the change touches semantically-loaded fields (state machines, metadata, hardware, bindings) and you need to confirm which rules they bring for the code.
 
-Do not read codegen prose for unrelated fields — this skill does not generate code.
+This skill edits the spec, not the code.
 
 The cone is one hop deep. If impact analysis surfaces a transitive concern (e.g. a sibling that itself owns a downstream chain), re-invoke `context --module <Sibling>` for the next-hop view rather than reading siblings of siblings preemptively.
 
@@ -65,17 +65,17 @@ The cone is one hop deep. If impact analysis surfaces a transitive concern (e.g.
 Summarize the module grouped by topic, not raw TOML:
 
 - **Identity** — `name`, `layer` (firmware-layered) or `visibility` (library-api), `depends_on`.
-- **Actions** — one line per action with `params`, `direction`, `blocking`, `isr_safe`.
+- **Actions** — one line per action with its `params` (name, direction), `blocking`, `isr_safe`.
 - **State machines** — initial state, state names, event names; skip transition detail unless asked.
 - **Ports** — name + `port_type` + `direction`.
 - **Hardware** (firmware-layered) — `pins`, `peripherals`, `clocks`.
-- **Errors** — one line per variant.
+- **Errors** — one line per entry.
 - **Metadata** (firmware-layered) — `MemoryModel`, `ConcurrencyModel`, `ErrorHandling`, `Ownership`.
 - **Bindings** — any `bindings.<a>+<b>` entries.
-- **External deps** — module-scoped crate deps.
-- **Visibility / feature_gates** (library-api). Re-exports live as `[[items]]` with `kind = "re_export"`.
-- **items[]** — public-API surface entries; re-exports use `kind = "re_export"`.
+- **Visibility** (library-api).
+- **items[]** — public-API surface entries when the module keeps them; re-exports use `kind = "re_export"`.
 - **satisfies** — requirement ids if present.
+- **Code state** — `planned`, `source_file`, `context_files`.
 
 ## Step 4 — interview, if needed
 
@@ -83,7 +83,7 @@ If the request is ambiguous, ask focused questions — batch them in one message
 
 ## Step 5 — impact analysis
 
-Audit downstream effects per `references/impact-analysis-matrix.md`. The cone's `related_modules` block (`upstream` / `downstream` / `port_endpoints` / `binding_endpoints` / `hardware_owners` / `re_export_targets` / `contains` / `contained_by`) is the bounded input set; the matrix enumerates what to grep / cross-check for each change type (action rename, port rename, layer change, `depends_on` change, hardware reassignment, concurrency-model change, binding edit, visibility change, feature-gate edit).
+Audit downstream effects per `references/impact-analysis-matrix.md`. The cone's `related_modules` block (`upstream` / `downstream` / `port_endpoints` / `binding_endpoints` / `hardware_owners` / `re_export_targets` / `contains` / `contained_by`) is the bounded input set; the matrix enumerates what to grep / cross-check for each change type (action rename, port rename, layer change, `depends_on` change, hardware reassignment, concurrency-model change, binding edit, visibility change).
 
 If any issue surfaces, present findings grouped by change type and **wait for confirmation** before editing.
 
@@ -120,10 +120,10 @@ One paragraph:
 - What changed (fields + summary).
 - Validation result.
 - Downstream modules that likely need a follow-up edit, with their bare names.
-- Suggested next step: `/spec-edit <Module>` for each affected dependent, or `/spec-gen <Module>` to regenerate code once the change is locked.
+- Suggested next step: `/spec-edit <Module>` for each affected dependent, or change the code to match. Before editing the code, run `specdev-analyzer context --module <Module>` and `specdev-analyzer report decisions --module <Module>` and read what they list; then run `/spec-validate` (`check` compares the spec with the code).
 
 ## Additional resources
 
 - `${CLAUDE_PLUGIN_ROOT}/agents/module-designer.md` — the subagent dispatched for substantive redrafts in Step 6 (with `existing_toml` set). Single source of truth for its input/output contract; shared with `/spec-design`.
-- `references/impact-analysis-matrix.md` — change-type → downstream-check mapping used in Step 5 (action rename, port rename, layer change, `depends_on` change, hardware reassignment, concurrency-model change, binding edit, visibility change, feature-gate edit).
+- `references/impact-analysis-matrix.md` — change-type → downstream-check mapping used in Step 5 (action rename, port rename, layer change, `depends_on` change, hardware reassignment, concurrency-model change, binding edit, visibility change).
 - `examples/edit-rename-action.md` — worked walkthrough of a rename-action edit with downstream impact analysis.

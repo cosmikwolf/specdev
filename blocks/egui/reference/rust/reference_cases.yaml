@@ -1,5 +1,0 @@
-# Reference-crate coverage manifest. Plugin-author / CI-only; never inlined.
-reference_cases:
-  - panels
-  - panels_legacy
-  - regions

@@ -55,9 +55,8 @@ watch or source that was never declared.
 
 - **A new crate.** There is no join product. probe-rs's `SwoReader<'_>`
   implements `std::io::Read` and itm's `Decoder<R>` accepts any
-  `R: Read`, so they compose directly. The bridge's reference crate
-  compiles that join, which is the proof no adapter is needed — and the
-  reason this bridge ships no `deps.yaml`.
+  `R: Read`, so they compose directly. A test crate compiled that join
+  when the bridge was written, which showed no adapter is needed.
 - **The watched addresses.** `add_swv_data_trace` takes an address at
   runtime. Where it comes from is not this pairing's concern; a symbol
   lookup is a different bridge's job.
@@ -99,11 +98,10 @@ way round.
 **Concrete pairing.** Both endpoints name specific published crates:
 the itm decoder on one side, probe-rs on the other.
 
-**Codegen-complete.** Conforming TOML produces working code: a decoder
-built directly on the probe's reader, one resolved clock feeding both
-the sink and the timestamp reconstruction, comparators armed and torn
-down in the right order, and packets routed back to the watch that
-declared them. Both worked examples are compiled by `reference/rust/`.
+**Rule-pack complete.** Each binding constrains the code (which watch,
+which trace source, which clock, when to arm); the guidance carries the
+seam's rules — one resolved clock for both sides, teardown order,
+routing by comparator — and ITMPR-001..004 as numbered rules; review checks them.
 
 **The contribution belongs to the bridge.** Comparator agreement cannot
 live in `itm` without teaching it about probe arming, and cannot live in

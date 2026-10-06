@@ -12,7 +12,7 @@ metaschema_version: "v1"
 #
 # `kinds` is a list-valued filter criterion. It is NOT surfaced as a
 # graph attr: attrs carry scalars, and no graph check reaches into the
-# accepted-kind set. Codegen prose reads it directly from the module's
+# accepted-kind set. The guidance reads it directly from the module's
 # TOML, the same way the nih-plug block reads its process-config table.
 #
 # Kinds are written bare here, not qualified. File location establishes

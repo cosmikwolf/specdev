@@ -37,8 +37,8 @@ properties:
       decoder:
         description: >
           Decoder configuration. A nameless singleton: it carries
-          settings rather than identity, so it is read directly by
-          codegen and is not materialized as a graph entity.
+          settings rather than identity, so the code reads it directly
+          and it is not materialized as a graph entity.
         type: object
         additionalProperties: false
         properties:

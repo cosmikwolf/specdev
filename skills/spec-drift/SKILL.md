@@ -1,12 +1,12 @@
 ---
 name: spec-drift
-description: This skill should be used when the user asks "are my inlined blocks stale", "check drift", "run spec-drift", "see what's changed in inlined files", "are my inlined blocks up to date", "is the plugin newer than my project", "check for plugin updates", "show drift report", "did I hand-edit generated code", "check generated files against the spec", "which generated files were edited", or mentions `gen-lineage.toml` or a `gen-drift` report — i.e. they want to know which inlined block/bridge files are out-of-sync with the plugin tree or hand-edited locally, or which generated source files were hand-edited after `/spec-gen` emitted them. Thin wrapper over `specdev-analyzer drift` + `specdev-analyzer report gen-drift`; pure reporter (no edits). For schema/graph-check errors, use /spec-validate. For source-vs-spec drift on a module's `[[items]]` array, use /spec-sync-items.
+description: This skill should be used when the user asks "are my inlined blocks stale", "check drift", "run spec-drift", "see what's changed in inlined files", "are my inlined blocks up to date", "is the plugin newer than my project", "check for plugin updates", "show drift report", or "did I edit the inlined guidance" — i.e. they want to know which inlined block, bridge or profile files are out of sync with the plugin tree or edited locally. Thin wrapper over `specdev-analyzer drift`; pure reporter (no edits). For schema/graph-check errors and the spec checked against the code, use /spec-validate. For source-vs-spec drift on a module's `[[items]]` array, use /spec-sync-items.
 allowed-tools: Read, Bash, Glob, Grep
 ---
 
-# /spec-drift — Thin wrapper over `specdev-analyzer drift` + `report gen-drift`
+# /spec-drift — Thin wrapper over `specdev-analyzer drift`
 
-Run the analyzer's drift reporters — inlined-unit drift and generated-file drift — and present the results grouped by drift class. This skill never edits files — drift is observational. Acting on drift (`--merge` to update from plugin, hand-edits to lock in local divergence, etc.) is a separate user decision driven by `/spec-inline --merge`, `/spec-inline-bridge --merge`, or hand-edit + acceptance.
+Run the analyzer's drift reporter — inlined units and profile files against the plugin — and present the results grouped by drift class. This skill never edits files — drift is observational. Acting on drift (`--merge` to update from plugin, hand-edits to lock in local divergence, etc.) is a separate user decision driven by `/spec-inline --merge`, `/spec-inline-bridge --merge`, or hand-edit + acceptance.
 
 If `specdev-analyzer` is not on PATH, tell the user to install it (follow `${CLAUDE_PLUGIN_ROOT}/shared/analyzer-install.md` — it derives the org from the plugin's own remote; both repositories are private) and stop. If it IS on PATH but reports `MANIFEST-002`, or a `MANIFEST-001` naming a file under the plugin tree, then the analyzer is older than the plugin — not a problem with any project file. Tell the user to re-run the install command with `--force` (or `cargo install --path <checkout> --force` from a local checkout), then retry.
 
@@ -36,7 +36,7 @@ Capture stdout and the exit code. Three outcomes:
 
 ## Step 2 — present the four drift classes
 
-The analyzer classifies each tracked inlined file into exactly one of four classes. A unit's files are **split across** four locations and there is no single `inlined/<unit>/` directory: `schemas/inlined/{blocks,bridges}/<unit>.schema.yaml`, `reductions/{blocks,bridges}/<unit>.yaml`, `codegen/<lang>/{blocks,bridges}/<unit>/`, and the `upstream/{blocks,bridges}/<unit>/` snapshot.
+The analyzer classifies each tracked inlined file into exactly one of four classes. A unit's files are **split across** up to six locations and there is no single `inlined/<unit>/` directory: `schemas/inlined/{blocks,bridges}/<unit>.schema.yaml`, `reductions/{blocks,bridges}/<unit>.yaml` (a bridge also has `<unit>.contract.yaml` there), `guidance/{blocks,bridges}/<unit>.md`, the rule pack's `checks/{blocks,bridges}/<unit>.toml` and `queries/{blocks,bridges}/<unit>/<lang>/*.scm` when the unit ships one, and the `upstream/{blocks,bridges}/<unit>/` snapshot.
 
 1. **clean** — local file matches the recorded upstream snapshot byte-for-byte; the plugin's current version of the same file also matches. Nothing to do.
 2. **plugin-moved** — local file matches upstream snapshot, but the plugin tree has a newer version. `--merge` would fast-forward. Suggest: `/spec-inline <block> --merge` (or `/spec-inline-bridge <bridge> --merge`).
@@ -56,10 +56,10 @@ same four classes, so read them exactly as in Step 2, with two differences.
 
 **`status: not_recorded`.** The project was bootstrapped before the
 substrate was hashed, so `files:` is empty and nothing is being claimed
-either way. Say that plainly — do NOT report the substrate as clean. Tell
-the user the only way to start tracking it is a fresh bootstrap into a new
-tree, and that `migrate --refresh` cannot help here because no file can be
-proven untouched.
+either way. Say that plainly — do NOT report the substrate as clean. The
+move to the current spec format (`specdev-analyzer migrate`) records a first
+baseline from the plugin's hashes, so afterwards a file that differs from the
+plugin reads as locally edited.
 
 **`comparison: excludes_unit_refs`.** `module.schema.yaml` is co-owned:
 `inline` appends each inlined unit's `$ref` to its `allOf` array. That
@@ -74,52 +74,35 @@ blocks and bridges). Offer:
 specdev-analyzer migrate --refresh --dry-run
 ```
 
-It rewrites only files whose on-disk hash still matches the hash bootstrap
-recorded — proof that nobody edited them. Anything you changed is listed as
-`KEPT` and left alone, because profile files keep no `upstream/` base copy
-and there is nothing to merge against. Show the dry run, then re-run
-without `--dry-run` once the user agrees.
+It rewrites only files whose on-disk hash still matches the recorded hash —
+proof that nobody edited them. Anything you changed is listed as `KEPT` and
+left alone, because profile files keep no `upstream/` base copy and there is
+nothing to merge against. Before the real run, make sure the work tree is
+clean (`git status --porcelain` lists nothing; otherwise ask the user to
+commit or stash first), so `git diff` shows exactly what the refresh changed.
+Show the dry run, then re-run without `--dry-run` once the user agrees.
 
 A `locally-edited` or `both` profile file is the user's call. There is no
 merge path; the choice is keep the edit or re-apply the plugin's version by
 hand.
 
-## Step 3 — check generated files (gen-drift)
+## Step 3 — the code is `check`'s job
 
-Inlined-unit drift is one direction; the other is the code `/spec-gen` emitted. Run:
-
-```sh
-specdev-analyzer report gen-drift
-```
-
-Exit codes: `0` clean, `1` drift present, `2` analyzer error (surface verbatim and skip this section). The YAML report classifies each file recorded in `specs/specdev/gen-lineage.toml`:
-
-1. **clean** — bytes still match the hash recorded at generation time. Nothing to do.
-2. **edited** — the file was generated, then hand-edited. This is the one-way spec→code flow breaking silently: the edit lives only in source and will be lost on the next `/spec-gen` run. Surface the path and suggest: fold the change back into the spec (then regenerate), or — if the edit was accidental — re-run `/spec-gen <module>` to restore spec-derived code. If the row carries `derived = true` in `gen-lineage.toml` (a file `specdev-analyzer derive` wrote — a route shim), the fix is `specdev-analyzer derive --write --accept-edits`, not a regenerate: a derived file is never a hand-edit target.
-3. **missing** — recorded at generation time but no longer on disk. Usually a rename or delete outside the spec flow; suggest re-running `/spec-gen <module>` or, if the module was intentionally removed, removing its spec. A `derived = true` row is the exception: `specdev-analyzer derive --write` rewrites the file when a rule still produces it and removes the row when none does, so it is never `missing` for long. When `derive` itself prints `edited <path>: stale derived file kept because of a hand edit`, no rule produces that file any more; remove it or run `derive --write --accept-edits`.
-
-**If the user needs certainty about the code inside functions.** A `clean` line means the file's bytes still match the hash recorded when it was emitted — it answers "did these bytes change since then", nothing more. `specdev-analyzer items diff --module <Name>` is a second opinion that uses no stored record (it re-reads the source with tree-sitter), but it covers only the public surface: names of types, functions and fields, not what is inside them. To check the bodies, re-run `/spec-gen <module>` and compare the output.
-
-**Never re-record to clear an `edited` line.** Recording is what makes a file `clean`, so `gen-record` on an edited file makes the hand-edit the new baseline and this report can never surface it again. The analyzer refuses this by default; the refusal is correct — fix the cause instead, per the `edited` guidance above.
-
-If `gen-lineage.toml` doesn't exist yet (empty report), say so in one line — the project either predates lineage recording or hasn't run `/spec-gen` since; the record starts accruing on the next gen run.
-
-On `GEN-LINEAGE-001` (malformed `gen-lineage.toml`): surface verbatim. The recovery is re-running `/spec-gen` for the affected modules (recording rewrites the file); do not hand-edit it.
+Drift compares the inlined machinery with the plugin. Whether the code still matches the spec — sources resolve, imports follow `depends_on`, named tests exist, open questions do not block built code — is `specdev-analyzer check` (`/spec-validate`). If the user asked "did the code drift from the spec", run that instead.
 
 ## Step 4 — report and suggest
 
 End with one line per surface:
 
 - Inlined units clean: "No drift. `<N>` inlined files match plugin + upstream." Otherwise: "`<both>` both, `<moved>` plugin-moved, `<edited>` locally-edited, `<clean>` clean. Use `/spec-inline <block> --merge` to fast-forward plugin-moved units; review locally-edited paths if unintentional."
-- Generated files clean: "`<N>` generated files match their gen-time hashes." Otherwise: "`<edited>` generated files hand-edited, `<missing>` missing — fold edits back into the spec or regenerate."
 
 Do not edit files. Do not run `--merge` from this skill — drift is a read-only report.
 
 ## On `LINEAGE-001` errors
 
-If drift errors with `LINEAGE-001`, the project's `lineage.toml` is inconsistent with the inlined tree (e.g., a block was hand-deleted but lineage still claims it; or a file was added under one of a block's four locations without a matching lineage entry). Surface the message verbatim. Resolving lineage is a manual step:
+If drift errors with `LINEAGE-001`, the project's `lineage.toml` is inconsistent with the inlined tree (e.g., a block was hand-deleted but lineage still claims it; or a file was added under one of a block's locations without a matching lineage entry). Surface the message verbatim. Resolving lineage is a manual step:
 
-- Restoring a deleted block: prefer `/spec-inline <block> --merge`, which updates in place. A plain `/spec-inline` is refused with `INLINE-002` while the block is still inlined, and clearing that means removing the block's files across **all four** locations (`schemas/inlined/blocks/<block>.schema.yaml`, `reductions/blocks/<block>.yaml`, `codegen/<lang>/blocks/<block>/`, `upstream/blocks/<block>/`) — rare, and `/spec-inline`'s own `INLINE-002` text says the same. Prefer `--merge`.
+- Restoring a deleted block: prefer `/spec-inline <block> --merge`, which updates in place. A plain `/spec-inline` is refused with `INLINE-002` while the block is still inlined, and clearing that means removing the block's files across **all** its locations (`schemas/inlined/blocks/<block>.schema.yaml`, `reductions/blocks/<block>.yaml`, `guidance/blocks/<block>.md`, `checks/blocks/<block>.toml`, `queries/blocks/<block>/`, `upstream/blocks/<block>/`) — rare, and `/spec-inline`'s own `INLINE-002` text says the same. Prefer `--merge`.
 - Cleaning up an unexpected file under an inlined unit: delete it (it isn't a block-emitted file) and re-run `/spec-drift` to confirm.
 
 Do not auto-edit `lineage.toml`.
@@ -129,4 +112,4 @@ Do not auto-edit `lineage.toml`.
 - **Update inlined files.** Use `/spec-inline --merge` or `/spec-inline-bridge --merge`.
 - **Revert local edits.** Manual step: copy the file from `specs/specdev/upstream/<unit>/<path>` over the local file.
 - **Resolve `--merge` conflict markers.** Hand-resolve, then `/spec-validate`.
-- **Fold hand-edits to generated code back into the spec.** Edit the spec (for `[[items]]`-level drift, `/spec-sync-items` orchestrates it), then `/spec-gen` to regenerate and re-record.
+- **Compare the code with the spec.** That is `check` (`/spec-validate`); for `[[items]]`-level drift, `/spec-sync-items`.

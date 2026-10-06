@@ -9,12 +9,11 @@ description: >
 
   v1 models structure and appearance: WHICH plots exist, WHICH series
   belong to each, and how each is drawn. It does not model where the
-  data comes from. A series names a channel; filling it is the emitted
-  code's job, and binding it to a producer is a bridge's job.
+  data comes from. A series names a channel; filling it is the code's job, and binding it to a producer is a bridge's job.
 
   The block contributes the `egui_plot` crate but **not egui itself**,
   which always arrives from whichever unit supplies the crate-root
-  `pub use ...::egui;` alias. Emitted code therefore reaches plot types
+  `pub use ...::egui;` alias. The code therefore reaches plot types
   through `egui_plot::` and everything else through `crate::egui`. The
   host's egui and the one `egui_plot` builds against must be the same
   minor version, or their `Ui` types will not unify — see the block
@@ -92,14 +91,13 @@ $defs:
       follow_window:
         description: >
           Width of a scrolling x-axis window, in x-axis units. When set,
-          codegen pins the x bounds to the most recent window on every
+          the code pins the x bounds to the most recent window on every
           frame — the behaviour a live streaming plot needs. When absent
           the x axis is left under user and auto-bounds control.
 
           Setting this necessarily takes the x axis away from
           auto-bounds; declaring `auto_bounds = "x"` or `"both"`
-          alongside it is contradictory, and codegen resolves it in
-          favour of the window.
+          alongside it is contradictory, and the window wins.
         type: number
         exclusiveMinimum: 0
       auto_bounds:

@@ -102,7 +102,7 @@ $defs:
       probe_selector:
         description: >
           Optional probe selector, `VID:PID` or `VID:PID:Serial`. When
-          absent, codegen emits first-probe-found selection. Set this
+          absent, the code has first-probe-found selection. Set this
           for a workstation with more than one probe plugged in.
         type: string
         minLength: 1
@@ -123,7 +123,7 @@ $defs:
 
   Sampler:
     description: >
-      One periodic memory-read group. Codegen emits a loop that reads
+      One periodic memory-read group. The code has a loop that reads
       each requested address at `interval_ms` and publishes the raw
       bytes. The address list is a runtime input.
     type: object
@@ -147,7 +147,7 @@ $defs:
         description: >
           Target period between sampling passes, in milliseconds. This
           is a floor, not a guarantee: a pass that takes longer than the
-          interval simply runs late. Codegen emits the deadline
+          interval simply runs late. The code has the deadline
           bookkeeping, never a busy-wait.
         type: integer
         minimum: 1
@@ -163,7 +163,7 @@ $defs:
         default: u32
       max_batch:
         description: >
-          Maximum number of addresses read in one pass. Codegen emits a
+          Maximum number of addresses read in one pass. The code has a
           chunking loop at this size so one oversized request cannot
           stall the interval. Defaults to 64.
         type: integer

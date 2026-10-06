@@ -4,93 +4,42 @@ Pure build system reference for Rust projects using Cargo. These patterns apply 
 
 ---
 
-## Workspace Cargo.toml
+## Toolchain Commands
 
-When a project contains multiple modules, use a workspace at the project root:
+| Purpose | Command |
+|---|---|
+| Type-check (the usual compile gate) | `cargo check --quiet` |
+| Type-check for a cross target | `cargo check --quiet --target <triple>` |
+| Run tests | `cargo test` |
+| Lint | `cargo clippy --all-targets` |
+| Format | `cargo fmt` |
+| Build release | `cargo build --release` |
+| Fail when `Cargo.lock` would change (CI) | add `--locked` to any of the above |
 
-```toml
-[workspace]
-members = [
-    "src/module_a",
-    "src/module_b",
-    "src/module_c",
-]
-```
-
-Each module directory listed in `members` must contain its own `Cargo.toml`.
-
----
-
-## Single-Crate Cargo.toml
-
-For projects that compile as a single crate (all modules in one package):
-
-```toml
-[package]
-name = "<project_name>"
-version = "0.1.0"
-edition = "<edition>"     # e.g. "2021" or "2024"
-
-[dependencies]
-# Internal and external dependencies listed here
-```
+- `cargo check` exiting 0 is the minimum bar: a type-clean tree. It does not run the code; a profile that needs more
+  adds a second gate.
+- **None of these commands is "the compile gate".** The gate is the profile's `gates:` registry in
+  `specs/specdev/profile.yaml` — a `label` and `steps` as argv lists — rendered into `scripts/specdev-gates.sh`, which
+  CI runs after `specdev-analyzer check`. This table is the menu a profile author picks steps from.
 
 ---
 
-## Per-Module Cargo.toml
+## Cargo.toml
 
-Each module directory has its own `Cargo.toml`:
+`Cargo.toml` is the project's, and the only source of truth for dependencies, features and build profiles. The spec
+copies none of it.
 
-```toml
-[package]
-name = "<module_name>"
-version = "0.1.0"
-edition = "<edition>"
-
-[dependencies]
-# From depends_on: internal workspace crates
-other_module = { path = "../other_module" }
-
-# From external_deps: external crates
-some_crate = "1.2"
-another_crate = { version = "0.5", features = ["feature_a", "feature_b"] }
-```
-
----
-
-## Mapping External Packages to Cargo Dependencies
-
-External packages from the architecture spec map to `[dependencies]` entries. The `build_integration.cargo` field in the architecture spec provides the exact Cargo dependency string.
-
-### Source Types
-
-| Source Type | Cargo Mapping |
-|-------------|---------------|
-| `crate` | Standard crates.io dependency: `name = "version"` |
-| `git` | Git dependency: `name = { git = "url", rev = "ref" }` |
-| `sdk` | SDK-specific crate: follows `build_integration.cargo` exactly |
-| `component` | Framework registry crate: follows `build_integration.cargo` exactly |
-
-### Version and Features
+- A single crate holds every module of a package; modules are files under `src/`, not crates.
+- A workspace lists its member crates under `[workspace] members`; each member has its own `Cargo.toml` and, in
+  specdev, its own spec root (see the `rust-workspace` profile).
+- Dependency shapes:
 
 ```toml
 [dependencies]
-# Simple version constraint
 simple_dep = "1.0"
-
-# With features enabled
 featured_dep = { version = "2.3", features = ["async", "derive"] }
-
-# Git source with specific revision
 git_dep = { git = "https://github.com/org/repo", rev = "abc123" }
-
-# Git source with branch
-branch_dep = { git = "https://github.com/org/repo", branch = "main" }
-
-# Path dependency (workspace member)
 local_dep = { path = "../local_dep" }
-
-# With default-features disabled
 minimal_dep = { version = "1.0", default-features = false, features = ["needed_feature"] }
 ```
 
@@ -205,7 +154,7 @@ Use in code with `#[cfg(feature = "feature_name")]`.
 
 ## Build Scripts
 
-When a module requires build-time code generation or configuration:
+When a crate needs a build-time step (a generated table, a linker script, a native library):
 
 ```toml
 [package]
@@ -235,40 +184,12 @@ fn main() {
 
 ## Dependency Graph Verification
 
-The `depends_on` list from each module spec maps directly to `[dependencies]` entries — either as path dependencies (internal modules) or crate dependencies (external packages). The build system enforces that:
+`Cargo.toml` is the only source of truth for dependencies. The spec's `depends_on` states which project modules a
+module may use; `specdev-analyzer check` compares it with the module's actual imports (`internal_edges_declared`), and
+Cargo itself refuses an external crate the manifest does not declare. Cargo also rejects circular crate dependencies.
 
-- Every `depends_on` entry resolves to a declared dependency
-- No circular dependencies exist (Cargo rejects these at build time)
-- External packages listed in `external_deps` have corresponding entries in `[dependencies]`
+### Files a project template owns
 
----
-
-## Additive Dependency Management
-
-When a project already has a Cargo.toml (e.g., from a template like `esp-rs/esp-idf-template` or manual setup), spec-gen updates it additively rather than regenerating it.
-
-### Rules
-
-- Only add dependencies that are missing. Never modify existing entries.
-- Use the exact `build_integration.cargo` string from architecture.yaml's `external_packages`.
-- Append new entries at the end of the `[dependencies]` section.
-- If a dependency exists but with a different version than architecture.yaml specifies, do NOT change it — the existing Cargo.toml is authoritative for versions. Report the discrepancy in the generation report.
-- For `sdkconfig.defaults`: append missing `CONFIG_*` entries at the end of the file. Never modify or remove existing entries.
-
-### Files never overwritten
-
-These files are platform-specific boilerplate typically provided by a project template. spec-gen must never overwrite or regenerate them if they already exist:
-
-- `build.rs`
-- `rust-toolchain.toml`
-- `.cargo/config.toml`
-- `.gitignore`
-
-### Dependency resolution
-
-To check if a dependency is already satisfied:
-
-1. Parse `[dependencies]` from Cargo.toml
-2. Match by crate name (the TOML key, e.g., `esp-idf-svc`, `log`, `heapless`)
-3. If present under any version or source, consider it satisfied
-4. If absent, add it using `build_integration.cargo` from architecture.yaml
+`build.rs`, `rust-toolchain.toml`, `.cargo/config.toml` and `.gitignore` are platform boilerplate the project or its
+template owns. A firmware project's `.cargo/config.toml` names the build target that `[platform].target_triple`
+repeats for the gate step; keep the two equal.

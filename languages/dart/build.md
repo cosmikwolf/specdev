@@ -63,9 +63,8 @@ dependencies:
     sdk: flutter                     # SDK-provided package
 ```
 
-- `dev_dependencies` — test/lint/codegen tooling; never shipped.
-- `dependency_overrides` — local-development escape hatch only; do not commit
-  overrides that generated manifests would fight over.
+- `dev_dependencies` — test, lint and generator tooling; never shipped.
+- The pubspec's override table is a local-development escape hatch only; do not commit it.
 
 ---
 
@@ -109,7 +108,7 @@ a task runner.)
 | Build release | `dart compile exe` | `flutter build apk` / `appbundle` / `ios` / `web` |
 
 - `dart analyze` / `flutter analyze` exiting 0 is the Dart analog of
-  `cargo check` — an analysis-clean tree is the minimum bar for generated code.
+  `cargo check` — an analysis-clean tree is the minimum bar.
 - `flutter build web` targets JS by default; `flutter build web --wasm` targets
   WasmGC and is stricter about interop — treat it as a separate gate.
 
@@ -126,8 +125,8 @@ analyzer:
     strict-raw-types: true
 ```
 
-Generated code must be clean under the package's committed analysis options —
-do not weaken the options to make generated code pass.
+Code must be clean under the package's committed analysis options — do not
+weaken the options to make code pass.
 
 ---
 
@@ -136,7 +135,7 @@ do not weaken the options to make generated code pass.
 `flutter create` scaffolds `android/`, `ios/`, `web/`, `macos/`, `linux/`,
 `windows/`. These are build-system state, owned by the Flutter tool and edited
 only for platform configuration (permissions, entitlements, manifest entries).
-Spec tooling never generates or records them.
+Spec tooling never writes them.
 
 Platform permission declarations live in:
 
@@ -146,7 +145,7 @@ Platform permission declarations live in:
 
 ---
 
-## Codegen Runners
+## Code Generators
 
 Some packages generate Dart source (`*.g.dart`, `*.freezed.dart`) via
 `build_runner`; others ship standalone generator CLIs. Two rules:

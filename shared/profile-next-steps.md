@@ -36,19 +36,19 @@ Then `/spec-design <plugin shell module>`.
 
 Go straight to `/spec-design <one-line module description>` — start with the composition root (an `app`-role module), then screens and services. If the app consumes a Rust library over FFI or needs BLE, inline the matching block once it ships (list with `ls "${CLAUDE_PLUGIN_ROOT}/blocks/"`).
 
-Platform scaffolding (`flutter create . --platforms <matrix>`) is a one-time manual step before the first `/spec-gen` compile gate; the platform directories it writes are externally owned and never generated. Delete the scaffold's `test/widget_test.dart` afterwards — it references template symbols a spec-generated app doesn't have.
+Platform scaffolding (`flutter create . --platforms <matrix>`) is a one-time manual step before the first real build; the platform directories it writes belong to Flutter tooling. Delete the scaffold's `test/widget_test.dart` afterwards — it references template symbols the app doesn't have.
 
 ## nextjs-app
 
 Go straight to `/spec-design <one-line module description>`. Start with the composition root — an `app`-role module, exactly one per project, which owns `app/layout.tsx` — then one `page`, then the `service` modules behind it.
 
-Every module carries a required `role`, one of `app`, `layout`, `page`, `route_handler`, `boundary`, `component`, `server_action`, `service`, `model`. A `service` also carries a required `environment` (`server` / `client` / `universal`) — the emitter reads it to choose the `server-only` or `client-only` guard import, so it is never defaulted. A `page`, `layout`, `boundary` or `component` may carry `client_component = true`; a `service` may not.
+Every module carries a required `role`, one of `app`, `layout`, `page`, `route_handler`, `boundary`, `component`, `server_action`, `service`, `model`. A `service` also carries a required `environment` (`server` / `client` / `universal`) — it decides the `server-only` or `client-only` guard import the body starts with, so it is never defaulted. A `page`, `layout`, `boundary` or `component` may carry `client_component = true`; a `service` may not.
 
-You never author a file under `app/`. The route files are **derived**: `specdev-analyzer derive --write` re-exports each module body into the `app_path` the module declares, and `/spec-gen` runs it. Author the body under `[paths] source`; the URL is derived from `app_path`, never stored.
+Route files under `app/` are two-line shims that re-export the module body at the module's `app_path` (the profile README shows the three forms). Write the body under `[paths] source`; the URL follows from `app_path`, never stored.
 
-Two gates ship in the registry (`specs/specdev/profile.yaml` `gates:`) and `/spec-gen` Step 8 runs both through `specdev-analyzer gate`: `fast` (module scope — `pnpm install`, `next typegen`, `tsc --noEmit`, `vitest run --passWithNoTests`) and `next-build` (batch scope — `next build`). `next build` is the only one of the two that catches a client/server rule violation in a route file; `typegen` and `tsc` are blind to it. Keep at least one `scope: module` gate: with none declared, `/spec-gen` refuses to generate at all.
+Two gates ship in the registry (`specs/specdev/profile.yaml` `gates:`), and `scripts/specdev-gates.sh` runs them after `specdev-analyzer check`: `fast` (`pnpm install`, `next typegen`, `tsc --noEmit`, `vitest run --passWithNoTests`) and `next-build` (`next build`). `next build` is the only one of the two that catches a client/server rule violation in a route file; `typegen` and `tsc` are blind to it.
 
-`tsconfig.json`, `next.config.ts`, `vitest.config.ts`, `playwright.config.ts` and `.gitignore` are written by `specdev-analyzer manifest --write` **only when absent**, then externally owned — edit them freely, but know that each is in the gate key, so an edit flips every module to `verified: false` and the next gen re-gates them. `package.json` is the opposite: pure output, rewritten on every `manifest --write`; add dependencies to `architecture.toml [[external_deps]]` or a module's `external_deps[]`, never to the file.
+`tsconfig.json`, `next.config.ts`, `vitest.config.ts`, `playwright.config.ts`, `.gitignore`, `pnpm-workspace.yaml` and `.github/workflows/specdev.yml` were written by `bootstrap` **only when absent**, and are the project's now. `package.json` is the project's too: add dependencies there.
 
 ## rust-workspace
 
@@ -57,6 +57,10 @@ Bootstrap each member crate with its own profile, passing the language the membe
 ```
 cd <member> && /spec-init --non-interactive --profile <profile> --language <profile language> --name <member-name>
 ```
+
+## Every profile
+
+Before writing a module's code, run `specdev-analyzer context --module <Module>` and `specdev-analyzer report decisions --module <Module>` and read what they list; mark a module without code `planned = true`. CI needs the repository variable `SPECDEV_ANALYZER_REPO` and the secret `SPECDEV_ANALYZER_TOKEN` that `.github/workflows/specdev.yml` reads, and a committed lockfile.
 
 ## Other / user-authored profile
 

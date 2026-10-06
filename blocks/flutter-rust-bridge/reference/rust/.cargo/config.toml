@@ -1,5 +1,0 @@
-# CI builds this reference for wasm32-unknown-unknown: the web-enabled
-# companion-crate contract is "compiles for wasm" (wasm-purity), and that is
-# the leg that can silently rot. The host build is exercised at authoring time.
-[build]
-target = "wasm32-unknown-unknown"
