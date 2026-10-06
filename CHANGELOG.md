@@ -14,6 +14,8 @@ and it is `2`.
 
 ## [Unreleased]
 
+## [0.3.3] — 2026-10-06
+
 ### Added
 
 - **`/spec-validate` names the requirement-tree rule, `report requirements`, and the workspace id rules** (#234,
