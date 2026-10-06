@@ -21,7 +21,7 @@ project against schemas the plugin does not ship.
 1. Install the analyzer (requires a stable Rust toolchain, at least 1.86):
 
    ```
-   cargo install --git https://github.com/<org>/specdev-analyzer --tag v0.2.1
+   cargo install --git https://github.com/<org>/specdev-analyzer --tag v0.3.0
    ```
 
    Already have a checkout? `cargo install --path <analyzer-checkout>`
