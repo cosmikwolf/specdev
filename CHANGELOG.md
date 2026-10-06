@@ -14,6 +14,8 @@ and it is `2`.
 
 ## [Unreleased]
 
+## [0.3.1] — 2026-10-06
+
 ### Fixed
 
 - **Rust test discovery sees tests made by a local `macro_rules!` macro** (#223): `languages/rust/tests.scm`.
