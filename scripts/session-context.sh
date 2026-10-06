@@ -19,12 +19,20 @@
 # The project's copy wins, because it is the one that also works with hooks
 # disabled — which is the reason /spec-config writes it at all.
 #
+# At a project root it also relays the analyzer's version warning (D116):
+# `specdev-analyzer --version` compares itself with this plugin's
+# `shared/min-analyzer-version` (D110) and prints `ANALYZER-VERSION-` on
+# stderr when it is older. Outside a skill nobody names the plugin root, so
+# that warning was silent exactly when an agent ran `check` from a plain shell
+# after a plugin update. This runs before the early exit below: the project's
+# rules copy does not carry it.
+#
 # Deliberate constraints. Do not relax one without revisiting the decision that
-# authorized this hook:
+# authorized this hook (D103, amended by D116):
 #   - reads no project file beyond the three existence tests above
 #   - prints nothing that depends on project content (existence, never bytes:
 #     this script must never compare the two copies or report on staleness)
-#   - never invokes specdev-analyzer
+#   - invokes specdev-analyzer only as `--version`, and only at a project root
 #   - writes no file
 #   - always exits 0, so a fault here can never block a session
 
@@ -38,9 +46,23 @@ fi
 RULES="${PLUGIN_ROOT}/shared/project-rules.md"
 [ -f "${RULES}" ] || exit 0
 
+# One line when the analyzer is missing or older than this plugin needs.
+version_note() {
+    if ! command -v specdev-analyzer >/dev/null 2>&1; then
+        echo "specdev: specdev-analyzer is not on PATH; the specdev skills need it. Tell the user once; install it per ${PLUGIN_ROOT}/shared/analyzer-install.md."
+        return
+    fi
+    line="$(SPECDEV_PLUGIN_ROOT="${PLUGIN_ROOT}" specdev-analyzer --version 2>&1 >/dev/null | grep 'ANALYZER-VERSION-' | head -n 1)"
+    if [ -n "${line}" ]; then
+        echo "specdev: ${line}"
+        echo "Tell the user once: the findings may show defects the plugin's release already fixed until they re-install."
+    fi
+}
+
 dir="$(pwd)"
 while :; do
     if [ -f "${dir}/spec.toml" ] && [ -d "${dir}/specs/specdev" ]; then
+        version_note
         # The project owns a copy; Claude Code already loaded it. Stay quiet.
         if [ -f "${dir}/.claude/rules/specdev.md" ]; then
             exit 0
