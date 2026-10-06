@@ -28,6 +28,8 @@ Run from the project root:
 specdev-analyzer check --no-color
 ```
 
+At a workspace root, `check` alone checks the root only, and its summary line says how many members it skipped. Add `--members` to check the root and every member in one run: each member's findings come under a `member <path>:` heading, the last line sums them, and the exit code is the worst.
+
 `check` runs `validate` first — layout discovery, schema validation of every spec file, kind resolution, reduction, and the graph checks in `specs/specdev/domain.toml` — and then the checks that read the code:
 
 - **source rule** (`source_resolves`) — a module that is not `planned` must have resolvable source;
@@ -36,6 +38,11 @@ specdev-analyzer check --no-color
 - **imports** (`internal_edges_declared`) — every import between project modules follows a declared `depends_on`;
 - **tests** (`requirements_have_tests`, `verified_by_resolves`) — a requirement names its tests in `verified_by`, and each named test exists in the test discovery (`specdev-analyzer report tests` shows the identities);
 - **rule packs** (`pack_entity_in_code`, `pack_attribute_matches`, `pack_key_ambiguous`) — each inlined block's or bridge's code checks: a spec entity the code lacks, an attribute that differs, or a key the code has at more than one place (`${CLAUDE_PLUGIN_ROOT}/shared/rule-packs.md`).
+
+Two spec-only rules `validate` runs for every profile:
+
+- **retired requirements** (`retired_requirement_consistency`) — a file in `specs/requirements/retired/` needs `retired_by` naming an accepted decision, a live file must not have it, and nothing may `satisfy` a retired requirement (see `/spec-decide`, "retires a requirement");
+- **requirement size** (`requirement_size`, a warning) — a requirement over 120 words probably states more than one behaviour: split it, and give each part its own `verified_by`.
 
 Use `specdev-analyzer validate --no-color` alone only when the code is not there to read (a spec-only review).
 
@@ -94,7 +101,7 @@ Do not invent rule names or codes. If a code is unfamiliar, point the user at `s
 
 `FORMAT-001` (info) means the project is on an older spec format; `FORMAT-002` (exit 2) means a workspace member's format major differs from its root's. Both route to `specdev-analyzer migrate`, run at the workspace root when there is one.
 
-**Before running `migrate`, make sure the work tree is clean.** `migrate` rewrites files in place, and for a tree with no recorded baseline it cannot prove which files carry local edits — `git diff` is the only way to see what it changed. Run `git status --porcelain`; if it lists anything, stop and ask the user to commit or stash first, and run `migrate` only when they say go. Then `specdev-analyzer migrate --dry-run`, show the report, and run without `--dry-run` once the user agrees. After it, `git diff` shows every change.
+**Before running `migrate`, make sure the work tree is clean.** `migrate` rewrites files in place, and for a tree with no recorded baseline it cannot prove which files carry local edits — `git diff` is the only way to see what it changed. Run `git status --porcelain`; if it lists anything, stop and ask the user to commit or stash first, and run `migrate` only when they say go. Then `specdev-analyzer migrate --dry-run`, show the report, and run without `--dry-run` once the user agrees. After it, `git diff` shows every change. When the report lists removed values, its last line says so: put the report in the migration's commit message — it is the only list of what the format removed.
 
 ## Step 4 — hand off for fixes
 
