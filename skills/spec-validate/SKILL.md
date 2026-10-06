@@ -43,6 +43,7 @@ Spec-only rules `validate` runs for every profile:
 
 - **retired requirements** (`retired_requirement_consistency`) — a file in `specs/requirements/retired/` needs `retired_by` naming an accepted decision, a live file must not have it, and nothing may `satisfy` a retired requirement (see `/spec-decide`, "retires a requirement");
 - **ids across a workspace** — in a member, `workspace_id_collision` (error): a decision or open question with the id of one at the workspace root; the two are merged by id, so one hides the other — rename one. At the root, `workspace_affects_ambiguous` (warning): a workspace open question's `affects` names a requirement id that two or more members define, so it gates all of them; `workspace_affects_nothing` (warning): it names an id no member defines;
+- **requirement trees** — a requirement names its parent with `satisfies`. A parent with at least one live child is covered by its children: it needs no module and no test of its own, and each child is checked instead. `requirement_parents_acyclic` (error): parent links that form a cycle (then none of them is covered). `specdev-analyzer report requirements` (`--format text` for an outline) shows the tree;
 - **requirement size** (`requirement_size`, a warning) — a requirement over 120 words probably states more than one behaviour: split it, and give each part its own `verified_by`.
 
 Use `specdev-analyzer validate --no-color` alone only when the code is not there to read (a spec-only review).
