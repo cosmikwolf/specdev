@@ -39,9 +39,10 @@ At a workspace root, `check` alone checks the root only, and its summary line sa
 - **tests** (`requirements_have_tests`, `verified_by_resolves`) — a requirement names its tests in `verified_by`, and each named test exists in the test discovery (`specdev-analyzer report tests` shows the identities);
 - **rule packs** (`pack_entity_in_code`, `pack_attribute_matches`, `pack_key_ambiguous`) — each inlined block's or bridge's code checks: a spec entity the code lacks, an attribute that differs, or a key the code has at more than one place (`${CLAUDE_PLUGIN_ROOT}/shared/rule-packs.md`).
 
-Two spec-only rules `validate` runs for every profile:
+Spec-only rules `validate` runs for every profile:
 
 - **retired requirements** (`retired_requirement_consistency`) — a file in `specs/requirements/retired/` needs `retired_by` naming an accepted decision, a live file must not have it, and nothing may `satisfy` a retired requirement (see `/spec-decide`, "retires a requirement");
+- **ids across a workspace** — in a member, `workspace_id_collision` (error): a decision or open question with the id of one at the workspace root; the two are merged by id, so one hides the other — rename one. At the root, `workspace_affects_ambiguous` (warning): a workspace open question's `affects` names a requirement id that two or more members define, so it gates all of them; `workspace_affects_nothing` (warning): it names an id no member defines;
 - **requirement size** (`requirement_size`, a warning) — a requirement over 120 words probably states more than one behaviour: split it, and give each part its own `verified_by`.
 
 Use `specdev-analyzer validate --no-color` alone only when the code is not there to read (a spec-only review).
