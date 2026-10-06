@@ -14,6 +14,12 @@ and it is `2`.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Rust test discovery sees tests made by a local `macro_rules!` macro** (#223): `languages/rust/tests.scm`.
+- **Rust imports inside `#[cfg(test)]` code, `#[cfg(all(…, test, …))]` code or a `#[test]` fn are test-only**
+  (#224): `languages/rust/imports.scm`. Needs specdev-analyzer 0.3.1.
+
 ## [0.3.0] — 2026-10-05
 
 **Checked intent: specdev no longer generates code.** Specs state intent — what each module is for, what it may
