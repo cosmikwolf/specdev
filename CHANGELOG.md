@@ -14,6 +14,8 @@ and it is `2`.
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-10-05
+
 **Checked intent: specdev no longer generates code.** Specs state intent — what each module is for, what it may
 depend on, which requirements it satisfies, which decisions guide it — and `specdev-analyzer check` checks that intent
 against the code you and the agent write. Needs specdev-analyzer 0.3.0. Existing projects move with
