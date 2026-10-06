@@ -14,6 +14,8 @@ and it is `2`.
 
 ## [Unreleased]
 
+## [0.3.2] — 2026-10-06
+
 ### Added
 
 - **Retire a requirement instead of deleting it** (#229): `/spec-decide` Step 4.6 moves it to
