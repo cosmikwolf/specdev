@@ -40,7 +40,8 @@ If no module owns the file yet, design one first (`/spec-design`), or mark the w
 ## The loop
 
 1. Spec first: `/spec-design <one line>` or `/spec-edit <Module>`. A module with no code yet carries
-   `planned = true`; remove it when the code lands.
+   `planned = true`; remove it when the code lands. When the module's code exists but some of its rule-pack
+   entries (one entry of an inlined block's table) do not, put `planned = true` on those entries, not on the module.
 2. Read the context (above), then write the code and its tests. A requirement's `verified_by` names the test
    by the identity `specdev-analyzer report tests` shows.
 3. Check: `/spec-validate` (`specdev-analyzer check`). CI runs `sh scripts/specdev-gates.sh`, which runs `check`

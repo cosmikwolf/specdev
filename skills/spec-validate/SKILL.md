@@ -94,7 +94,7 @@ Do not invent rule names or codes. If a code is unfamiliar, point the user at `s
 
 `FORMAT-001` (info) means the project is on an older spec format; `FORMAT-002` (exit 2) means a workspace member's format major differs from its root's. Both route to `specdev-analyzer migrate`, run at the workspace root when there is one.
 
-**Before running `migrate`, make sure the work tree is clean.** `migrate` rewrites files in place, and for a tree with no recorded baseline it cannot prove which files carry local edits — `git diff` is the only way to see what it changed. Run `git status --porcelain`; if it lists anything, stop and ask the user to commit or stash first, and run `migrate` only when they say go. Then `specdev-analyzer migrate --dry-run`, show the report, and run without `--dry-run` once the user agrees. After it, `git diff` shows every change.
+**Before running `migrate`, make sure the work tree is clean.** `migrate` rewrites files in place, and for a tree with no recorded baseline it cannot prove which files carry local edits — `git diff` is the only way to see what it changed. Run `git status --porcelain`; if it lists anything, stop and ask the user to commit or stash first, and run `migrate` only when they say go. Then `specdev-analyzer migrate --dry-run`, show the report, and run without `--dry-run` once the user agrees. After it, `git diff` shows every change. When the report lists removed values, its last line says so: put the report in the migration's commit message — it is the only list of what the format removed.
 
 ## Step 4 — hand off for fixes
 
