@@ -19,16 +19,16 @@
 # The project's copy wins, because it is the one that also works with hooks
 # disabled — which is the reason /spec-config writes it at all.
 #
-# At a project root it also relays the analyzer's version warning (D116):
+# At a project root it also relays the analyzer's version warning:
 # `specdev-analyzer --version` compares itself with this plugin's
-# `shared/min-analyzer-version` (D110) and prints `ANALYZER-VERSION-` on
+# `shared/min-analyzer-version` and prints `ANALYZER-VERSION-` on
 # stderr when it is older. Outside a skill nobody names the plugin root, so
 # that warning was silent exactly when an agent ran `check` from a plain shell
 # after a plugin update. This runs before the early exit below: the project's
 # rules copy does not carry it.
 #
 # Deliberate constraints. Do not relax one without revisiting the decision that
-# authorized this hook (D103, amended by D116):
+# authorized this hook:
 #   - reads no project file beyond the three existence tests above
 #   - prints nothing that depends on project content (existence, never bytes:
 #     this script must never compare the two copies or report on staleness)

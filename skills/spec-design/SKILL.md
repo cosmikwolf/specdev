@@ -32,7 +32,7 @@ If `specs/specdev/` is absent at the project root, stop and tell the user to run
 
 Read `spec.toml` to learn the project's `[project].profile` and `[project].language`. The profile shapes which fields the module schema accepts.
 
-Check `specs/requirements/`. The module `satisfies` requirements, so the subagent (Step 2) needs requirement ids to already exist. If there is no requirement covering what this module does, tell the user up front — they author requirements under `specs/requirements/` (and `/spec-question` / `/spec-decide` capture the reasoning behind them). Do not let the draft invent requirement ids.
+Check `specs/requirements/` (its top level only: `specs/requirements/retired/` holds retired requirements, which no module may satisfy). The module `satisfies` requirements, so the subagent (Step 2) needs requirement ids to already exist. If there is no requirement covering what this module does, tell the user up front — they author requirements under `specs/requirements/` (and `/spec-question` / `/spec-decide` capture the reasoning behind them). Do not let the draft invent requirement ids.
 
 ## Step 1 — interview
 
