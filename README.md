@@ -64,7 +64,7 @@ project against schemas the plugin does not ship.
    claude --plugin-dir /path/to/specdev
    ```
 
-3. Verify the install: type `/` in Claude Code and confirm the specdev commands appear in the slash-command menu. **Sixteen** commands ship; the Commands table below lists them all. Rather than counting them by eye, compare the menu against the install: `ls "${CLAUDE_PLUGIN_ROOT}/skills/"`. If none appear, re-run the marketplace add or check `/plugin` for installation errors.
+3. Verify the install: type `/` in Claude Code and confirm the specdev commands appear in the slash-command menu. **Seventeen** commands ship; the Commands table below lists them all. Rather than counting them by eye, compare the menu against the install: `ls "${CLAUDE_PLUGIN_ROOT}/skills/"`. If none appear, re-run the marketplace add or check `/plugin` for installation errors.
 
 ## Quickstart
 
@@ -103,6 +103,7 @@ From an existing **Rust** codebase (reverse engineering is Rust-only today):
 | `/spec-reverse`        | One-shot migration: reverse-engineer module specs from an existing **Rust** codebase. Single-module or `--all`. |
 | `/spec-inline`         | Inline a canonical block from `${CLAUDE_PLUGIN_ROOT}/blocks/<name>/` into the project's `specs/specdev/` tree, split across schema, reduction, implementation guidance, an optional rule pack and an upstream snapshot. |
 | `/spec-inline-bridge`  | Inline a canonical bridge between two already-inlined blocks. Bridge name is `<a>+<b>` with `a` and `b` lex-ordered. |
+| `/spec-audit`          | Read one module's code against the claims no check reads — requirement text, descriptions, `isr_safe`, `blocking`, `metadata.*` — and report a verdict with evidence for each. Reports in chat; edits nothing. |
 | `/spec-drift`          | Read-only report on which inlined files diverge from the plugin tree or have been edited locally. |
 | `/spec-sync-items`     | Three-stage sync (deterministic diff → AI-advisory rationale → human approval → spec mutation) reconciling a module's `[[items]]` with what tree-sitter finds in source. |
 | `/spec-config`         | Write the two files the project owns from then on — `.claude/rules/specdev.md` (the project rules, so they survive with hooks disabled) and `specdev-feedback.md` (an append-only log for the specdev developer). Each only when absent; never overwrites, never merges. `/spec-init` runs it for you. |
