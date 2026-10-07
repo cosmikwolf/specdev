@@ -14,6 +14,13 @@ and it is `2`.
 
 ## [Unreleased]
 
+### Added
+
+- **`/spec-audit <Module>`**: an agent reads one module's code against the claims no check reads — each
+  requirement's text (and whether its tests exercise it), the descriptions, `isr_safe`, `blocking` and `metadata.*` —
+  and reports `holds`, `contradicted` or `not shown` for each, with `path:line` evidence. It reports in chat and
+  edits nothing. No analyzer change.
+
 ## [0.3.3] — 2026-10-06
 
 ### Added
