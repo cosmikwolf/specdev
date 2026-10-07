@@ -8,7 +8,7 @@ allowed-tools: Read, Bash, Glob, Grep
 
 `/spec-validate` proves what extraction can see: the source exists, imports follow `depends_on`, the named tests exist, rule-pack entities match the code. It cannot read meaning. A requirement that says "the flash task fills the bitmap at boot" passes `check` as long as some test is named and some code exists. This skill is the reader: it takes one module, lists every claim no check reads, reads the code, and gives each claim a verdict with evidence.
 
-It is a report. It **edits nothing and writes no file** — not the spec, not the code, not a report file. The user decides what to do with each finding, and records it through the skills that own that state.
+It is a report. It **edits nothing and writes no file** — not the spec, not the code, not a report file. It runs no build and no test either (both write to the work tree): it reads. When only a test's result would settle a claim, the claim is `not shown`, and the report names the test to run. The user decides what to do with each finding, and records it through the skills that own that state.
 
 Run it at milestones: after a module lands, before a release, after a large change to a module's code.
 
@@ -28,7 +28,7 @@ Skip if `SPECDEV_PLUGIN_ROOT` is already set or every invocation passes `--plugi
 
 The argument is one module name, matching `specs/modules/<Module>.toml`. If none is given, ask for one; list the files under `specs/modules/` to help. Do not audit more than one module in a run — one module's claims, code and tests fit in one context; a whole tree does not.
 
-**The project** below means the whole repository the module lives in: in a workspace, the sibling members and path dependencies count as project code. Code outside it is what a package registry or vendored SDK supplies.
+**The project** below means the whole repository the module lives in, from the workspace root down: the sibling members, path dependencies, and the captures and reference material under the root (the sources in `specs/sources/` say where a reference lives) count as project content. Code outside it is what a package registry or vendored SDK supplies.
 
 In a workspace, run every command from the **member** directory that holds the module, not the workspace root.
 
@@ -36,7 +36,7 @@ Read `specs/modules/<Module>.toml`. If it has `planned = true`, the module is no
 
 ```sh
 specdev-analyzer context --module <Module>        # profile, schema files, guidance files
-specdev-analyzer extract-items --module <Module>  # source_file
+specdev-analyzer extract-items --module <Module> | grep source_file
 specdev-analyzer check --no-color
 ```
 
@@ -49,9 +49,9 @@ specdev-analyzer check --no-color
 Number the claims `C1`, `C2`, … in this order. Each claim records where it lives (file and key) and its exact text or value.
 
 1. **Requirements.** Every id in the module's `satisfies`, and in each `[[items]]` entry's `satisfies` — one claim per id, however many places name it. Read each requirement's `text` from `specs/requirements/<id>.toml` (one file per id; a `specs/requirements.toml` that says `MOVED` is a stub from an older format — ignore it). Run `specdev-analyzer report requirements` once (it covers every requirement; read it as YAML — an entry's `children:` block can print before its `id:` — and pick out this module's ids): `satisfied_by` lists every module that satisfies the id, this one included, and `verified_by` lists its tests (`test_pending: true` means none are written yet). A requirement that other modules satisfy too is judged for **this module's part**: the behaviour this module's code does, including the calls it makes into other modules for it, and the code that applies the commands or values it returns (Step 3) — that code may live in a module that is not in `satisfied_by`. Write the other modules in the claim's Where cell (`shared with Storage, LedTask`); the behaviour they do on their own paths is theirs.
-2. **Descriptions.** The module's `description`, and every other `description` in the module file (actions, ports, state machines, errors, and each `[[items]]` entry). One description is one claim. A clause that gives history or a reason ("so no temporary lands on the stack", "matched 2026-09-14") is not a statement about the code; judge only what the text says the code does. The source rule proves the code exists; nothing checks what it does.
-3. **Action parameters.** One claim per action: the names in its `params`, and each `direction`, against the code's parameters. (`[[items]]` signatures are not claims here: `items diff` and `/spec-sync-items` own the items surface.)
-4. **Fields no check reads.** On a `firmware-layered` module: `isr_safe = true` and `blocking = false` on each action, then every field under `[metadata.<Category>]`, one claim per field, in file order. On any profile: every other module field that says something about the code (for example `visibility`). `check` reads the code for these only: source resolution, imports against `depends_on`, `verified_by` tests, the open-question gate, and the rule packs' `[[code_checks]]`; everything else that describes the code is a claim. Skip `isr_safe = false` and `blocking = true`: they promise nothing, so they cannot be wrong; count them for the heading line.
+2. **Descriptions.** The module's `description`, and every other `description` in the module file (actions, ports, state machines, errors, and each `[[items]]` entry). One description is one claim. A clause that gives only history or a motive ("matched 2026-09-14", "after the stack overflowed") is not a statement about the code. An effect the code is said to have is a statement, even in a "so …" clause ("so no temporary lands on the stack"). In a clause that mixes both, judge the statement part. The source rule proves the code exists; nothing checks what it does.
+3. **Action parameters.** On a profile with actions, one claim per action: the names in its `params`, and each `direction`, against the code's parameters. (`[[items]]` signatures are not claims here: `items diff` and `/spec-sync-items` own the items surface.)
+4. **Fields no check reads.** On a `firmware-layered` module: `isr_safe = true` and `blocking = false` on each action, then every field under `[metadata.<Category>]`, one claim per field, in file order. On any profile: every other module field that says something about the code (for example `visibility`; not `context_files`, which lists reading for agents). `check` reads the code for these only: source resolution, imports against `depends_on`, `verified_by` tests, the open-question gate, and the rule packs' `[[code_checks]]`; everything else that describes the code is a claim. Skip `isr_safe = false` and `blocking = true`: they promise nothing, so they cannot be wrong; count them for the heading line.
 5. **Unit tables no code check reads.** A rule pack's code checks compare some unit tables with the code. For each unit whose table the module uses (`[[<unit>.<table>]]`), find the table's entity kind: `specs/specdev/reductions/{blocks,bridges}/<unit>.yaml` has an entry with `for_each: "<unit>.<table>[]"` and its `kind`; the full kind is `<unit>.<kind>`. Then open `specs/specdev/checks/{blocks,bridges}/<unit>.toml` (a folder or file that does not exist means the unit has no checks). Each `[[code_checks]]` entry names the `entity_kind` it covers. (`check` prints each pack's counts as `PACK-000 … (<g> graph check(s), <c> code check(s))`; `0 code check(s)` means none.) Every entry of a table whose kind **no** `[[code_checks]]` entry covers is a claim — one claim per entry (for example a DMA channel the code must take). A pack with only `[[graph_checks]]` checks the spec against itself, not against the code.
 
 Get each field's meaning in this order:
@@ -64,7 +64,7 @@ Say in the report's Notes which source each group of meanings came from.
 
 Do **not** list what a check already covers: `[[items]]` names, kinds and signatures (`items diff`), `name`, `layer`, `source_file`, `planned`, `guided_by`, `ports` endpoints, `depends_on` (but only partly: `check` reports a `use` import with no `depends_on` entry; it does not see a fully qualified path use such as `crate::led::X` in an expression, and it does not report a `depends_on` entry with no use — both go under "Other findings"), and the unit-table entries a `[[code_checks]]` entry covers. `/spec-validate` owns those.
 
-Audit every claim without asking. Only when a module has more than about 40 claims, or its source passes about 2,000 lines outside test code, show the counts and ask whether to audit all of them or a subset (requirements first is a good default).
+Audit every claim without asking. Only when a module has more than about 40 claims, or its source passes about 2,000 lines before its test code (the first `#[cfg(test)]` or equivalent), show the counts and ask whether to audit all of them or a subset (requirements first is a good default).
 
 ## Step 3 — read the code
 
@@ -72,8 +72,8 @@ Read, in this order, only as far as each claim needs:
 
 1. The source file, whole, except its test code (`#[cfg(test)]` modules and the like), which you read only as tests. For a `mod.rs` module, the directory it heads.
 2. The guidance files `context` listed (`files.guidance`), when a claim uses a project term: they define the project's terms (what "the ISR" or "the audio thread" is in this project). Guidance says what the code *should* do; it is never evidence of what the code *does*.
-3. The code this module calls in other project modules, when a claim depends on what the call does. Follow the call as deep as the claim needs, and stop at code outside the project: there, trust its documented behaviour and say so. A claim that the code matches a reference that is not in the repository ("as the C driver does") is `not shown`, unless a test or a capture in the repository compares the two (then judge the cases it covers); name what would settle it. A reference cited as a source, when the text also states the value or behaviour ("C DOUBLECLICKMS = 250"), is provenance: judge the stated value. A neighbour's **spec** is a hint, not evidence: when its flags disagree with its code, judge by the code and report the neighbour's spec under "Other findings".
-4. The tests in each requirement's `verified_by`, when any requirement has one. `specdev-analyzer report tests` lists every test as a YAML entry with `identity:` and `file:`; match the full identity, because two tests can share a last segment. Read the test body. A test that drives the whole program (a device or bench test) exercises this module's part when its assertion observes that behaviour. A test the module's code has but no `verified_by` names goes under "Other findings" when it would cover a requirement.
+3. The code this module calls in other project modules, when a claim depends on what the call does. Follow the call as deep as the claim needs, and stop at code outside the project: there, trust its documented behaviour and say so. A claim that the code matches a reference that is not in the repository ("as the C driver does") is `not shown`, unless a test or a capture in the repository compares the two (then judge the cases it covers); name what would settle it. A reference cited as a source, when the text also states the value or behaviour ("C DOUBLECLICKMS = 250"), is provenance: judge the stated value. A caller or collaborator the text names that is not in the repository is `not shown`. A neighbour's **spec** is a hint, not evidence: when its flags disagree with its code, judge by the code and report the neighbour's spec under "Other findings".
+4. The tests in each requirement's `verified_by`, when any requirement has one. `specdev-analyzer report tests` lists every test as a YAML entry with `identity:` and `file:`; match the identity and, when two entries share it, the `file:` too. Read the test body. A test that drives the whole program (a device or bench test) exercises this module's part when its assertion observes that behaviour. A test anywhere in the repository that exercises this module but that no `verified_by` names goes under "Other findings" when it would cover one of the module's requirements.
 
 `specdev-analyzer report decisions --module <Module>` lists the decisions that reach the module (the `modules:` block; the `decisions:` list after it is every decision in the project). Read one when a claim's verdict depends on it, and read every decision a claim's text cites by id, whether or not the command lists it. A decision whose text this module's code contradicts goes under "Other findings", whether or not it is in `guided_by`. Workspace-tier decisions (`via: workspace`) matter only when their text names this module or what it does.
 
@@ -105,10 +105,10 @@ Rules:
 The heading line:
 
 ```
-/spec-audit <Module> — <source file> — <N> claims: <h> holds, <c> contradicted, <s> not shown (<k> flags skipped)
+/spec-audit <Module> — <source file> — <N> claims: <h> holds, <c> contradicted (<f> false statements), <s> not shown (<k> flags skipped)
 ```
 
-Drop the parenthesis when no flag was skipped.
+Drop the last parenthesis when no flag was skipped. The false-statement count keeps one long description with many defects from reading as one defect.
 
 Then **Notes**, one line each: where the field meanings came from (Step 2); `PLUGIN-AHEAD-001`, when `check` printed it (the inlined schemas are older than the plugin's; the audit uses the project's copies as they are, and `/spec-drift` shows the difference); a subset audited, when it was.
 
@@ -121,7 +121,7 @@ Then one table, in claim order:
 
 Keep each Evidence cell to the one or two citations that decide the verdict; the rest goes in the paragraph.
 
-Then, for each `contradicted` and `not shown` claim, a short paragraph: what the claim says, what the code does, the quoted lines, and the hand-off below. `holds` claims need no paragraph. When one cause makes several claims false (a removed feature named in a requirement, a description and a param list), say "same cause as C<n>" in the later paragraphs instead of repeating the evidence, so the reader sees one defect, not several.
+Then, for each `contradicted` and `not shown` claim, a short paragraph: what the claim says, what the code does, the quoted lines, and the hand-off below. `holds` claims need no paragraph, except a short test list when a requirement names more than three tests. When one cause makes several claims false (a removed feature named in a requirement, a description and a param list), say "same cause as C<n>" in the later paragraphs instead of repeating the evidence, so the reader sees one defect, not several.
 
 Then **Other findings**: what you found while reading that is not one of this module's claims — a decision whose text disagrees with the code, a neighbour's spec that disagrees with its code, a `depends_on` entry the code never uses, behaviour the spec omits that a reader needs. One line each, with evidence and a hand-off. These get no verdict and do not enter the counts.
 
