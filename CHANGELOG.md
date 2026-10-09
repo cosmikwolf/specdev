@@ -14,6 +14,8 @@ and it is `2`.
 
 ## [Unreleased]
 
+## [0.3.4] — 2026-10-07
+
 ### Added
 
 - **`/spec-audit <Module>`**: an agent reads one module's code against the claims no check reads — each
