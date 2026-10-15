@@ -14,6 +14,13 @@ and it is `2`.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The Rust imports query captures qualified paths** (#238): a `crate::`, `super::` or `self::` path in an
+  expression, a pattern or a type, not only `use` lines, so `internal_edges_declared` reports a module that uses
+  another without naming it in `depends_on`. The analyzer embeds this query, so the fix takes effect with the
+  analyzer release that carries it.
+
 ## [0.3.4] — 2026-10-07
 
 ### Added
