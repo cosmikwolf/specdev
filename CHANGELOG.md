@@ -14,6 +14,8 @@ and it is `2`.
 
 ## [Unreleased]
 
+## [0.3.5] — 2026-10-15
+
 ### Fixed
 
 - **The Rust imports query captures qualified paths** (#238): a `crate::`, `super::` or `self::` path in an
