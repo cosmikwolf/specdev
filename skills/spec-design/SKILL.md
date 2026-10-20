@@ -61,7 +61,7 @@ Dispatch the `module-designer` subagent to draft the Candidate TOML. It reads th
 The subagent has no shell, so it cannot run the analyzer — that is what makes its read-only contract enforced rather than stated. Write the cone to a file for it first, and **do not read that file here**; reading or pasting it defeats the reason the subagent exists:
 
 ```sh
-ctx=$(mktemp -t specdev-designer-ctx.XXXXXX) && specdev-analyzer context --module <ModuleName> --output "$ctx" && echo "$ctx"
+ctx=$(mktemp "${TMPDIR:-/tmp}/specdev-designer-ctx.XXXXXX") && specdev-analyzer context --module <ModuleName> --output "$ctx" && echo "$ctx"
 ```
 
 If `context` exits non-zero (malformed project schema, reduction failure), relay its error and stop — do not dispatch.
