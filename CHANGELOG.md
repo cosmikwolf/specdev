@@ -14,6 +14,28 @@ and it is `2`.
 
 ## [Unreleased]
 
+### Added
+
+- **A decision that an accepted decision supersedes must be `superseded`** (#246). Every profile's
+  `domain.toml.template` gets a second `decision_supersedes_chain_consistency` check: two accepted, contradicting
+  decisions no longer pass `validate`. An existing project gets it by adding the block to its own
+  `specs/specdev/domain.toml`.
+
+### Fixed
+
+- **Temporary files have no literal `XXXXXX` on macOS** (#239). `/spec-design`, `/spec-edit` and the write check
+  use `mktemp "${TMPDIR:-/tmp}/<name>.XXXXXX"`; `mktemp -t` kept the template in the path and one agent read it as
+  unfilled.
+- **The module-designer brief says an impl item needs `target_type`** (#240), with one example.
+- **`implementation_unblocked` on an `impl_time` question is expected once** (#241): `/spec-question` and
+  `/spec-validate` say so, so it does not read as a failure.
+- **The requirements README template puts sources in `specs/sources/`** (#242). It said `specs/requirements/`,
+  which the analyzer rejects (ENTRY-FILE-001).
+- **The `parameter_bindings` schema describes a claim about the code** (#248), not tokens a compiler checks.
+- **`/spec-reverse` single-module mode runs without `architecture.toml`** (#249) unless the profile's module schema
+  needs it (`firmware-layered`: `layer`).
+- **`context_files` accepts a binary file** (#243): the module schemas say an image or a PDF is allowed.
+
 ## [0.3.5] — 2026-10-15
 
 ### Fixed

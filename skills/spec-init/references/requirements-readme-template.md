@@ -3,7 +3,7 @@
 `/spec-init` writes this file verbatim when the project tracks requirements; bootstrap does not create `specs/requirements/`. Copy the body between the horizontal rules below into the created file — no modifications.
 
 ---
-Each `.toml` file in this directory holds one entry: a `[[requirement]]` (file `<id>.toml`) or an external `[[source]]` document it derives from (a protocol spec, a standard, a user brief). One file per entry keeps parallel branches from colliding.
+Each `.toml` file in this directory holds one `[[requirement]]` entry (file `<id>.toml`). One file per entry keeps parallel branches from colliding. An external `[[source]]` document a requirement derives from (a protocol spec, a standard, a user brief) goes in `specs/sources/<id>.toml`, not here.
 
 - **Ids.** `REQ-<AREA>-NNN` (e.g. `REQ-API-001`, `REQ-NOSTD-007`), unique across the project.
 - **Sources.** A requirement may name source ids in `source = [...]`, with a free-form `source_ref` locator (page, section).

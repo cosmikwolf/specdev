@@ -139,7 +139,20 @@ signature.** This is the contract you draft to:
   the prefix — write `RateLimiter::new`, never `RateLimiter<C>::new`.
 - **A trait impl is one item.** `impl Display for RateLimiter` is a single
   `kind = "impl"` item named `Display for RateLimiter` — its method bodies are
-  dictated by the trait, so they are not separate items.
+  dictated by the trait, so they are not separate items. An impl item **must**
+  carry `target_type` (the type after `for`, without generics) and should carry
+  `trait_ref`; the Rust items schema rejects an impl item without
+  `target_type`:
+
+  ```toml
+  [[items]]
+  name = "Display for RateLimiter"
+  kind = "impl"
+  target_type = "RateLimiter"
+  trait_ref = "Display"
+  description = "Formats the limiter as its remaining capacity."
+  satisfies = ["REQ-LIMITER-001"]
+  ```
 - **The struct/enum/trait the methods hang off is its own item** —
   `pub struct RateLimiter` → item `RateLimiter` (`kind = "struct"`).
 - **Private / helper members are not items.** Only `pub` surface is contract.
