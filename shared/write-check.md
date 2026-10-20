@@ -10,7 +10,7 @@ skills that write spec files run it around their write step.
 Before the write, snapshot the files you are about to write:
 
 ```sh
-snap=$(mktemp -t specdev-write-check.XXXXXX) && bash "${CLAUDE_PLUGIN_ROOT}/scripts/write-check" snapshot <target>... > "$snap"
+snap=$(mktemp "${TMPDIR:-/tmp}/specdev-write-check.XXXXXX") && bash "${CLAUDE_PLUGIN_ROOT}/scripts/write-check" snapshot <target>... > "$snap"
 ```
 
 Write the files. Then compare, naming the same targets:

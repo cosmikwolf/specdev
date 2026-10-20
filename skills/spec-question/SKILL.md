@@ -152,7 +152,7 @@ Show the output. If errors:
 2. **`REDUCE_UNRESOLVED` naming a `Decision` endpoint** — `default_via` or `closed_by` names an id that doesn't exist. Author the Decision via `/spec-decide` first, or fix the typo.
 3. **`REDUCE_UNRESOLVED` naming a `Requirement` endpoint** — `affects[]` names a requirement that doesn't exist. Fix or remove the reference.
 4. **`open_question_status_consistency`** — `closed_by` or `default_via` points at a Decision whose status isn't `accepted`.
-5. **`implementation_unblocked` naming a module** — the question (or a sibling) is `open`, reaches that module, and the module has code. Expected right after path A when the affected code already exists: the gate stays red until the question is downgraded or closed. A module that is still `planned` with no code is not reported.
+5. **`implementation_unblocked` naming a module** — the question (or a sibling) is `open`, reaches that module, and the module has code. Expected right after path A when the affected code already exists: the gate stays red until the question is downgraded or closed. Also expected once for every `category = "impl_time"` question: it settles during implementation, so it is still `open` when the first code lands. That is not a failure — close it (path C) with the decision the code made, or commit a default (path B). A module that is still `planned` with no code is not reported.
 
 ## Step 8 — report
 
