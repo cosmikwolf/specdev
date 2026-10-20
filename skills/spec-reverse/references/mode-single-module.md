@@ -6,7 +6,7 @@ Entered from the main SKILL.md when `$ARGUMENTS` is a bare module name (not `--a
 
 Entered after the main SKILL.md's Steps 0–2 have run (env preamble, `analyzer reverse` pre-flight, authoritative guides read).
 
-1. Read `specs/architecture.toml`. If missing, stop: *"Run `/spec-reverse` (no args) first to produce architecture."*
+1. Read `specs/architecture.toml` when it exists. If it is missing, stop only when the profile's module schema requires a field whose value names an architecture entry (`firmware-layered`: `layer`); then say *"Run `/spec-reverse` (no args) first to produce architecture."* Otherwise continue without it — `validate` reports a missing `architecture.toml` as info (`LAYOUT-005`) only, and a `library-api` member of a workspace normally has none.
 2. Read every existing `specs/modules/**/*.toml` for cross-module context.
 3. Check if `specs/modules/**/<ModuleName>.toml` exists; if so, ask **Compare / Replace / Cancel**.
 4. Locate source for the module. Heuristics:
