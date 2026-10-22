@@ -16,6 +16,11 @@ and it is `2`.
 
 ### Added
 
+- **`pyo3` block**: a `[pyo3]` table naming the extension modules, classes, functions and exceptions a Rust crate
+  exposes to Python (Rust names, which are also the Python names); a rule pack with one code check per entry kind
+  (`pack_entity_in_code`), measured on code that compiles against PyO3; guidance for the declarative module form,
+  names, free-threading, errors and the build.
+
 - **`python-library` profile**: an importable Python package (`src/` layout); modules carry optional `items[]` and
   no visibility field (the `_` prefix is the visibility). Gates per tool under `toolchains:` — uv, poetry and pip —
   each running pytest, pyright and `ruff check` through `python -m`; a CI template for uv. `/spec-init` asks for the
