@@ -8,8 +8,8 @@ the code does not have, and the implementation guidance for the module form, nam
 ## When to use
 
 Inline it into the Rust crate that holds the `#[pymodule]` — usually a `library-api` crate with `cdylib` + `rlib`
-crate types. The Python package that imports the built module is a separate specdev project (the `python-library`
-profile, or `python-ffi` once it ships); maturin builds the wheel from that package.
+crate types. The Python package that imports the built module is a separate specdev project with the `python-ffi`
+profile, whose `stubs` gate holds its `.pyi` stub to the built module; maturin builds the wheel from that package.
 
 ## What it contributes
 
