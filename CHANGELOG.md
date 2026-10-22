@@ -16,6 +16,11 @@ and it is `2`.
 
 ### Added
 
+- **`python-ffi` profile**: a Python package built around a Rust extension (PyO3, maturin). The Rust crate is a
+  second specdev project (`library-api` + the `pyo3` block). `specs/architecture.toml` `[native] module` names the
+  extension; a `stubs` gate (`python -m mypy.stubtest`) holds the `.pyi` stub to the built module, before pytest,
+  pyright and ruff. Gates for uv, poetry and pip. `/spec-init` offers it.
+
 - **`pyo3` block**: a `[pyo3]` table naming the extension modules, classes, functions and exceptions a Rust crate
   exposes to Python (Rust names, which are also the Python names); a rule pack with one code check per entry kind
   (`pack_entity_in_code`), measured on code that compiles against PyO3; guidance for the declarative module form,
