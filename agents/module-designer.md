@@ -153,6 +153,14 @@ signature.** This is the contract you draft to:
   description = "Formats the limiter as its remaining capacity."
   satisfies = ["REQ-LIMITER-001"]
   ```
+- **A trait declaration is one item; its methods are not.** Describe the
+  required methods in the trait's `description`; never draft a
+  `<Trait>::<method>` item.
+- **Macro-generated items are not items.** `items diff` expands no macro: a
+  struct, fn or getter that a `macro_rules!` or an attribute macro
+  (`#[bitfield]`, a derive) generates is never found in the source. Describe
+  it in the item that holds the macro call. A `macro_rules!` is an item only
+  with `#[macro_export]`.
 - **The struct/enum/trait the methods hang off is its own item** —
   `pub struct RateLimiter` → item `RateLimiter` (`kind = "struct"`).
 - **Private / helper members are not items.** Only `pub` surface is contract.

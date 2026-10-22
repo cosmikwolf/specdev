@@ -13,6 +13,9 @@ Before the write, snapshot the files you are about to write:
 snap=$(mktemp "${TMPDIR:-/tmp}/specdev-write-check.XXXXXX") && bash "${CLAUDE_PLUGIN_ROOT}/scripts/write-check" snapshot <target>... > "$snap"
 ```
 
+A target can be a directory: it covers every file under it, new or changed, so
+a skill that writes several new files into one folder names the folder once.
+
 Write the files. Then compare, naming the same targets:
 
 ```sh
