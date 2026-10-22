@@ -44,7 +44,14 @@ ii. **Inherent `impl` blocks dissolve into their methods.** Never author an item
     prefix: `RateLimiter::new`, never `RateLimiter<C>::new`.
 iii. **A trait impl is one item** — `kind = "impl"`, named `<Trait> for <Type>`
      (e.g. `Display for RateLimiter`). Its method bodies are dictated by the
-     trait, so they are not separate items.
+     trait, so they are not separate items. **A trait declaration is one item
+     too** (`kind = "trait"`): describe its methods in its `description`; a
+     `<Trait>::<method>` item stays `in_spec_only` in `items diff`.
+     **Macro-generated items are not items.** `items diff` reads the source as
+     written and expands no macro, so a struct or getter that a `macro_rules!`
+     or an attribute macro (`#[bitfield]`, a derive) generates is never found.
+     Describe it in the item that holds the macro call. A `macro_rules!` is an
+     item only with `#[macro_export]`.
 iv. **The type itself is an item** — `pub struct RateLimiter` → item
     `RateLimiter` (`kind = "struct"`). Private / helper members are **not**
     items; only `pub` surface is contract.

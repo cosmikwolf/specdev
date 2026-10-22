@@ -62,7 +62,7 @@ Get each field's meaning in this order:
 
 Say in the report's Notes which source each group of meanings came from.
 
-Do **not** list what a check already covers: `[[items]]` names and kinds (`items diff`), `name`, `layer`, `source_file`, `planned`, `guided_by`, `ports` endpoints, `depends_on` (but only partly: `check` reports a `use` import with no `depends_on` entry; it does not see a fully qualified path use such as `crate::led::X` in an expression, and it does not report a `depends_on` entry with no use — both go under "Other findings"), and the unit-table entries a `[[code_checks]]` entry covers. `/spec-validate` owns those.
+Do **not** list what a check already covers: `[[items]]` names and kinds (`items diff`), `name`, `layer`, `source_file`, `planned`, `guided_by`, `ports` endpoints, `depends_on` (but only partly: `check` reports a `use` import or a qualified path such as `crate::led::X` with no `depends_on` entry; it does not see a path inside a macro's arguments, and it does not report a `depends_on` entry with no use — both go under "Other findings"), and the unit-table entries a `[[code_checks]]` entry covers. `/spec-validate` owns those.
 
 Audit every claim without asking. Only when a module has more than about 40 claims, or its source passes about 2,000 lines before its test code (the first `#[cfg(test)]` or equivalent), show the counts and ask whether to audit all of them or a subset (requirements first is a good default).
 

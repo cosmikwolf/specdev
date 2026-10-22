@@ -19,6 +19,10 @@
 #
 #   wrote <path>         a target whose content changed (or that is new)
 #   not-written <path>   a target whose content did not change
+#
+# A target that is a directory covers every file under it: each changed or
+# new file there prints `wrote`, and the directory prints `not-written <dir>/`
+# only when no file under it changed.
 #   unexpected <path>    another file whose content changed, or that appeared
 #
 # and exits 0 when every target was written and nothing unexpected changed,
@@ -74,22 +78,34 @@ case "$cmd" in
     after="$(mktemp)"; tlist="$(mktemp)"
     trap 'rm -f "$after" "$tlist"' EXIT
     snapshot "$@" > "$after"
-    for t in "$@"; do rel "$t"; done > "$tlist"
+    for t in "$@"; do
+      if [ -d "$t" ]; then echo "D $(rel "$t")"; else echo "F $(rel "$t")"; fi
+    done > "$tlist"
     # Plain awk, no bash 4 features: macOS still ships bash 3.2 as /bin/bash.
     awk -v SNAP="$snap" -v TGT="$tlist" '
       BEGIN {
         while ((getline l < SNAP) > 0) { i = index(l, " "); before[substr(l, i + 1)] = substr(l, 1, i - 1) }
-        while ((getline l < TGT) > 0) target[l] = 1
+        while ((getline l < TGT) > 0) {
+          if (substr(l, 1, 1) == "D") dirs[substr(l, 3)] = 1; else target[substr(l, 3)] = 1
+        }
         rc = 0
       }
       {
         i = index($0, " "); h = substr($0, 1, i - 1); p = substr($0, i + 1)
+        if (p in dirs) next
         b = (p in before) ? before[p] : "absent"
+        under = ""
+        for (d in dirs) if (index(p, d "/") == 1) under = d
         if (p in target) {
           if (b == h) { print "not-written " p; rc = 1 } else print "wrote " p
+        } else if (under != "") {
+          if (b != h) { print "wrote " p; written[under] = 1 }
         } else if (b != h) { print "unexpected " p; rc = 1 }
       }
-      END { exit rc }
+      END {
+        for (d in dirs) if (!(d in written)) { print "not-written " d "/"; rc = 1 }
+        exit rc
+      }
     ' "$after"
     ;;
   *)
