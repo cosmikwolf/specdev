@@ -14,6 +14,20 @@ and it is `2`.
 
 ## [Unreleased]
 
+### Added
+
+- **Python language tier** (`languages/python/`): items schema and query (`fn`, `class`, `const`, `type`; methods and
+  class constants as `Class.name`; privacy by the `_` prefix; `.pyi` stubs too), pytest test discovery, import
+  queries (relative, absolute, `from . import <submodule>`, `if TYPE_CHECKING:` not a dependency), and `build.md`
+  with uv, poetry and pip commands side by side. No Python profile yet.
+- **`toolchains:` in `profile.yaml`** for a language with more than one common tool: each tool's lockfiles and
+  gates. A project declares its tool in `spec.toml` (`[project] toolchain`). `/spec-create-profile` documents it.
+
+### Changed
+
+- **Profile contract 3.** Every `profile.yaml` declares `contract_version: 3` (the `python` language and the
+  `toolchains` key). Needs specdev-analyzer with contract 3; an older analyzer reports `MANIFEST-002`.
+
 ### Removed
 
 - **Items carry no signature** (#247). `signature_hint` is gone from the Rust, TypeScript and Dart items schemas;
