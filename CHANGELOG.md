@@ -14,6 +14,15 @@ and it is `2`.
 
 ## [Unreleased]
 
+### Removed
+
+- **Items carry no signature** (#247). `signature_hint` is gone from the Rust, TypeScript and Dart items schemas;
+  a value left in a project fails `validate` with "`signature_hint` is not allowed: it was removed …", once
+  `/spec-drift` brings the schema forward. A signature that really is the contract (FFI, a macro's calling form)
+  goes in the item's `description`, in prose. No analyzer ever read a source signature, so every hint reported
+  drift. `/spec-sync-items` loses the `update-spec` action, which existed only for that drift: four actions remain
+  (`skip`, `add-to-spec`, `remove-from-spec`, `rename`).
+
 ### Added
 
 - **A decision that an accepted decision supersedes must be `superseded`** (#246). Every profile's

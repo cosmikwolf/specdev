@@ -45,7 +45,7 @@ specdev-analyzer items diff --module <Module>
 Capture stdout (YAML) and exit code. Three possibilities:
 
 - **Exit 0** — no drift. Stop. Tell the user "spec items[] match source." Do not write a proposal.
-- **Exit 1** — drift present. Stdout YAML carries `in_spec_only`, `in_source_only`, and `both[]` (with `signature_drift` flagged on the diverging pairs). Continue to Step 2.
+- **Exit 1** — drift present. Stdout YAML carries `in_spec_only`, `in_source_only`, and `both[]` (the matched pairs). Continue to Step 2.
 - **Exit 2** — hard error (missing module spec, source-read failure, language adapter missing). Surface stderr verbatim and stop.
 
 Show the user a one-line summary per category (counts, not full paths) so they know the shape before you pull up a proposal file.
@@ -67,7 +67,7 @@ Default behavior when in doubt: stop and ask. Losing rationales silently is wors
 
 ## Step 3 — fill in recommendations (Claude-advisory pass)
 
-Read `specs/specdev/upstream/items-sync/<Module>.proposal.yaml`. Walk each `pending` entry and pick one of five actions per the taxonomy in `references/action-taxonomy.md` (`skip` / `add-to-spec` / `remove-from-spec` / `update-spec` / `rename`). For each entry, write `rationale`, `action`, and (for `add-to-spec` / `update-spec`) `proposed_spec` or (for `rename`) `rename_to`. A symbol renamed in source is a `rename` on the `in_spec_only` old-name entry + a `skip` on the paired `in_source_only` new-name entry — never remove + add, which drops the `satisfies` trace.
+Read `specs/specdev/upstream/items-sync/<Module>.proposal.yaml`. Walk each `pending` entry and pick one of four actions per the taxonomy in `references/action-taxonomy.md` (`skip` / `add-to-spec` / `remove-from-spec` / `rename`). For each entry, write `rationale`, `action`, and (for `add-to-spec` / `update-spec`) `proposed_spec` or (for `rename`) `rename_to`. A symbol renamed in source is a `rename` on the `in_spec_only` old-name entry + a `skip` on the paired `in_source_only` new-name entry — never remove + add, which drops the `satisfies` trace.
 
 Save the file. Tell the user how many entries were resolved per action category, and ask them to review.
 
@@ -120,9 +120,9 @@ End with one line:
 
 ## On `[ITEM-309]` (target not found)
 
-If apply fires `ITEM-309` for a `remove-from-spec`, `update-spec`, or `rename` action, the spec moved between `propose` and `apply` (the user manually edited `[[items]]` in the meantime). Re-run `propose --clobber` and the new diff will reflect the current state. A `rename` with no `rename_to` fires `ITEM-315` — add the new name to the recommendation.
+If apply fires `ITEM-309` for a `remove-from-spec` or `rename` action, the spec moved between `propose` and `apply` (the user manually edited `[[items]]` in the meantime). Re-run `propose --clobber` and the new diff will reflect the current state. A `rename` with no `rename_to` fires `ITEM-315` — add the new name to the recommendation.
 
 ## Additional resources
 
-- `references/action-taxonomy.md` — the five `recommendation.action` values, when to pick each, the `proposed_spec` shape required for `add-to-spec` and `update-spec`, and the `rename_to` field for `rename`.
+- `references/action-taxonomy.md` — the four `recommendation.action` values, when to pick each, the `proposed_spec` shape required for `add-to-spec`, and the `rename_to` field for `rename`.
 

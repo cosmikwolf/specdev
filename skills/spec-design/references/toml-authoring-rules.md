@@ -50,10 +50,10 @@ iv. **The type itself is an item** — `pub struct RateLimiter` → item
     items; only `pub` surface is contract.
 v. **Prose-first, never signatures.** Each item carries a `description` of what
    it does, not a mirror of how it is typed. Do not name parameters, return
-   types, struct fields, or generics. `signature_hint` is a rare escape hatch
-   (FFI, macro contracts) — reaching for it on ordinary functions turns the spec
-   back into a copy of the code, which is the one failure this model exists to
-   prevent.
+   types, struct fields, or generics. An item has no signature field; when a
+   signature really is the contract (FFI, a macro's calling form), say so in the
+   `description`, in prose. Copying signatures turns the spec back into a copy of
+   the code, which is the one failure this model exists to prevent.
 vi. **`satisfies` shares coarsely.** Every item except `kind = "re_export"`
     needs `satisfies` (≥1 id; the schema enforces it), **but requirements are
     shared across a type's methods** — a limiter's whole surface can
