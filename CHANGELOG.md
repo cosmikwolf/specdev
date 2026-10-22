@@ -25,6 +25,12 @@ and it is `2`.
 
 ### Added
 
+- **`decision_reference_superseded` (warning)** (#251). A module's `guided_by` or a requirement's `decided_by` that
+  names a superseded decision is stale: `report decisions` drops it, so the module loses that guidance. Six profile
+  templates get the check; an existing project adds the two blocks to its own `specs/specdev/domain.toml`.
+- **`write-check` takes a directory target** (#255): it covers every new or changed file under it.
+- **Authoring rules: trait members and macro-generated items are not items** (#254). A trait declaration is one
+  item; `items diff` expands no macro; a `macro_rules!` is an item only with `#[macro_export]`.
 - **A decision that an accepted decision supersedes must be `superseded`** (#246). Every profile's
   `domain.toml.template` gets a second `decision_supersedes_chain_consistency` check: two accepted, contradicting
   decisions no longer pass `validate`. An existing project gets it by adding the block to its own
@@ -32,6 +38,10 @@ and it is `2`.
 
 ### Fixed
 
+- **`/spec-decide` says `guided_by` and `decided_by` stay inside one tier** (#250), and that a workspace decision's
+  reach shows in a member's report, not the root's.
+- **`/spec-audit` no longer says `check` misses a qualified path** such as `crate::led::X`: #238 fixed that in
+  analyzer v0.3.4; only a path inside a macro's arguments is unseen.
 - **Temporary files have no literal `XXXXXX` on macOS** (#239). `/spec-design`, `/spec-edit` and the write check
   use `mktemp "${TMPDIR:-/tmp}/<name>.XXXXXX"`; `mktemp -t` kept the template in the path and one agent read it as
   unfilled.
