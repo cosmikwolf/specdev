@@ -16,6 +16,7 @@ For each language `<lang>`:
 - `c/`, `cpp/` — `audit.scm`, `tests.scm`, `imports.scm`, `build.md`; no item vocabulary yet.
 - `dart/` — full tier: `audit.scm`, `items.schema.yaml`, `items.scm`, `imports.scm`, `tests.scm`, `build.md` (pub/flutter toolchain). Used by `extract-items` and by the `flutter-app` profile's module schema.
 - `typescript/` — full tier: `audit.scm`, `items.schema.yaml`, `items.scm`, `imports.scm`, `tests.scm`, `build.md` (Node/pnpm toolchain). One language, two extensions (`.ts`, `.tsx`) and two grammars; the adapter picks the grammar per resolved file and the one items query compiles under both. Visibility is `export` (top level) and the absence of `private`/`protected`/`#` (members). Used by `extract-items` and by the `nextjs-app` profile's module schema.
+- `python/` — full tier: `audit.scm`, `items.schema.yaml`, `items.scm`, `imports.scm`, `tests.scm`, `build.md` (uv / poetry / pip — the project declares its tool in `spec.toml`). Extensions `.py` and `.pyi` (stubs give items too). Privacy is the `_` prefix; tests follow pytest's discovery rules and are named by the pytest node id when a bare name is ambiguous; an import inside `if TYPE_CHECKING:` is not a dependency.
 
 ## Sparseness rule
 

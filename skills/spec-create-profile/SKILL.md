@@ -88,6 +88,24 @@ Batch these; show the precedents' answers as defaults.
   - **Match the argv to the check you mean.** Measured: `flutter analyze` defaults to `--fatal-infos --fatal-warnings` and exits 1 on one unused import, so the shipped row is `[flutter, analyze, --no-fatal-infos, --no-fatal-warnings]`.
   - Choose steps the language tier already documents (`languages/<lang>/build.md`; its "Toolchain Commands" section where it has one), or copy the closest precedent profile's gates.
   - The analyzer renders the gates into `scripts/specdev-gates.sh`, which runs `specdev-analyzer check` first. CI runs the script.
+  - **A language with more than one common tool** (Python: uv, poetry, pip) keeps the analyzer and the common gates tool-neutral and lists each tool under `toolchains:` — its `lockfiles` and its own `gates`, run after the common ones. The project declares its tool in `spec.toml` (`[project] toolchain = "uv"`); `gate` and the gate script use that tool's gates, and `check` reports a lockfile of another listed tool. Name no tool in the common gates when the language has a neutral entry point (`python -m pytest`):
+
+    ```yaml
+    toolchains:
+      uv:
+        lockfiles: [uv.lock]
+        gates:
+          - label: tests
+            steps:
+              - [uv, sync]
+              - [uv, run, python, -m, pytest]
+      pip:
+        lockfiles: [pylock.toml]
+        gates:
+          - label: tests
+            steps:
+              - [python, -m, pytest]
+    ```
 - **CI toolchain and workflow template.** Which tools must CI install for the gates (the language toolchain, the package manager, Rust to build the analyzer)? The README lists them and says installs are frozen with a committed lockfile. Ship a GitHub Actions workflow template as a paired file (`templates/specdev-ci.yml.template` → `.github/workflows/specdev.yml`) that installs exactly those tools, builds the analyzer, and runs `sh scripts/specdev-gates.sh`. Copy the closest shipped profile's template.
 - **Auxiliary schemas?** Does the shape need an extra schema beyond the standard set (firmware-layered's `metadata.schema.yaml`)? Bootstrap enumerates `schemas/` dynamically, so extras are fine.
 
