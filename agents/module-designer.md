@@ -159,11 +159,11 @@ signature.** This is the contract you draft to:
 - **A file whose exports the framework constrains gets only the exports the framework allows.** When the profile says a role's items are a fixed set of named exports — `nextjs-app` `role = "route_handler"`: the HTTP method functions (`GET`, `POST`, …) and route-segment config only, because its `route.ts` shim is `export *` and the framework's build rejects any other export — draft **only** those as items. Do not export helpers to satisfy the item model. A helper the module needs is either unexported (and so not an item) or it belongs in a `service` module that the handler depends on; if the helpers are substantial, stop and say "this should be two modules" instead of drafting them onto the handler. Flagging the tension in `## Notes` and drafting the exports anyway is the wrong call — `validate` passes that draft and the build gate is where it fails.
 - **Prose-first, always.** Each item carries a `description` of *what it does*,
   never a mirror of how it is typed. Do not name parameters, return types,
-  struct fields, or generics — that is the source's job. The `signature_hint`
-  field is a rare escape hatch (FFI declarations, macro contracts); do **not**
-  reach for it on ordinary functions or methods. Routinely emitting
-  `signature_hint` turns the spec back into a copy of the code — that is the
-  one failure mode this contract exists to prevent.
+  struct fields, or generics — that is the source's job. An item has no
+  signature field. When a signature really is the contract (an FFI symbol, a
+  macro's calling form), say so in the `description`, in prose. A spec that
+  copies signatures turns back into a copy of the code — that is the one
+  failure mode this contract exists to prevent.
 
 ### Requirements and `satisfies` (coarse-sharing — do not over-granulate)
 
@@ -274,8 +274,8 @@ and requirement breakage to the user (resolve-and-stop, not draft-around).
   aggregator uses `unevaluatedProperties: false` (allOf-aware) — block-
   contributed fields pass through; invented keys do not.
 - **Prose-first items, never signatures.** This is the single discipline that
-  keeps the spec a contract and not an AST mirror. `signature_hint` is a rare
-  escape hatch, not a habit.
+  keeps the spec a contract and not an AST mirror. Items have no signature
+  field.
 - **Stay read-only on files.** Your tools are `Read`, `Grep` and `Glob`. None of
   them writes, and you hold no shell, so the contract is enforced by the tool
   list and not only stated here. You do not write files or run `validate` —
