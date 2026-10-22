@@ -10,7 +10,8 @@ Precedents (clone the closest): `profiles/library-api/` (standalone library, no
 layers), `profiles/firmware-layered/` (no_std binary, 5-tier + metadata schema),
 `profiles/audio-plugin/` (cdylib plugin, 4-tier, parameter bindings),
 `profiles/rust-workspace/` (workspace root), `profiles/nextjs-app/` (roles, several
-paired files, two gates).
+paired files, two gates), `profiles/python-library/` (gates per tool under
+`toolchains:`).
 
 ---
 
@@ -45,7 +46,7 @@ top-level keys: `name`, `language`. Shape:
 ```yaml
 # Manifest — drives analyzer dispatch for <name> projects.
 # Schema: specdev-analyzer/src/embedded/profile.schema.yaml.
-contract_version: 2
+contract_version: 3
 
 name: <name>
 language: <lang>
