@@ -14,6 +14,8 @@ and it is `2`.
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-10-22
+
 ### Added
 
 - **`python-ffi` profile**: a Python package built around a Rust extension (PyO3, maturin). The Rust crate is a
