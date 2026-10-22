@@ -17,7 +17,7 @@ Entered after the main SKILL.md's Steps 0–2 have run (env preamble, `analyzer 
 
 5. **Author a stub `specs/modules/<ModuleName>.toml`** with the bare minimum required by the project's profile (typically `name`, plus required metadata fields the schema demands). The stub exists so `extract-items` can resolve a source file for this module.
 
-6. Run `specdev-analyzer extract-items --module <ModuleName>` from the project root. The YAML output enumerates every top-level item in the source file (kind, name, attributes, span; a signature where the query captures one). Use it as the structural basis for filling out the rest of the spec — it is authoritative about what's in the source.
+6. Run `specdev-analyzer extract-items --module <ModuleName>` from the project root. The YAML output enumerates every top-level item in the source file (kind, name, attributes, span). Use it as the structural basis for filling out the rest of the spec — it is authoritative about what's in the source.
 
 ### Extraction checklist
 
