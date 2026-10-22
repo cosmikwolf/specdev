@@ -16,6 +16,11 @@ and it is `2`.
 
 ### Added
 
+- **`python-library` profile**: an importable Python package (`src/` layout); modules carry optional `items[]` and
+  no visibility field (the `_` prefix is the visibility). Gates per tool under `toolchains:` — uv, poetry and pip —
+  each running pytest, pyright and `ruff check` through `python -m`; a CI template for uv. `/spec-init` asks for the
+  tool; `/spec-create-profile` lists Python and the `toolchains:` precedent, and its templates say contract 3.
+
 - **Python language tier** (`languages/python/`): items schema and query (`fn`, `class`, `const`, `type`; methods and
   class constants as `Class.name`; privacy by the `_` prefix; `.pyi` stubs too), pytest test discovery, import
   queries (relative, absolute, `from . import <submodule>`, `if TYPE_CHECKING:` not a dependency), and `build.md`

@@ -46,7 +46,7 @@ the orchestration; that file is the material.
 
 4. **Screen for analyzer-work scope.** A profile is authorable as **pure content** only when it reuses existing analyzer machinery. A **novel graph-check primitive** is not in this skill's scope: reuse the existing primitives (`requirements_have_satisfiers`, `modules_acyclic`, `layer_dependency`, `entity_has_inbound_relation`, the `*_resolves` family, …). If the shape needs a brand-new check kind, stop and tell the user it needs an analyzer change first.
 
-5. **Language.** One of `rust` / `dart` / `typescript` / `c` / `cpp` — each has the tree-sitter adapter that `check` uses for test discovery and imports. The manifest names the primary `language`, and your gate steps must agree with `languages/<lang>/build.md` § "Toolchain Commands".
+5. **Language.** One of `rust` / `dart` / `typescript` / `python` / `c` / `cpp` — each has the tree-sitter adapter that `check` uses for test discovery and imports. The manifest names the primary `language`, and your gate steps must agree with `languages/<lang>/build.md` (its toolchain commands section). For a language with several common tools (Python), the gates go under `toolchains:`, one list per tool (Step 1).
 
 6. **Read the closest precedent end to end.** Pick the shipped profile nearest the target shape and read its whole tree — you will copy-and-adapt it:
    - `<root>/profiles/library-api/` (rust) — standalone library, no layers, `items[]` as a contract surface.
@@ -56,6 +56,7 @@ the orchestration; that file is the material.
    - `<root>/profiles/rust-workspace/` (rust) — the workspace-root profile.
    - `<root>/profiles/flutter-app/` (dart) — roles, a two-step gate.
    - `<root>/profiles/nextjs-app/` (typescript) — roles, `paired_files` config templates, and **two** gates. Read this one whenever the new profile needs paired files or more than one gate.
+   - `<root>/profiles/python-library/` (python) — importable package, no layers, `toolchains:` with one gate list per tool (uv / poetry / pip). Read this one for any language with several tools.
    Also read `references/profile-artifact-templates.md`.
 
 ## Step 1 — interview the project shape
@@ -117,7 +118,7 @@ Copy the precedent profile's tree into `<root>/profiles/<name>/` and adapt. Foll
 
 | File | Adapt or reuse |
 |---|---|
-| `profile.yaml` | **Adapt.** `contract_version: 2`, `name`, `language`, **`gates`** (Step 1), `bootstrap.steps`, `context` (context-subcommand extras), `surface` flags, `paired_files` (config files written once when absent — at least the CI workflow template). Optional: `items`, `reverse`. Validated against the embedded `profile.schema.yaml`. |
+| `profile.yaml` | **Adapt.** `contract_version: 3` (the analyzer's `PROFILE_CONTRACT_VERSION`; `plugin-lint` checks it), `name`, `language`, **`gates`** (Step 1), `bootstrap.steps`, `context` (context-subcommand extras), `surface` flags, `paired_files` (config files written once when absent — at least the CI workflow template). Optional: `items`, `reverse`. Validated against the embedded `profile.schema.yaml`. |
 | `schemas/module.schema.yaml` | **Adapt** (load-bearing). Set `unevaluatedProperties: false` at the root — **never** `additionalProperties: false` (block contributions arrive via the aggregator's `allOf` slot). Reference `inlined/languages/{{language}}/items.schema.yaml` for the optional `items[]`. |
 | `schemas/enums.schema.yaml` | **Reuse + extend.** Copy `Identifier` / `ModuleRef` / `RequirementId` / `QualifiedPort` verbatim; add profile-specific vocabularies (e.g. a `LayerKind` enum). |
 | `schemas/architecture.schema.yaml` | **Adapt.** `additionalProperties: false` at the top. Only fields a check reads (connections, project decisions, a platform fact a gate uses). |
