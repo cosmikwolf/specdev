@@ -14,6 +14,8 @@ and it is `2`.
 
 ## [Unreleased]
 
+## [0.4.1] — 2026-10-22
+
 ### Added
 
 - **`ts-library` profile** (#269): a TypeScript package published to npm — ESM, `src/` built to `dist/` with
