@@ -52,6 +52,19 @@ If no module owns the file yet, design one first (`/spec-design`), or mark the w
 In a `rust-workspace` root, modules live in the member crates: run the module skills from the member
 directory, not the workspace root.
 
+## When the code lives apart from the specs
+
+If `spec.toml` sets `[paths] code`, the code is in that folder — often a git submodule with no specs in it:
+
+- `source_file`, `[paths].source`, `[paths].tests` and the code paths the analyzer prints (`extract-items`,
+  `items diff`, `report tests`, `report imports`) are relative to the code folder. `context --module` gives
+  `files.code_root` and the module's `files.source` as a path that opens from here.
+- Commit the code in its own repository first, then commit the spec change together with the submodule bump.
+  `check` warns when the code has uncommitted changes (`code_root_clean`) or the submodule is not at the commit
+  the spec repository records (`code_root_recorded`).
+- The spec repository's CI runs `sh scripts/specdev-gates.sh`; the code repository's CI runs
+  `sh scripts/compile-gates.sh` (the gates only). `gate --emit` writes both.
+
 ## Feedback for the specdev developer
 
 Keep `specdev-feedback.md` at the project root. Append one dated entry whenever a skill or

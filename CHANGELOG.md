@@ -14,6 +14,15 @@ and it is `2`.
 
 ## [Unreleased]
 
+### Added
+
+- **Code apart from the specs** (`[paths] code`, needs specdev-analyzer with the code root): the project rules say
+  which paths are relative to the code root, the commit order (code repository first, then the spec change with the
+  submodule bump), and which CI runs which gate script. `/spec-audit` opens the source through `context`'s
+  `files.source` and reads printed code paths through `files.code_root`; `/spec-validate` explains `LAYOUT-007`,
+  `code_root_commit`, `code_root_clean` and `code_root_recorded`; `module-designer` and `/spec-reverse` write
+  `source_file` relative to the code root.
+
 ## [0.4.1] — 2026-10-22
 
 ### Added
