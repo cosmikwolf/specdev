@@ -57,6 +57,8 @@ the orchestration; that file is the material.
    - `<root>/profiles/flutter-app/` (dart) — roles, a two-step gate.
    - `<root>/profiles/nextjs-app/` (typescript) — roles, `paired_files` config templates, and **two** gates. Read this one whenever the new profile needs paired files or more than one gate.
    - `<root>/profiles/python-library/` (python) — importable package, no layers, `toolchains:` with one gate list per tool (uv / poetry / pip). Read this one for any language with several tools.
+   - `<root>/profiles/ts-library/` (typescript) — npm package, `toolchains:` (pnpm / npm), two tsconfig paired files (type-check and emit).
+   - `<root>/profiles/dart-package/` (dart) — pub.dev package, one toolchain so plain `gates:`, analyze and format gates that match pub.dev's score.
    Also read `references/profile-artifact-templates.md`.
 
 ## Step 1 — interview the project shape
@@ -158,7 +160,7 @@ The gate is a real bootstrap round-trip in a throwaway scratch directory (use th
    ```sh
    sh scripts/specdev-gates.sh; echo "exit $?"
    ```
-   It runs `check` and every gate in order. Exit `0` is a pass. Afterwards, set `planned = true` on the module and delete its source file: `check` must stay clean (a planned module with no code is silent). Another non-zero code means a step **ran and failed** — a real finding. Exit `2` means a step **could not run**: its executable could not start, or a `${root.*}` token resolved to nothing. A wrong token is a profile bug; a missing tool is an environment gap. The message says which — read it before you call the gate green. (Set `SPECDEV_ANALYZER` to the analyzer's path if it is not on `PATH`.)
+   It runs `check` and every gate in order. Exit `0` is a pass. Afterwards, set `planned = true` on the module and delete its source file: `check` must stay clean (a planned module with no code is silent). Another non-zero code means a step **ran and failed** — a real finding. Exit `2` is ambiguous: a step **could not run** (its executable could not start — the script then prints `could not start` — or a `${root.*}` token resolved to nothing), **or** a tool exited 2 on its own findings (measured: `dart analyze` exits 2 when it finds issues). A wrong token is a profile bug; a missing tool is an environment gap; a tool's own 2 is a real finding. The message says which — read it before you call the gate green. (Set `SPECDEV_ANALYZER` to the analyzer's path if it is not on `PATH`.)
 
 4. **plugin-lint** for structural hygiene and the guidance rules:
    ```sh
