@@ -11,7 +11,8 @@ layers), `profiles/firmware-layered/` (no_std binary, 5-tier + metadata schema),
 `profiles/audio-plugin/` (cdylib plugin, 4-tier, parameter bindings),
 `profiles/rust-workspace/` (workspace root), `profiles/nextjs-app/` (roles, several
 paired files, two gates), `profiles/python-library/` (gates per tool under
-`toolchains:`).
+`toolchains:`), `profiles/ts-library/` and `profiles/dart-package/` (libraries in
+those languages).
 
 ---
 
