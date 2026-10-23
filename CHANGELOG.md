@@ -14,6 +14,21 @@ and it is `2`.
 
 ## [Unreleased]
 
+### Added
+
+- **`ts-library` profile** (#269): a TypeScript package published to npm — ESM, `src/` built to `dist/` with
+  declarations. Gates per package manager under `toolchains:` (pnpm, npm): frozen install, `tsc --noEmit`,
+  `vitest run`, `tsc -p tsconfig.build.json`. Paired `tsconfig.json` (type-check), `tsconfig.build.json` (emit),
+  `.gitignore`, CI.
+- **`dart-package` profile** (#269): a pure Dart package for pub.dev. Gates `dart pub get`, `dart analyze
+  --fatal-infos`, `dart format --set-exit-if-changed`, `dart test` — the analysis and formatting bar pub.dev scores.
+  Paired `analysis_options.yaml` (recommended lints, strict modes), `.gitignore` (`pubspec.lock` not committed).
+
+### Fixed
+
+- **`/spec-create-profile` reads gate exit code 2 correctly**: a tool can exit 2 on its own findings
+  (`dart analyze`), not only when a step could not start.
+
 ## [0.4.0] — 2026-10-22
 
 ### Added
