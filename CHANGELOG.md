@@ -14,6 +14,8 @@ and it is `2`.
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-10-23
+
 ### Added
 
 - **Code apart from the specs** (`[paths] code`, needs specdev-analyzer with the code root): the project rules say
