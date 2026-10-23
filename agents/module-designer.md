@@ -111,7 +111,9 @@ wins.
 ### Code state — `planned` and `source_file`
 
 When the interview says the code does not exist yet, draft `planned = true`.
-When it exists outside the profile's conventional path, draft `source_file`.
+When it exists outside the profile's conventional path, draft `source_file`,
+relative to the code root (`[paths] code` in `spec.toml`; the project root
+when it is absent), never with the `code` path in front.
 Never both: a `planned` module whose source resolves is a `check` warning, and
 a non-planned module with no resolvable source is a `check` error.
 

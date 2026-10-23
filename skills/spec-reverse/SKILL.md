@@ -92,6 +92,7 @@ From the mode table above, load the matching reference file and follow it end to
 - **Evidence over invention.** Every field must trace to source. If evidence is missing, leave the field out or mark `# LOW: inferred from <file>:<line>, please confirm` and ask.
 - **Schema is the contract.** Every key written must validate against `specs/specdev/schemas/module.schema.yaml` (the aggregator). If the code uses a concept the inlined blocks don't model (e.g., raw register pokes that bypass the HAL), capture it as a comment for the user, do not invent a schema field.
 - **One module per file.** Do not fold multiple concerns into a single TOML.
+- **A separate code root.** When `spec.toml` sets `[paths] code`, the code is in that folder: every `src/…` path in the references is relative to it, and so is each `source_file` you write.
 - **Stop on structural ambiguity.** If a source file plausibly represents two modules, ask before splitting.
 - **Comment policy** — follow `${CLAUDE_PLUGIN_ROOT}/shared/comment-policy.md`. This skill's carve-out: inline `# LOW: inferred from <source>:<line>, please confirm` markers are permitted on inferred fields and are removed once the user confirms each one.
 - **Profile-shaped reverse.** firmware-layered's required fields differ from library-api's. Reverse against the project's actual profile, not a generic shape.
