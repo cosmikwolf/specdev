@@ -10,7 +10,7 @@ Entered after the main SKILL.md's Steps 0–2 have run (env preamble, `analyzer 
 2. Read every existing `specs/modules/**/*.toml` for cross-module context.
 3. Check if `specs/modules/**/<ModuleName>.toml` exists; if so, ask **Compare / Replace / Cancel**.
 4. Locate the source. `specdev-analyzer context --module <ModuleName>` prints `files.source` — the file the analyzer resolves for the name, before the module exists, from `[paths].source` and the language's file names (`<snake>.rs` or `<snake>/mod.rs`, `<snake>.ts`, `<snake>.dart`, `<snake>.py`). When the module lives elsewhere, the spec sets `source_file`. If no file fits, ask the user. Never reverse a generated file (see `mode-full-project.md`, Step A).
-5. **Author a stub `specs/modules/<ModuleName>.toml`** with the fields the module schema requires and `source_file` when the default does not resolve. `extract-items` takes a module name, not a path, so the stub must exist before step 6. Until step 7's `depends_on` is written, `check` reports the stub's imports as `internal_edges_declared`; that is expected.
+5. **Author a stub `specs/modules/<ModuleName>.toml`** with the fields the module schema requires and `source_file` when the default does not resolve. `extract-items` takes a module name, not a path, so the stub must exist before step 6. Until step 7's `depends_on` is written, `check` reports the stub's imports as `internal_edges_declared` errors; that is expected, and step 7 clears them.
 6. Run `specdev-analyzer extract-items --module <ModuleName>` from the project root. The YAML output lists every public item in the file (kind, name, span). It is authoritative about what is in the source.
 7. Run `specdev-analyzer report imports --root <the module's file>`: the in-project imports, each resolved to a file. They give `depends_on` in every language.
 
@@ -35,9 +35,9 @@ Follow `requirements.md` in this folder: propose the module's requirements, the 
 
 `extract-items` lists every public name — in Rust also a `pub` name in a private module and a trait impl on a private type. Use the name exactly as it prints (`IntoText for T`, generics and all). Each one ends up in one of three places — ask the user when it is not clear:
 
-1. **An item** — it carries a confirmed requirement: one `items` entry, its name and kind in the form the language's items schema gives (`${CLAUDE_PLUGIN_ROOT}/skills/spec-design/references/toml-authoring-rules.md`, "The item surface"), described in prose.
+1. **An item** — it carries a confirmed requirement (one requirement may cover several items, as twelve plot functions share "plots show …"; and a module may satisfy a requirement another module also satisfies): one `items` entry, its name and kind in the form the language's items schema gives (`${CLAUDE_PLUGIN_ROOT}/skills/spec-design/references/toml-authoring-rules.md`, "The item surface"), described in prose.
 2. **Private** — it is a helper that is public by accident (a Python name without `_`, an `export` nothing uses): propose making it private in the code. That is a code change; the user decides. An export that a test imports is not an accident: it is item or left out.
-3. **Left out** — it stays public and carries no requirement (a type only tests use, a type that only names a function's argument). `items diff --module <Name>` then lists it as `in_source_only`, and `/spec-sync-items` will raise it again. Say this in the report, with the count.
+3. **Left out** — it stays public and carries no requirement (a type only tests use, a type that only names a function's argument, a Python name missing from the package's `__all__`). `items diff --module <Name>` then lists it as `in_source_only`, and `/spec-sync-items` will raise it again. Say this in the report, with the count.
 
 ### Writing
 

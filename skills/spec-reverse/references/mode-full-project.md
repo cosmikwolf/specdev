@@ -4,7 +4,7 @@ Entered from the main SKILL.md when `$ARGUMENTS` is `--all`. Runs an end-to-end 
 
 ## Step A — project shape survey
 
-Before any module reversal, detect how the source is organized, fix `spec.toml` to match the tree, and propose a list of spec modules. Goal: one spec module per coherent unit while preserving the grouping users expect from the source tree.
+Before any module reversal, detect how the source is organized, fix `spec.toml` to match the tree, and propose a list of spec modules. Goal: one spec module per coherent unit while preserving the grouping users expect from the source tree. Module names are PascalCase (`toml-authoring-rules.md` rule 5), also where a profile README example shows a lower-case name; a module in a subfolder takes the folder in its name (`lib/src/admin/store.dart` → `AdminStore`, with `source_file`). All module files go flat in `specs/modules/`.
 
 1. **Detect project shape.** Check these in order and stop at the first match:
    - **Workspace** — a root manifest that lists members: `Cargo.toml` `[workspace] members`, `package.json` `workspaces` (or `pnpm-workspace.yaml`), a `melos.yaml` or `pubspec.yaml` `workspace:`, a `pyproject.toml` workspace table (`[tool.uv.workspace]`). Each member is a spec root with its own `specs/specdev/`; reverse runs in each member.
@@ -12,7 +12,7 @@ Before any module reversal, detect how the source is organized, fix `spec.toml` 
    - **CMake multi-subproject** — root `CMakeLists.txt` with `add_subdirectory(...)` calls. Not reversed today (no items query for C/C++).
    - **Flat / unknown** — treat the whole tree as one spec root and ask the user.
 
-   A part of the tree in another language (a Rust crate beside a Flutter app, a native module beside a Python package) is not this spec root's: it gets its own spec root. Say so in the report.
+   A part of the tree in another language (a Rust crate beside a Flutter app, a native module beside a Python package) is not this spec root's: it gets its own spec root. Say so in the report, and say when the language has no specdev support (shell scripts, CI workflow files).
 
 2. **Fix `spec.toml` from the tree.** Bootstrap writes defaults; an existing tree may differ:
    - `[paths] source` names the folder the hand-written code is in: the Python import package (`src/<package>/`), `lib/src` or `lib` for Dart, `src` or the real code folders for TypeScript. When the default folder holds only generated code, or the library code is in several top-level folders, use the folder that holds them all (`lib`, `.`) and give each module outside the default file name a `source_file`. Entry points outside the library folder (`bin/`, `scripts/`) do not move `source`: their modules set `source_file`.
@@ -26,6 +26,7 @@ Before any module reversal, detect how the source is organized, fix `spec.toml` 
    - **Types only** — data types with little or no behavior (a conversion or mapping table is behavior: such a file is coherent). When its types are public (exported, re-exported, `pub`), it is a module and its types are items. When they are internal, it gets no module, and the modules that use them cover them. In a profile with `ports` (firmware), its traits become port types other modules reference.
    - **Re-export only** — a Python `__init__.py`, a TypeScript `index.ts` or a Dart library of `export` lines that only re-exports. → 0 spec modules. A module that imports a name through it depends on the module that defines the name: read the names and list those modules in `depends_on`. `report imports` resolves such an import to the re-export file and marks its lines `reexport: false` for Python and Rust; `check` sees through a TypeScript barrel only, so for Python and Rust these entries are yours to get right.
    - **Generated** — written by a tool: a "generated" / "do not edit" header (`@generated`), `*.g.dart`, `*.freezed.dart`, `frb_generated*`, `*_pb2.py`. → 0 spec modules. The generator's input is the spec; when it is in another language, it belongs to that language's spec root.
+   - **Example or sample** — `examples/`, `samples/`, a demo script outside the library folder. → 0 spec modules; list them in the report.
    - **Entry point** — `main.rs`, `bin/*.dart`, `lib/main.dart` (and any other Flutter target), `__main__.py`, a CLI script. → 1 module when it holds logic, 0 when it only wires other modules. Its required fields (a `role`) come from the schema like any module's.
    - **Crate or package root with logic** — `lib.rs`, a Python `__init__.py` with code. → 1 module, named after the package, with `source_file`.
 
@@ -38,7 +39,7 @@ Before any module reversal, detect how the source is organized, fix `spec.toml` 
    lib/src/rust/frb_generated.dart (generated → 0 modules; input is the Rust crate in rust/)
    ```
 
-5. **User confirms / edits.** Record the confirmed list of `(module_name, source_path)` tuples for the loop in Step B.
+5. **User confirms / edits** (an unattended run: SKILL.md, "An unattended run"). Record the confirmed list of `(module_name, source_path)` tuples for the loop in Step B.
 
 For workspace projects, run the survey once per member (each member has its own `specs/specdev/`); a workspace `--all` is shorthand for "iterate every member and run --all in each."
 
@@ -55,8 +56,8 @@ Ongoing source-vs-spec checking is `check` (`/spec-validate`), on every change; 
 ## Summary report
 
 - **Architecture**: language, build system, and only the fields the project's architecture schema has.
-- **Modules**: table — name, the profile's required fields, status (OK / SKIPPED / PARTIAL), LOW-confidence field count, source files. Files left without a module, and why; in-project imports into a file with no module (the next modules to reverse).
+- **Modules**: table — name, the profile's required fields, status (OK / SKIPPED / PARTIAL), `# LOW:` markers (fields and requirements), source files. Files left without a module, and why; in-project imports into a file with no module (the next modules to reverse: `specdev-analyzer report imports --root <file>` on each module's file lists them).
 - **Requirements**: proposed / confirmed / dropped; tested vs `test_pending`; the source id of the run.
-- **Findings**: defects the reverse found in the code (dropped from the spec), and where the code breaks the profile's guidance.
+- **Findings**: defects the reverse found in the code (dropped from the spec), where the code breaks the profile's guidance, and a project with no tests at all (every requirement is then `test_pending`).
 - **Check**: the summary line and every error or warning; `items diff` counts per module.
 - **Next steps**: review LOW fields, `/spec-edit <Module>` to refine any, then `/spec-validate`.
