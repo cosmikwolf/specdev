@@ -14,6 +14,22 @@ and it is `2`.
 
 ## [Unreleased]
 
+### Added
+
+- **`/spec-reverse` for TypeScript, Dart and Python** (#273). The skill takes its field checklist from the
+  project's module schema instead of a Rust list, reads `depends_on` from `report imports`, and fixes `[paths]
+  source` and `toolchain` from the tree before the first module. It skips generated files. `python-library`,
+  `python-ffi`, `ts-library`, `dart-package` and `flutter-app` declare `reverse.vocabulary: profile`, so their
+  pre-flight passes with no block inlined. The `firmware-layered` inference rules moved to its README (`## Reverse`).
+- **`/spec-reverse` proposes requirements** (#273): from test names and doc comments, with `verified_by` from
+  `report tests`, `test_pending` when untested, and a `derived` source that marks them as read from the code. The
+  user confirms each one; then items carry `satisfies`.
+
+### Fixed
+
+- **A requirement's `source` id must name a `[[source]]` entry** (#272): every profile with requirements has the
+  relation `requirement_derived_from_source`, so an unknown id is `REDUCE_UNRESOLVED`.
+
 ## [0.5.0] — 2026-10-23
 
 ### Added

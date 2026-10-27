@@ -82,7 +82,7 @@ From an empty directory:
 /spec-validate                # specdev-analyzer check: the spec, and the spec against the code
 ```
 
-From an existing **Rust** codebase (reverse engineering is Rust-only today):
+From an existing codebase (Rust, TypeScript, Dart or Python):
 
 ```
 /spec-init                    # bootstrap a profile first
@@ -100,7 +100,7 @@ From an existing **Rust** codebase (reverse engineering is Rust-only today):
 | `/spec-decide`         | Record a decision under `specs/decisions/`, or supersede an existing one (the chain is kept). |
 | `/spec-question`       | Raise an open question under `specs/open_questions/`, downgrade it to a committed default, or close it. |
 | `/spec-validate`       | Run `specdev-analyzer check` (validate, then the spec against the code) and translate findings into actionable fixes. |
-| `/spec-reverse`        | One-shot migration: reverse-engineer module specs from an existing **Rust** codebase. Single-module or `--all`. |
+| `/spec-reverse`        | One-shot migration: reverse-engineer module specs, and proposed requirements, from an existing Rust, TypeScript, Dart or Python codebase. Single-module or `--all`. |
 | `/spec-inline`         | Inline a canonical block from `${CLAUDE_PLUGIN_ROOT}/blocks/<name>/` into the project's `specs/specdev/` tree, split across schema, reduction, implementation guidance, an optional rule pack and an upstream snapshot. |
 | `/spec-inline-bridge`  | Inline a canonical bridge between two already-inlined blocks. Bridge name is `<a>+<b>` with `a` and `b` lex-ordered. |
 | `/spec-audit`          | Read one module's code against the claims no check reads — requirement text, descriptions, `isr_safe`, `blocking`, `metadata.*` — and report a verdict with evidence for each. Reports in chat; edits nothing. |
@@ -213,7 +213,7 @@ User-contributed blocks and bridges are first-class: lineage records the origin,
 
 - **v1 is single-package** for every profile except `rust-workspace`. That profile coordinates multi-member Rust projects; per-member skills (`/spec-design`, `/spec-edit`) run from the member's directory. A typescript package can sit inside a pnpm workspace, but no shipped profile drives the workspace root.
 - **Checked languages: `rust`, `dart`, `typescript`, `c`, `cpp`** — test discovery and imports for all five. Shipped profiles cover `rust`, `dart` and `typescript`.
-- **`/spec-reverse`** is a one-shot migration tool — moves an existing **Rust** codebase into the spec-driven world. Rust profiles only; a TypeScript or Dart project authors its modules with `/spec-design` instead. It is a person-in-the-loop authoring flow against the inlined-block schemas, not a continuous source-vs-spec audit. For ongoing source-vs-spec drift on a module's `[[items]]`, use `/spec-sync-items`.
+- **`/spec-reverse`** is a one-shot migration tool — moves an existing Rust, TypeScript, Dart or Python codebase into the spec-driven world (C and C++ have no items query, so they author with `/spec-design`). It is a person-in-the-loop authoring flow against the inlined-block schemas, not a continuous source-vs-spec audit. For ongoing source-vs-spec drift on a module's `[[items]]`, use `/spec-sync-items`.
 
 ## Permissions (optional hardening)
 
