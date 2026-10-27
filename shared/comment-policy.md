@@ -25,4 +25,4 @@ These markers are transient review metadata — they exist so the user can confi
 
 ## Scope
 
-This policy applies to every `.toml` file that lives under a project's `specs/` tree: `spec.toml`, `specs/architecture.toml`, `specs/modules/**/*.toml`, and the ledger entries under `specs/requirements/`, `specs/sources/`, `specs/decisions/` and `specs/open_questions/`. It does not apply to non-spec TOML (e.g. `Cargo.toml`).
+This policy applies to every `.toml` file that lives under a project's `specs/` tree: `spec.toml`, `specs/architecture.toml`, `specs/modules/**/*.toml`, and the ledger entries under `specs/requirements/`, `specs/sources/`, `specs/decisions/` and `specs/open_questions/`. It does not apply to non-spec TOML (e.g. `Cargo.toml`), and it does not remove the comments bootstrap writes from the profile's templates (`spec.toml`, `architecture.toml`, `domain.toml`): those explain the profile's choices and stay until the user removes them.

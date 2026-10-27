@@ -39,6 +39,8 @@ If the project has no `specs/specdev/` directory, this is expected for a greenfi
 
 If `specs/specdev/` is present, continue. Read `spec.toml` to learn the project's `[project].profile` and `[project].language`.
 
+**Check that the profile fits the tree.** Read the profile README's "When to use" section and compare it with what the tree is: a published library, an application, a server, or a folder of scripts. Compare the profile's gates (test runner, build) with what the tree uses. When they differ, tell the user before any module is written: `check` cannot see a profile that does not fit, and the gates will fail.
+
 **If `${CLAUDE_PLUGIN_ROOT}/languages/<language>/items.scm` does not exist, stop here** (C and C++ today): there is no `extract-items` for the language and no profile to author against. Tell the user to author the specs with `/spec-init` + `/spec-design`.
 
 Read `specs/specdev/profile.yaml` too. If it declares `reverse.vocabulary: profile`, the profile's own module schema is the reverse vocabulary and no block needs to be inlined; the analyzer reads the same key in Step 1 and reports `[REVERSE-004]` as info instead of stopping on `[REVERSE-002]`. Every profile whose modules name no block field declares it.
@@ -69,19 +71,19 @@ Do not proceed past `[REVERSE-002]` — the skill cannot author against an empty
 
 ## Step 2 — read the authoritative guides
 
-For single-module reversal, run the analyzer's context cone for the to-be-reversed module name. The cone returns the schema files + plugin-tree READMEs + (when present) sibling cone in one call:
+For each module, run the analyzer's context cone (it prints YAML to stdout; keep it in the conversation, never in a file outside the project):
 
 ```sh
-specdev-analyzer context --module <Name> --output /tmp/specdev-ctx-$$.yaml
+specdev-analyzer context --module <Name>
 ```
 
-For greenfield reversal the module won't yet exist, and the cone returns `status: module-not-found` with `files.schema`, `files.block_readmes`, `files.bridge_readmes`, `files.profile_readme`, `files.guidance`, and `files.architecture` populated — exactly the surfaces this step needs. Read every path under `files:` (project-relative paths and `${CLAUDE_PLUGIN_ROOT}/...` paths alike); when `related_files` is non-empty (already-reversed siblings), read those for naming conventions and pattern reuse.
+For a module that does not exist yet, the cone returns `status: module-not-found` with `files.schema` (the module, architecture and requirements schemas, and the files they `$ref`), `files.block_readmes`, `files.bridge_readmes`, `files.profile_readme`, `files.guidance` and `files.source` (the file the name resolves to by default) populated. Read every path under `files:` (project-relative and `${CLAUDE_PLUGIN_ROOT}/...` alike); when `related_files` is non-empty (already-reversed siblings), read those for naming conventions and pattern reuse.
 
 Plus the comment-policy file (not surfaced via the cone since it isn't a per-module concern):
 
 - **`${CLAUDE_PLUGIN_ROOT}/shared/comment-policy.md`** — TOML comment policy (with the `# LOW:` carve-out unique to this skill).
 
-For `--all` mode, the per-module loop in `references/mode-full-project.md` invokes `context` once per module rather than reading the whole tree per pass.
+For `--all` mode, each module's pass (`references/mode-single-module.md`, step 4) runs `context` once for that module rather than reading the whole tree per pass.
 
 ## Step 3 — route by mode
 
@@ -102,7 +104,7 @@ From the mode table above, load the matching reference file and follow it end to
 ## Additional resources
 
 - `references/mode-architecture.md` — procedure for the no-args architecture pass.
-- `references/mode-single-module.md` — procedure for `<ModuleName>` single-module reversal (uses Step 4's `extract-items` output as the structural basis).
+- `references/mode-single-module.md` — procedure for `<ModuleName>` single-module reversal (its `extract-items` output, step 6, is the structural basis).
 - `references/mode-full-project.md` — procedure for `--all` end-to-end reversal: project-shape survey, then a sequential per-module loop using the same single-module procedure. Parallel fan-out is not available (the `module-reverser` subagent is staged, not shipped).
 - `references/requirements.md` — how a reverse proposes requirements: text, `verified_by`, `test_pending`, the `derived` source.
 - `references/module-reverser-subagent.md` — the contract and status of the staged `module-reverser` subagent (not shipped; nothing dispatches it).

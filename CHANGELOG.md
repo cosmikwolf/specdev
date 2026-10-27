@@ -27,6 +27,9 @@ and it is `2`.
 
 ### Fixed
 
+- **Bootstrap writes the Python import name in paths** (#274): new placeholder `{{project_identifier}}` (the
+  project name with each `-` as `_`); `python-library` and `python-ffi` use it for `[paths] source` and the native
+  module, so `pattern-analysis` gives `src/pattern_analysis`.
 - **A requirement's `source` id must name a `[[source]]` entry** (#272): every profile with requirements has the
   relation `requirement_derived_from_source`, so an unknown id is `REDUCE_UNRESOLVED`.
 
