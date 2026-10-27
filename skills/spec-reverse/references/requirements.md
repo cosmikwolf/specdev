@@ -47,12 +47,12 @@ source = ["reverse-<YYYY-MM-DD>"]
 - `id` — `REQ-<AREA>-<NNN>`, where `<AREA>` is a short upper-case name for the module (`RATE` for `RateLimit`); it must match the enums schema's `RequirementId` pattern. Check `specs/requirements/` for ids in use.
 - `text` — from §2.
 - `nature = "module"`.
-- `verified_by` — the test identities from `report tests` that check it.
+- `verified_by` — the test identities from `report tests` that check it. When they check only part of the behavior (three color codes of fifty), name them and say in the report which part has no test.
 - `test_pending = true` — when no test checks it. Never invent a test name; `check` rejects one that does not resolve.
 - `source` — the run's id from §1.
 
 ## 4. Confirm, then write
 
-Show the proposed requirements next to the module TOML, with `# LOW:` on the ones that came from code only. For each one the user chooses: **confirm**, **edit**, or **drop** (behavior that is a defect, or not worth a requirement). Write only what is confirmed or edited; a confirmed requirement is written without its `# LOW:` marker. A dropped behavior that is a defect goes to the user as a finding, not into the spec.
+Show the proposed requirements next to the module TOML, with `# LOW:` on the ones that came from code only — the marker goes at the end of the `text` line: `text = "…"  # LOW: inferred from <file>:<line>, please confirm`. For each one the user chooses: **confirm**, **edit**, or **drop** (behavior that is a defect, or not worth a requirement). Write only what is confirmed or edited; a confirmed requirement is written without its `# LOW:` marker. A dropped behavior that is a defect goes to the user as a finding, not into the spec.
 
 When the run has no user to confirm (an unattended run), write the proposals with their `# LOW:` markers kept, and say in the report that every requirement of the run is unconfirmed.

@@ -21,6 +21,8 @@ If a fact deserves to live in the TOML, it belongs in a schema field, not in a c
 field = "..."  # LOW: inferred from <source>:<line>, please confirm
 ```
 
+On a requirement, the marker goes at the end of the `text` line (the requirement as a whole is the inference).
+
 These markers are transient review metadata — they exist so the user can confirm or override the inference, and they are removed from the file once the field is confirmed. No other skill emits LOW markers. `/spec-edit` treats existing LOW markers as a carve-out (leave them alone until cleared); `/spec-design` never produces them.
 
 ## Scope

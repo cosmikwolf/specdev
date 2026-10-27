@@ -35,11 +35,11 @@ Optional `--into <block,...>` scopes the reverse vocabulary to specific inlined 
 
 ## Step 0 — prerequisites and bootstrap
 
-If the project has no `specs/specdev/` directory, this is expected for a greenfield reverse. **Stop and tell the user to run `/spec-init` first** to bootstrap a profile-aware tree. `/spec-reverse` is not a substitute for `/spec-init`; the inlined block schemas drive what fields the reversed module specs may use, and those schemas only exist after `/spec-init` + `specdev-analyzer inline <block>`.
+If the project has no `specs/specdev/` directory, this is expected for a greenfield reverse. **Stop and tell the user to run `/spec-init` first** to bootstrap a profile-aware tree. `/spec-reverse` is not a substitute for `/spec-init`: the inlined profile schemas (and, for a profile that needs them, the inlined block schemas) drive what fields the reversed module specs may use, and they exist only after `/spec-init`.
 
 If `specs/specdev/` is present, continue. Read `spec.toml` to learn the project's `[project].profile` and `[project].language`.
 
-**Check that the profile fits the tree.** Read the profile README's "When to use" section and compare it with what the tree is: a published library, an application, a server, or a folder of scripts. Compare the profile's gates (test runner, build) with what the tree uses. When they differ, tell the user before any module is written: `check` cannot see a profile that does not fit, and the gates will fail.
+**Check that the profile fits the tree.** Read the profile README's "When to use" section and compare it with what the tree is: a published library, an application, a server, or a folder of scripts. Compare the profile's gates (test runner, build) with what the tree uses. When they differ, tell the user before any module is written: `check` cannot see a profile that does not fit, and the gates will fail. When no shipped profile fits, the user chooses: go on with the nearest one (and accept its gates), or stop and author a profile with `/spec-create-profile`.
 
 **If `${CLAUDE_PLUGIN_ROOT}/languages/<language>/items.scm` does not exist, stop here** (C and C++ today): there is no `extract-items` for the language and no profile to author against. Tell the user to author the specs with `/spec-init` + `/spec-design`.
 
@@ -77,7 +77,7 @@ For each module, run the analyzer's context cone (it prints YAML to stdout; keep
 specdev-analyzer context --module <Name>
 ```
 
-For a module that does not exist yet, the cone returns `status: module-not-found` with `files.schema` (the module, architecture and requirements schemas, and the files they `$ref`), `files.block_readmes`, `files.bridge_readmes`, `files.profile_readme`, `files.guidance` and `files.source` (the file the name resolves to by default) populated. Read every path under `files:` (project-relative and `${CLAUDE_PLUGIN_ROOT}/...` alike); when `related_files` is non-empty (already-reversed siblings), read those for naming conventions and pattern reuse.
+For a module that does not exist yet, the cone returns `status: module-not-found` with `files.schema` (the module, architecture and requirements schemas, and the files they `$ref`), `files.block_readmes`, `files.bridge_readmes`, `files.profile_readme` and `files.guidance`, and `files.source` when a file of the default name exists. No `files.source` means the module's file has another name (a kebab-case TypeScript file, a crate root): it needs `source_file`. Read every path under `files:` (project-relative and `${CLAUDE_PLUGIN_ROOT}/...` alike); when `related_files` is non-empty (already-reversed siblings), read those for naming conventions and pattern reuse.
 
 Plus the comment-policy file (not surfaced via the cone since it isn't a per-module concern):
 
@@ -96,6 +96,8 @@ From the mode table above, load the matching reference file and follow it end to
 - **One module per file.** Do not fold multiple concerns into a single TOML.
 - **A separate code root.** When `spec.toml` sets `[paths] code`, the code is in that folder: every `src/…` path in the references is relative to it, and so is each `source_file` you write.
 - **Stop on structural ambiguity.** If a source file plausibly represents two modules, ask before splitting.
+- **Write only inside the project.** No scratch copy, backup or redirect outside it (`/tmp` included). To see what a check does with an edit, make the edit in the project and undo it.
+- **An unattended run** (no user to answer): where a step says to ask, confirm or wait, take your own proposal and go on, and list every such question with the answer you took in the report. Write requirements with their `# LOW:` markers kept; `satisfies` and `items` may point at them. A profile that does not fit (Step 0) is the report's first finding. Every requirement of the run is reported as unconfirmed.
 - **Comment policy** — follow `${CLAUDE_PLUGIN_ROOT}/shared/comment-policy.md`. This skill's carve-out: inline `# LOW: inferred from <source>:<line>, please confirm` markers are permitted on inferred fields and are removed once the user confirms each one.
 - **Profile-shaped reverse.** The fields come from the project's module schema, never from a fixed list: required fields first, then every optional field the code gives evidence for. Each field's `description` (and the enum's, through `$ref`) says what it means and how to read it from the code. When the profile README has a `## Reverse` section, it adds the inference rules the schema cannot hold.
 - **Requirements are proposals.** A requirement read from code states what the code does, defects included. Propose each one for the user to confirm, and tag it with the run's `derived` source (see `references/requirements.md`).
@@ -112,7 +114,7 @@ From the mode table above, load the matching reference file and follow it end to
 
 ## What this skill does NOT do
 
-- **Replace `/spec-init`.** Bootstrap first; this skill needs the inlined block schemas to author against.
+- **Replace `/spec-init`.** Bootstrap first; this skill needs the inlined profile (and block) schemas to author against.
 - **Inline blocks or bridges.** That's `/spec-inline` / `/spec-inline-bridge`. If the source uses a peripheral or runtime construct that no inlined block covers, stop and recommend the relevant inline.
 - **Continuous audit.** Project-wide source-vs-spec audit is not in v1. `/spec-reverse` is the migration tool, not the maintenance tool. For per-module `[[items]]` drift, `/spec-sync-items` is the supported path.
 - **Edit existing specs.** That's `/spec-edit`. If `specs/modules/<Name>.toml` already exists, ask whether to compare/replace/cancel before overwriting.

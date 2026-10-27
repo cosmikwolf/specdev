@@ -22,6 +22,6 @@ Write only fields the project's `architecture.schema.yaml` defines; evidence for
 
 **When the evidence disagrees** (a generator's metadata lists six platforms, the notes show four tested, the tree has folders for two), prefer what the project shows it builds or runs over what a tool generated, mark the field `# LOW:` and ask.
 
-Present candidate `specs/architecture.toml` with confidence (HIGH/MEDIUM/LOW) per field. Wait for confirmation. Write clean TOML per `${CLAUDE_PLUGIN_ROOT}/shared/comment-policy.md` — in particular, LOW markers are permitted inline next to LOW-confidence fields and are removed after the user confirms each one. Scaffold `specs/modules/` and `specs/requirements/` if absent.
+Present candidate `specs/architecture.toml` with confidence (HIGH/MEDIUM/LOW) per field. Wait for confirmation. Write clean TOML per `${CLAUDE_PLUGIN_ROOT}/shared/comment-policy.md` — in particular, LOW markers are permitted inline next to LOW-confidence fields and are removed after the user confirms each one. Scaffold `specs/modules/`, `specs/requirements/` and `specs/sources/` if absent.
 
 Report: language, build system, the architecture fields written (or why none), packages, module candidates. Suggested next step: `/spec-reverse <Module>` or `/spec-reverse --all`.

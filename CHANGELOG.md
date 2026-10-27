@@ -30,6 +30,9 @@ and it is `2`.
 - **Bootstrap writes the Python import name in paths** (#274): new placeholder `{{project_identifier}}` (the
   project name with each `-` as `_`); `python-library` and `python-ffi` use it for `[paths] source` and the native
   module, so `pattern-analysis` gives `src/pattern_analysis`.
+- **Schema text names the per-file layout** (#277): requirement schemas, `RequirementId` and decisions' `source`
+  say `specs/requirements/` and `specs/sources/`, not the 1.x `specs/requirements.toml`. `library-api` README has a
+  `## Reverse` section (`visibility`, the crate root).
 - **A requirement's `source` id must name a `[[source]]` entry** (#272): every profile with requirements has the
   relation `requirement_derived_from_source`, so an unknown id is `REDUCE_UNRESOLVED`.
 
