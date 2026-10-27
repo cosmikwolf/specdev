@@ -1,13 +1,13 @@
 ---
 name: spec-reverse
-description: "This skill should be used when the user asks to \"reverse-engineer specs\", \"generate specs from code\", \"document this existing codebase\", \"reverse <ModuleName>\", or \"spec-reverse --all\". One-shot migration tool — moves an existing Rust codebase into the spec-driven world; not a continuous source-vs-spec audit (use /spec-sync-items for that). Rust profiles only: the field guidance here is written against Rust module schemas, so a TypeScript or Dart project must use /spec-init plus /spec-design instead — the analyzer's `reverse` pre-flight admits those trees, but this skill's guidance does not fit their schemas. Extracts architecture and module TOML specs against a Rust profile, using the analyzer's tree-sitter `extract-items` surface plus inlined block READMEs as authoring context."
+description: "This skill should be used when the user asks to \"reverse-engineer specs\", \"generate specs from code\", \"document this existing codebase\", \"reverse <ModuleName>\", or \"spec-reverse --all\". One-shot migration tool — moves an existing codebase (Rust, TypeScript, Dart or Python) into the spec-driven world; not a continuous source-vs-spec audit (use /spec-sync-items for that). Authors module specs against the project's own profile schema, using the analyzer's tree-sitter `extract-items` and `report imports` surfaces, and proposes requirements from doc comments and test names for the user to confirm."
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 argument-hint: "[<ModuleName> | --all] [--into <a,b,...>]"
 ---
 
 # /spec-reverse — Extract specs from source
 
-Reverse-engineer TOML specs from existing source. Never invent fields the code does not support. Every claim written must be traceable to a file and line.
+Reverse-engineer TOML specs from existing source. Never invent fields the code does not support. Every claim written must be traceable to a file and line. Works for every language that has an items query (`${CLAUDE_PLUGIN_ROOT}/languages/<lang>/items.scm`): Rust, TypeScript, Dart, Python.
 
 `/spec-reverse` is the **migration tool** for v1 — one-shot for moving an existing codebase into the spec-driven world. Continuous source-vs-spec drift detection (project-wide audit) is not in v1; this skill does not replace audit. For ongoing source-vs-spec drift on a module's `[[items]]`, use `/spec-sync-items`.
 
@@ -35,15 +35,17 @@ Optional `--into <block,...>` scopes the reverse vocabulary to specific inlined 
 
 ## Step 0 — prerequisites and bootstrap
 
-If the project has no `specs/specdev/` directory, this is expected for a greenfield reverse. **Stop and tell the user to run `/spec-init` first** to bootstrap a profile-aware tree. `/spec-reverse` is not a substitute for `/spec-init`; the inlined block schemas drive what fields the reversed module specs may use, and those schemas only exist after `/spec-init` + `specdev-analyzer inline <block>`.
+If the project has no `specs/specdev/` directory, this is expected for a greenfield reverse. **Stop and tell the user to run `/spec-init` first** to bootstrap a profile-aware tree. `/spec-reverse` is not a substitute for `/spec-init`: the inlined profile schemas (and, for a profile that needs them, the inlined block schemas) drive what fields the reversed module specs may use, and they exist only after `/spec-init`.
 
 If `specs/specdev/` is present, continue. Read `spec.toml` to learn the project's `[project].profile` and `[project].language`.
 
-**If `[project].language` is not `rust`, stop here.** The analyzer's `reverse` pre-flight is language-neutral and will report `Proceed.` for a TypeScript or Dart tree, but every field this skill teaches you to extract below (`layer`, `actions`, `ports`, `hardware`, `state_machines`, `metadata`) belongs to the Rust profile schemas — a `nextjs-app` module schema admits none of them, and names five fields (`role`, `environment`, `client_component`, `boundary_kind`, `app_path`) this skill never mentions. Tell the user to author the specs with `/spec-init` + `/spec-design` instead, and that reverse engineering for their language is not shipped yet.
+**Check that the profile fits the tree.** Read the profile README's "When to use" section and compare it with what the tree is: a published library, an application, a server, or a folder of scripts. Compare the profile's gates (test runner, build) with what the tree uses. When they differ, tell the user before any module is written: `check` cannot see a profile that does not fit, and the gates will fail. When no shipped profile fits, the user chooses: go on with the nearest one (and accept its gates), or stop and author a profile with `/spec-create-profile`.
 
-Read `specs/specdev/profile.yaml` too. If it declares `reverse.vocabulary: profile`, the profile's own schema (items, visibility — the profile README and inlined guidance are the reading in Step 2) is the reverse vocabulary and no block needs to be inlined. Among the Rust profiles, `library-api` and `rust-app` ship this declaration; `nextjs-app` ships it too, which is why the pre-flight admits a TypeScript tree the guidance below does not cover. The analyzer reads the same key in Step 1 and reports `[REVERSE-004]` as info instead of stopping on `[REVERSE-002]`.
+**If `${CLAUDE_PLUGIN_ROOT}/languages/<language>/items.scm` does not exist, stop here** (C and C++ today): there is no `extract-items` for the language and no profile to author against. Tell the user to author the specs with `/spec-init` + `/spec-design`.
 
-For firmware-layered projects (and any profile without `reverse.vocabulary: profile`), the relevant blocks should be inlined before reversing (the analyzer's pre-flight in Step 1 will tell you which are present):
+Read `specs/specdev/profile.yaml` too. If it declares `reverse.vocabulary: profile`, the profile's own module schema is the reverse vocabulary and no block needs to be inlined; the analyzer reads the same key in Step 1 and reports `[REVERSE-004]` as info instead of stopping on `[REVERSE-002]`. Every profile whose modules name no block field declares it.
+
+For a profile without `reverse.vocabulary: profile` (its modules name block fields), the relevant blocks should be inlined before reversing (the analyzer's pre-flight in Step 1 will tell you which are present):
 - An MCU block (e.g., `stm32h5-rs`) — needed to put `peripherals` / `pins` into module specs.
 - A runtime block (e.g., `embassy`) — needed to put `tasks` / `channels` into module specs.
 - Any relevant bridge (e.g., `embassy+stm32h5-rs`) — needed for `bindings.<a>+<b>` entries.
@@ -69,19 +71,19 @@ Do not proceed past `[REVERSE-002]` — the skill cannot author against an empty
 
 ## Step 2 — read the authoritative guides
 
-For single-module reversal, run the analyzer's context cone for the to-be-reversed module name. The cone returns the schema files + plugin-tree READMEs + (when present) sibling cone in one call:
+For each module, run the analyzer's context cone (it prints YAML to stdout; keep it in the conversation, never in a file outside the project):
 
 ```sh
-specdev-analyzer context --module <Name> --output /tmp/specdev-ctx-$$.yaml
+specdev-analyzer context --module <Name>
 ```
 
-For greenfield reversal the module won't yet exist, and the cone returns `status: module-not-found` with `files.schema`, `files.block_readmes`, `files.bridge_readmes`, `files.profile_readme`, `files.guidance`, and `files.architecture` populated — exactly the surfaces this step needs. Read every path under `files:` (project-relative paths and `${CLAUDE_PLUGIN_ROOT}/...` paths alike); when `related_files` is non-empty (already-reversed siblings), read those for naming conventions and pattern reuse.
+For a module that does not exist yet, the cone returns `status: module-not-found` with `files.schema` (the module, architecture and requirements schemas, and the files they `$ref`), `files.block_readmes`, `files.bridge_readmes`, `files.profile_readme` and `files.guidance`, and `files.source` when a file of the default name exists. No `files.source` means the module's file has another name (a kebab-case TypeScript file, a crate root): it needs `source_file`. Read every path under `files:` (project-relative and `${CLAUDE_PLUGIN_ROOT}/...` alike); when `related_files` is non-empty (already-reversed siblings), read those for naming conventions and pattern reuse.
 
 Plus the comment-policy file (not surfaced via the cone since it isn't a per-module concern):
 
 - **`${CLAUDE_PLUGIN_ROOT}/shared/comment-policy.md`** — TOML comment policy (with the `# LOW:` carve-out unique to this skill).
 
-For `--all` mode, the per-module loop in `references/mode-full-project.md` invokes `context` once per module rather than reading the whole tree per pass.
+For `--all` mode, each module's pass (`references/mode-single-module.md`, step 4) runs `context` once for that module rather than reading the whole tree per pass.
 
 ## Step 3 — route by mode
 
@@ -94,21 +96,26 @@ From the mode table above, load the matching reference file and follow it end to
 - **One module per file.** Do not fold multiple concerns into a single TOML.
 - **A separate code root.** When `spec.toml` sets `[paths] code`, the code is in that folder: every `src/…` path in the references is relative to it, and so is each `source_file` you write.
 - **Stop on structural ambiguity.** If a source file plausibly represents two modules, ask before splitting.
+- **Write only inside the project.** No scratch copy, backup or redirect outside it (`/tmp` included). To see what a check does with an edit, make the edit in the project and undo it.
+- **Never change the code.** A reverse writes specs only. Where it finds a defect, a helper that should be private, or a breach of the profile's guidance, it reports it; the user changes the code.
+- **An unattended run** (no user to answer): where a step says to ask, confirm or wait, take your own proposal and go on, and list every such question with the answer you took in the report. Write requirements with their `# LOW:` markers kept; `satisfies` and `items` may point at them. A profile that does not fit (Step 0) is the report's first finding. Every requirement of the run is reported as unconfirmed. A public name the attended run would offer to make private is left out (and reported).
 - **Comment policy** — follow `${CLAUDE_PLUGIN_ROOT}/shared/comment-policy.md`. This skill's carve-out: inline `# LOW: inferred from <source>:<line>, please confirm` markers are permitted on inferred fields and are removed once the user confirms each one.
-- **Profile-shaped reverse.** firmware-layered's required fields differ from library-api's. Reverse against the project's actual profile, not a generic shape.
+- **Profile-shaped reverse.** The fields come from the project's module schema, never from a fixed list: required fields first, then every optional field the code gives evidence for. Each field's `description` (and the enum's, through `$ref`) says what it means and how to read it from the code. When the profile README has a `## Reverse` section, it adds the inference rules the schema cannot hold.
+- **Requirements are proposals.** A requirement read from code states what the code does, defects included. Propose each one for the user to confirm, and tag it with the run's `derived` source (see `references/requirements.md`).
 - **Vocabulary discipline.** Only use block-namespaced fields whose blocks were in Step 1's effective vocabulary. If a peripheral surfaces in source that no inlined block covers, capture it as a `# LOW:` comment and recommend inlining a covering block before recursing.
 
 ## Additional resources
 
 - `references/mode-architecture.md` — procedure for the no-args architecture pass.
-- `references/mode-single-module.md` — procedure for `<ModuleName>` single-module reversal (uses Step 4's `extract-items` output as the structural basis).
+- `references/mode-single-module.md` — procedure for `<ModuleName>` single-module reversal (its `extract-items` output, step 6, is the structural basis).
 - `references/mode-full-project.md` — procedure for `--all` end-to-end reversal: project-shape survey, then a sequential per-module loop using the same single-module procedure. Parallel fan-out is not available (the `module-reverser` subagent is staged, not shipped).
+- `references/requirements.md` — how a reverse proposes requirements: text, `verified_by`, `test_pending`, the `derived` source.
 - `references/module-reverser-subagent.md` — the contract and status of the staged `module-reverser` subagent (not shipped; nothing dispatches it).
 - `${CLAUDE_PLUGIN_ROOT}/skills/spec-design/references/toml-authoring-rules.md` — priority-ordered TOML authoring rules shared with `/spec-design` and `/spec-edit`. Rule 8 carves out the `# LOW:` marker convention that's unique to `/spec-reverse`; rules 1–7 apply once the user confirms inferred fields and the markers are stripped.
 
 ## What this skill does NOT do
 
-- **Replace `/spec-init`.** Bootstrap first; this skill needs the inlined block schemas to author against.
+- **Replace `/spec-init`.** Bootstrap first; this skill needs the inlined profile (and block) schemas to author against.
 - **Inline blocks or bridges.** That's `/spec-inline` / `/spec-inline-bridge`. If the source uses a peripheral or runtime construct that no inlined block covers, stop and recommend the relevant inline.
 - **Continuous audit.** Project-wide source-vs-spec audit is not in v1. `/spec-reverse` is the migration tool, not the maintenance tool. For per-module `[[items]]` drift, `/spec-sync-items` is the supported path.
 - **Edit existing specs.** That's `/spec-edit`. If `specs/modules/<Name>.toml` already exists, ask whether to compare/replace/cancel before overwriting.

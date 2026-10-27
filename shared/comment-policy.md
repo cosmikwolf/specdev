@@ -21,8 +21,10 @@ If a fact deserves to live in the TOML, it belongs in a schema field, not in a c
 field = "..."  # LOW: inferred from <source>:<line>, please confirm
 ```
 
+On a requirement, the marker goes at the end of the `text` line (the requirement as a whole is the inference).
+
 These markers are transient review metadata — they exist so the user can confirm or override the inference, and they are removed from the file once the field is confirmed. No other skill emits LOW markers. `/spec-edit` treats existing LOW markers as a carve-out (leave them alone until cleared); `/spec-design` never produces them.
 
 ## Scope
 
-This policy applies to every `.toml` file that lives under a project's `specs/` tree: `spec.toml`, `specs/architecture.toml`, `specs/modules/**/*.toml`, and the ledger entries under `specs/requirements/`, `specs/sources/`, `specs/decisions/` and `specs/open_questions/`. It does not apply to non-spec TOML (e.g. `Cargo.toml`).
+This policy applies to every `.toml` file that lives under a project's `specs/` tree: `spec.toml`, `specs/architecture.toml`, `specs/modules/**/*.toml`, and the ledger entries under `specs/requirements/`, `specs/sources/`, `specs/decisions/` and `specs/open_questions/`. It does not apply to non-spec TOML (e.g. `Cargo.toml`), and it does not remove the comments bootstrap writes from the profile's templates (`spec.toml`, `architecture.toml`, `domain.toml`): those explain the profile's choices and stay until the user removes them.

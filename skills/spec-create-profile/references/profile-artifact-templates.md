@@ -150,8 +150,8 @@ adjust for the fields your module schema added.
 - **Ledger schemas** — `requirements`, `decisions`, `open_questions` are stable;
   copy the shape (rewrite the `$id`). Open-question statuses: `open` /
   `default_committed` / `closed`, plus `hard_gate`.
-- **Placeholder vocabulary (closed)** — `{{project_name}}`, `{{profile}}`,
-  `{{language}}`. Any other `{{...}}` → `BOOTSTRAP-002`.
+- **Placeholder vocabulary (closed)** — `{{project_name}}`, `{{project_identifier}}`
+  (the name with each `-` as `_`), `{{profile}}`, `{{language}}`. Any other `{{...}}` → `BOOTSTRAP-002`.
 
 ---
 
