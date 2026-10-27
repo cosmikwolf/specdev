@@ -127,7 +127,7 @@ Copy the precedent profile's tree into `<root>/profiles/<name>/` and adapt. Foll
 | `schemas/requirements.schema.yaml`, `schemas/decisions.schema.yaml`, `schemas/open_questions.schema.yaml` | **Reuse** the shape (the ledgers are stable) — but rewrite the `$id` + title as above. |
 | `reductions/project.yaml` | **Adapt.** `metaschema_version: "v1"`; maps this profile's TOML to universal `entities` + `relations`, with glob `from:` paths over the per-entry ledger directories. |
 | `domain.toml.template` | **Adapt.** `[domain] name = "{{project_name}}"`, `[validation.rules]` (one entry per graph check → severity), `[[project.graph_checks]]`. |
-| `spec.toml.template` | **Adapt.** Placeholders `{{project_name}}` / `{{profile}}` / `{{language}}`; `spec_version = "2.0"`. |
+| `spec.toml.template` | **Adapt.** Placeholders `{{project_name}}` / `{{project_identifier}}` / `{{profile}}` / `{{language}}`; `spec_version = "2.0"`. |
 | `architecture.toml.template` | **Reuse/adapt** — an empty-or-example skeleton (omit when the architecture schema has nothing to fill). |
 | `templates/specdev-ci.yml.template` | **Adapt.** The CI workflow (Step 1). |
 | `guidance.md` | **Author** (load-bearing). Rules only: no fenced code and at most 4,096 bytes (`plugin-lint` checks these), no version numbers (review checks this). Role-not-framework naming. Inlined to `specs/specdev/guidance/profile.md`. |
@@ -136,7 +136,7 @@ Copy the precedent profile's tree into `<root>/profiles/<name>/` and adapt. Foll
 Invariants to hold:
 - Schema `$id`s match `https://specdev.dev/profiles/<name>/<schema-base>.schema.yaml`.
 - Only `module.schema.yaml` gets the `{{language}}` substitution; other schemas are byte-faithful (no stray `{{...}}` → `BOOTSTRAP-002`).
-- The placeholder vocabulary is closed: `{{project_name}}`, `{{profile}}`, `{{language}}`.
+- The placeholder vocabulary is closed: `{{project_name}}`, `{{project_identifier}}` (the name with each `-` as `_`, for an import name or a path), `{{profile}}`, `{{language}}`.
 
 ## Step 3 — gate at authoring time (bootstrap → check → gates)
 

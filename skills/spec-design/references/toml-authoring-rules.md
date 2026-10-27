@@ -6,11 +6,11 @@ dispatch, and `/spec-reverse` after the user has confirmed inferred fields).
 When two rules conflict, the earlier rule wins.
 
 1. **Schema is the contract.** Every field name must appear somewhere in the aggregator's reachable schemas. No invented keys. The schema uses `unevaluatedProperties: false`, which is `allOf`-aware — block-contributed properties pass through.
-2. **Required fields by profile.** firmware-layered requires `name` + `layer`; library-api requires `name` + `visibility`. Whatever else the profile's `module.schema.yaml` lists as required must be present.
+2. **Required fields by profile.** The profile's `module.schema.yaml` `required:` list is the rule (for example, firmware-layered: `name` + `layer`; library-api: `name` + `visibility`; flutter-app and nextjs-app: `name` + `role`; the TypeScript, Dart and Python library profiles: `name`).
 3. **Required metadata (firmware-layered).** `metadata.MemoryModel`, `metadata.ConcurrencyModel`, `metadata.ErrorHandling`, `metadata.Ownership` must all be present. Pick explicit values.
 4. **Prefer inline tables for short lists.** `params = [{name = "...", direction = "in"}]` is easier to read than an array-of-tables. Never write parameter or return types: the code holds them.
 5. **Naming conventions.**
-   - Module names: PascalCase (`StatusLed`, `BtA2dpSink`).
+   - Module names: PascalCase (`StatusLed`, `BtA2dpSink`). The default source file is the snake_case form (`status_led.rs`, `status_led.py`); a file named otherwise (a kebab-case `status-led.ts`, a crate root `lib.rs`) needs `source_file`.
    - Action names: `snake_case`.
    - Event names: `snake_case`, suffixed `_evt` (`set_solid_evt`, not `setSolid`).
    - State names: `snake_case`.
@@ -28,6 +28,13 @@ project that keeps one (a `library-api` crate), checked against the code by
 and its extraction queries define what counts as an item; these are the
 authoring rules. **Keep them in sync with the extraction queries — when the
 item model changes, this section changes with it.**
+
+**The examples below are Rust.** Every language's items schema gives its own
+kinds and name form: Rust `<Type>::<member>` with `fn` / `struct` / `impl`;
+TypeScript, Dart and Python `<Class>.<member>` with `function` (`fn` in Python)
+/ `class` and the kinds their schema lists. Use the schema of the project's
+language; the rules below hold for all of them. A Rust `impl` item also needs
+`target_type` (and `trait_ref` for a trait impl).
 
 The one-line rule:
 
@@ -95,6 +102,8 @@ satisfies = ["REQ-API-002"]
 [[items]]
 name = "Display for RateLimiter"
 kind = "impl"
+target_type = "RateLimiter"
+trait_ref = "Display"
 description = "Human-readable one-line summary of remaining budget."
 satisfies = ["REQ-API-009"]
 ```

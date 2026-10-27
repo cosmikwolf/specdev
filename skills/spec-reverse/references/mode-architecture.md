@@ -2,9 +2,11 @@
 
 Entered from the main SKILL.md when `$ARGUMENTS` is empty or missing. Produces `specs/architecture.toml` from source-tree evidence. Do not proceed to per-module reversal in this mode; that is `/spec-reverse <Module>` or `/spec-reverse --all`.
 
-## Step 3 — Architecture reverse
+## Architecture reverse
 
-If `specs/architecture.toml` exists, ask: **Compare (dry-run diff) / Replace / Cancel**.
+**First, read the project's `architecture.schema.yaml`.** It says which fields the architecture has. When the evidence below fills none of them (a library profile whose architecture holds only `project_decisions`, and the project has no decisions), write nothing: leave `specs/architecture.toml` as bootstrap wrote it, or absent, and say so in the report. `check` reports an absent file as info only.
+
+If `specs/architecture.toml` holds entries a person wrote (more than the profile's `architecture.toml.template`), ask: **Compare (dry-run diff) / Replace / Cancel**. When it holds only the template, edit it in place without asking, and keep the template's comments.
 
 Scan the project root for evidence in this order:
 
@@ -18,6 +20,8 @@ Scan the project root for evidence in this order:
 
 Write only fields the project's `architecture.schema.yaml` defines; evidence for anything else goes to the user as a note.
 
+**When the evidence disagrees** (a generator's metadata lists six platforms, the notes show four tested, the tree has folders for two), prefer what the project shows it builds or runs over what a tool generated, mark the field `# LOW:` and ask.
+
 Present candidate `specs/architecture.toml` with confidence (HIGH/MEDIUM/LOW) per field. Wait for confirmation. Write clean TOML per `${CLAUDE_PLUGIN_ROOT}/shared/comment-policy.md` — in particular, LOW markers are permitted inline next to LOW-confidence fields and are removed after the user confirms each one. Scaffold `specs/modules/` and `specs/requirements/` if absent.
 
-Report: language, build system, target, RTOS, packages, modules discovered. Suggested next step: `/spec-reverse <Module>` or `/spec-reverse --all`.
+Report: language, build system, the architecture fields written (or why none), packages, module candidates. Suggested next step: `/spec-reverse <Module>` or `/spec-reverse --all`.
