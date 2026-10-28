@@ -114,6 +114,8 @@ From an existing codebase (Rust, TypeScript, Dart or Python):
 
 `/spec-inline` and `/spec-inline-bridge` are the user-facing block / bridge inlining surface; both are thin wrappers over `specdev-analyzer inline` / `inline-bridge`.
 
+**To publish the spec's text beside the code** (a project whose specs are private while the code is public), add `[export] path = "docs/spec"` to `spec.toml` and run `specdev-analyzer export`. It writes the decisions, requirements and open questions as Markdown with one anchor per id, so a comment can link to `docs/spec/requirements/<name>.md#req-x-001`. `[export] omit` leaves fields out (`requirement = ["source_ref"]`); a decision's `record` (process notes) is never exported. `check` then reports a stale export (`export_current`) and code comments that cite an id that names nothing, is retired, or is not exported (`cited_ids_*`).
+
 **To see how the modules fit together**, run `specdev-analyzer report graph` (Mermaid) or `report graph --format dot`. It draws every module, grouped by the layers your profile's `domain.toml` declares, with each dependency that points the wrong way through the layers in thick red — the same edges `/spec-validate` reports. The output is deterministic: commit it (`report graph -o docs/module-map.mmd`) and a pull request shows every new edge.
 
 The last three are **plugin-authoring** commands: they extend the plugin's own `blocks/`, `bridges/` and `profiles/` trees. A project consuming specdev never needs them. To check this table against what is installed, `ls "${CLAUDE_PLUGIN_ROOT}/skills/"` — it must list the same names.

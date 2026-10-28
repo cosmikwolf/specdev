@@ -16,6 +16,11 @@ and it is `2`.
 
 ### Added
 
+- **Public spec export** (#283): `[export]` in `spec.toml` and `specdev-analyzer export` publish the decisions,
+  requirements and open questions as Markdown beside the code; the decision field `record` (process notes, in every
+  profile) is never exported, and `/spec-decide` writes approvals there. `/spec-validate` and the README describe
+  `export_current` and the `cited_ids_*` rules. The install doc gives the prebuilt binaries (#284).
+
 - **`/spec-reverse` for TypeScript, Dart and Python** (#273). The skill takes its field checklist from the
   project's module schema instead of a Rust list, reads `depends_on` from `report imports`, and fixes `[paths]
   source` and `toolchain` from the tree before the first module. It skips generated files. `python-library`,
