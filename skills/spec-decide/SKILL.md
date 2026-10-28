@@ -35,7 +35,7 @@ Read `spec.toml`. If `spec_version` is below `2.0`, the project still uses the c
 
 ## Step 1 — read the schema
 
-Read `specs/specdev/schemas/decisions.schema.yaml` to learn the binding contract. Required fields: `id`, `title`, `status`, `text`. Optional prose: `context`, `consequences`, `alternatives`, `verification`. Optional refs: `source[]`, `source_ref`, `supersedes[]`, `closes_questions[]`, `defaults_for[]`. Optional: `codegen_include[]` (which prose fields `report decisions` lists as applying; the name is historical).
+Read `specs/specdev/schemas/decisions.schema.yaml` to learn the binding contract. Required fields: `id`, `title`, `status`, `text`. Optional prose: `context`, `consequences`, `alternatives`, `verification`. Optional refs: `source[]`, `source_ref`, `supersedes[]`, `closes_questions[]`, `defaults_for[]`. Optional: `record` (process notes). Optional: `codegen_include[]` (which prose fields `report decisions` lists as applying; the name is historical).
 
 List `specs/decisions/` to see the project's id-prefix convention (`DEC-001`, `ADR-042`, `<TICKET>-<NNN>`). Match it. The id grammar is `^[A-Z0-9]+(-[A-Z0-9]+)*-\d+$`.
 
@@ -52,6 +52,7 @@ Batch all relevant questions in one message. Show defaults so a fluent user can 
 - **alternatives** (optional) — what was rejected and why.
 - **verification** (optional) — how the decision will be tested or validated.
 - **source[]** / **source_ref** (optional) — sources informing the decision, and a locator within them.
+- **record** (optional) — process notes: who accepted it and when, the session or review it came from (`Accepted by the user on 2026-10-27`). Write them here, never in `text` or the other prose: `specdev-analyzer export` publishes the prose and never `record`.
 - **supersedes[]** (optional) — older decision ids this entry replaces (see "Supersession" below).
 - **closes_questions[]** / **defaults_for[]** (optional) — open questions this decision closes or commits a default for. **Author one direction per cross-reference:** prefer the OQ-side pointer (`closed_by` / `default_via`, set by `/spec-question`) and leave these empty. The graph checks verify whichever side is authored; both sides double the bookkeeping for no extra check.
 - **codegen_include[]** (optional) — default `[text, consequences]`; add `verification` or `alternatives` when those fields matter to whoever implements the module.
@@ -77,6 +78,7 @@ What follows from the choice.
 """
 source = ["..."]
 source_ref = "..."
+record = "Accepted by the user on YYYY-MM-DD."
 ```
 
 Strip optional fields the user didn't author.
