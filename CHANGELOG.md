@@ -14,6 +14,8 @@ and it is `2`.
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-10-27
+
 ### Added
 
 - **Public spec export** (#283): `[export]` in `spec.toml` and `specdev-analyzer export` publish the decisions,
