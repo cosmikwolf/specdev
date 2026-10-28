@@ -55,6 +55,20 @@ cargo install --git https://github.com/<org>/specdev-analyzer --tag v0.5.0
 Add `--force` when re-installing; an install at an unchanged version still
 replaces the binary. Requires a stable Rust toolchain, at least **1.86**.
 
+A prebuilt binary, faster and with no Rust toolchain (from `cosmikwolf` only:
+its Releases carry binaries for macOS arm64 and x86_64, Linux x86_64 (musl)
+and Windows x86_64). Use the tag the `cargo install` line above names:
+
+```sh
+gh release download <tag> -R cosmikwolf/specdev-analyzer -p 'specdev-analyzer-<target>-<tag>.tgz'
+tar xzf specdev-analyzer-<target>-<tag>.tgz && mv specdev-analyzer ~/.cargo/bin/
+```
+
+`<target>` is the Rust target triple (`rustc -vV` prints it as `host`). When the
+repository is public, `cargo binstall --git https://github.com/cosmikwolf/specdev-analyzer
+specdev-analyzer` does the same in one step; while it is private, `cargo binstall`
+cannot download Release files (measured), so use `gh`.
+
 ## Why the README says `<org>` and this file does not
 
 `README.md` and `scripts/resolve-context` print `<org>` as a literal

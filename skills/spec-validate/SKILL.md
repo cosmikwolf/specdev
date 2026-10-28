@@ -37,7 +37,9 @@ At a workspace root, `check` alone checks the root only, and its summary line sa
 - **open-question gate** (`implementation_unblocked`) — a module that an `open` question reaches (local or workspace tier) and that has code;
 - **imports** (`internal_edges_declared`) — every import between project modules follows a declared `depends_on`;
 - **tests** (`requirements_have_tests`, `verified_by_resolves`) — a requirement names its tests in `verified_by`, and each named test exists in the test discovery (`specdev-analyzer report tests` shows the identities);
-- **rule packs** (`pack_entity_in_code`, `pack_attribute_matches`, `pack_key_ambiguous`) — each inlined block's or bridge's code checks: a spec entity the code lacks, an attribute that differs, or a key the code has at more than one place (`${CLAUDE_PLUGIN_ROOT}/shared/rule-packs.md`).
+- **rule packs** (`pack_entity_in_code`, `pack_attribute_matches`, `pack_key_ambiguous`) — each inlined block's or bridge's code checks: a spec entity the code lacks, an attribute that differs, or a key the code has at more than one place (`${CLAUDE_PLUGIN_ROOT}/shared/rule-packs.md`);
+- **cited ids** (`cited_ids_resolve`, `cited_ids_current`, `cited_ids_published`) — a requirement, decision or open-question id that the code's comments, docs or tests cite must name an entity, should not be retired or superseded, and, with `[export]`, must be of a kind the export publishes;
+- **export** (`export_current`) — with `[export]` in `spec.toml`, the exported Markdown equals what `specdev-analyzer export` writes now.
 
 Spec-only rules `validate` runs for every profile:
 
@@ -91,6 +93,8 @@ For graph-check rule names, the **project's** `specs/specdev/domain.toml` is aut
 - `SCHEMA` on a module — an unknown field usually means a block isn't inlined yet; a bad enum means the value is outside the schema's set.
 - `source_resolves` — the code exists somewhere else (set `source_file`), or it is not built yet (set `planned = true`).
 - `stale_planned` — the code landed: remove `planned = true`.
+- `cited_ids_resolve` — a comment or doc cites an id that names nothing: a typo, or an entity that was removed; fix the citation. `cited_ids_current` — the cited entity is retired or superseded: cite its successor (the message names it). `cited_ids_published` — the cited kind is not exported: add it to `[export] entities`, or drop the citation.
+- `export_current` — the spec changed since the last export: run `specdev-analyzer export` and commit the result with the spec change.
 - `LAYOUT-007` — the code root that `[paths] code` names does not exist, so the checks that read the code did not run. A git submodule that is not checked out: `git submodule update --init`. Otherwise correct the path in `spec.toml`.
 - `code_root_commit` (info) — the commit of the code repository that `check` read; nothing to fix. `code_root_clean` — the code repository has uncommitted changes, so `check` read them and not that commit: commit them in the code repository. `code_root_recorded` — the code submodule is at another commit than the spec repository records: commit the submodule bump with the spec change, or check out the recorded commit.
 - `pack_entity_in_code` / `pack_attribute_matches` — the spec and the code disagree about a unit entry. Either the spec is ahead (mark the entry `planned = true` until it is built) or the code drifted (fix the code). `pack_key_ambiguous` — two code items share the key; rename one, or give the spec the name the code uses. For a rule-pack graph check (`<unit>.<rule>`), the unit's inlined `guidance/` file names the rule and says what it means.
