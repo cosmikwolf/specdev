@@ -238,4 +238,4 @@ This is optional. Without it, analyzer calls follow your session's default permi
 
 ## License
 
-MIT.
+Apache-2.0. See `LICENSE` and `NOTICE`.
