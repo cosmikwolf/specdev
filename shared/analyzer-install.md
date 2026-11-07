@@ -17,9 +17,9 @@ against schemas the plugin does not ship.
 
 ## Step 1 — find the org, do not guess it
 
-Both repositories are **private**, so the install URL depends on which
-organization the user was granted access to. Read it off the plugin's own
-remote rather than assuming:
+The canonical repositories are public under `cosmikwolf`, but a fork of the
+plugin pairs with the analyzer from the same fork. Read the org off the
+plugin's own remote rather than assuming:
 
 ```sh
 git -C "${CLAUDE_PLUGIN_ROOT}" remote get-url origin
@@ -34,19 +34,19 @@ https://github.com/<org>/specdev.git      ->  <org>
 
 **If that command exits non-zero** (128 when the plugin tree is not a git
 checkout — a marketplace install need not keep `.git`), do **not** invent an
-org. Ask the user which organization they have access to, and offer the
-local-checkout install below, which needs no org at all.
+org. Use `cosmikwolf`, the canonical org, unless the user says they installed
+from a fork; the local-checkout install below needs no org at all.
 
 ## Step 2 — tell the user one of these
 
-From a local checkout — no network and no org access needed, and the
+From a local checkout — no network needed, and the
 supported path for anyone developing against the pair:
 
 ```sh
 cargo install --path <analyzer-checkout>
 ```
 
-From the private repository, with the org from Step 1:
+From GitHub, with the org from Step 1:
 
 ```sh
 cargo install --git https://github.com/<org>/specdev-analyzer --tag v0.6.0
@@ -69,12 +69,12 @@ repository is public, `cargo binstall --git https://github.com/cosmikwolf/specde
 specdev-analyzer` does the same in one step; while it is private, `cargo binstall`
 cannot download Release files (measured), so use `gh`.
 
-## Why the README says `<org>` and this file does not
+## Why the README names `cosmikwolf` and this file derives the org
 
-`README.md` and `scripts/resolve-context` print `<org>` as a literal
-placeholder because a **human** reads them and substitutes it. This file is
-read by **Claude**, which can run a command — so it derives the value instead
-of asking for it. Both are correct for their reader; do not "unify" them.
+`README.md` and `scripts/resolve-context` name the canonical org because a
+**human** reads them and most installs come from there. This file is read by
+**Claude**, which can run a command — so it also finds a fork's org. Both are
+correct for their reader; do not "unify" them.
 
 Note also that `${{ github.repository_owner }}` works only in GitHub Actions
 workflow YAML. It renders literally in Markdown and must never appear here.

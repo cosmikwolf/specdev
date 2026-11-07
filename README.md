@@ -4,28 +4,24 @@ A Claude Code plugin for spec-driven development. Describe your project's intent
 
 The plugin models a project as a **profile** (project shape) composed with **blocks** (concrete frameworks, libraries, hardware families) and **bridges** (pairwise wirings between blocks). All three ship in the plugin and are inlined into the project's own `specs/specdev/` tree by deterministic CLI operations; once inlined, the project owns its content.
 
-Pairs with the `specdev-analyzer` CLI — a private repository alongside this one, in the same organization — which does validation, the checks against the code (`check`), extraction, inline, bootstrap, migration, and rendering the compile gates into the script CI runs. The plugin provides the interactive authoring workflow; the analyzer provides the mechanical operations.
+Pairs with the [`specdev-analyzer`](https://github.com/cosmikwolf/specdev-analyzer) CLI, which does validation, the checks against the code (`check`), extraction, inline, bootstrap, migration, and rendering the compile gates into the script CI runs. The plugin provides the interactive authoring workflow; the analyzer provides the mechanical operations.
 
 ## Install
 
-**Both repositories are private, and they are one unit.** `specdev` (this
-plugin) and `specdev-analyzer` (the CLI) ship together and must be installed
-as a matched pair — see "Keeping it current" below for why.
-
-Replace `<org>` in the commands below with the GitHub organization you were
-granted access to (the upstream is `cosmikwolf`). If `git` cannot read the URL, you do not have
-access yet — ask for it rather than working around it, because the two
-repositories must come from the *same* org or the analyzer will validate your
-project against schemas the plugin does not ship.
+**The two repositories are one unit.** `specdev` (this plugin) and
+`specdev-analyzer` (the CLI) ship together and must be installed as a matched
+pair — see "Keeping it current" below for why. If you install from a fork, take
+both from the same fork, or the analyzer will validate your project against
+schemas the plugin does not ship.
 
 1. Install the analyzer (requires a stable Rust toolchain, at least 1.86):
 
    ```
-   cargo install --git https://github.com/<org>/specdev-analyzer --tag v0.6.0
+   cargo install --git https://github.com/cosmikwolf/specdev-analyzer --tag v0.6.0
    ```
 
    Already have a checkout? `cargo install --path <analyzer-checkout>`
-   needs no network and no org access, and is the supported path for
+   needs no network, and is the supported path for
    anyone developing against the pair.
 
    **Keeping it current.** The analyzer embeds the JSON Schemas it
@@ -54,7 +50,7 @@ project against schemas the plugin does not ship.
 2. Add the marketplace and install the plugin in Claude Code:
 
    ```
-   /plugin marketplace add <org>/specdev
+   /plugin marketplace add cosmikwolf/specdev
    /plugin install specdev@specdev
    ```
 

@@ -18,6 +18,9 @@ and it is `2`.
 
 - **License: Apache-2.0** (was MIT). `LICENSE` holds the Apache-2.0 text and `NOTICE` the copyright line;
   `LICENSE.md` is gone.
+- **Install text names the public `cosmikwolf` repositories.** `README.md`, `scripts/resolve-context` and
+  `shared/analyzer-install.md` no longer describe private repositories or an `<org>` placeholder; the install guide
+  still reads a fork's org off the plugin's remote.
 
 ## [0.6.0] — 2026-10-27
 
